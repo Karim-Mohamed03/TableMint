@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import tablesRouter from './routes/tables';
 
 dotenv.config();
 
@@ -24,6 +25,9 @@ app.get('/', (_req, res) => {
 app.get('/test', (_req, res) => {
   res.send('Test endpoint is working!');
 });
+
+// Register the tables routes
+app.use('/api/restaurants', tablesRouter);
 
 const PORT = process.env.PORT || 3000; // Changed to port 3000 instead of 5000
 app.listen(PORT, () => {

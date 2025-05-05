@@ -36,6 +36,15 @@ const restaurantPOSConfigs: Record<string, RestaurantPOSConfig> = {
       businessId: 'foodics-business-id',
       apiBaseUrl: 'https://api.foodics.com/v5'
     }
+  },
+  'rest-5': {
+    restaurantId: 'rest-5',
+    posProvider: POSProvider.LOYVERSE,
+    apiCredentials: {
+      apiKey: 'loyverse-api-key-example',
+      storeId: 'loyverse-store-id-example',
+      apiBaseUrl: 'https://api.loyverse.com/v1.0'
+    }
   }
 };
 

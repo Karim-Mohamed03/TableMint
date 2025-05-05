@@ -34,7 +34,8 @@ export enum POSProvider {
   SQUARE = 'square',
   TOAST = 'toast',
   MICROS = 'micros',
-  FOODICS = 'foodics'
+  FOODICS = 'foodics',
+  LOYVERSE = 'loyverse'
   // Add more as needed
 }
 

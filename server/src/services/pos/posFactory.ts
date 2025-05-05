@@ -3,6 +3,7 @@ import { SquarePOSAdapter } from './providers/square';
 import { ToastPOSAdapter } from './providers/toast';
 import { MicrosPOSAdapter } from './providers/micros';
 import { FoodicsPOSAdapter } from './providers/foodics';
+import { LoyversePOSAdapter } from './providers/loyverse';
 
 /**
  * Creates the appropriate POS adapter based on the provider type
@@ -17,6 +18,8 @@ export function createPOSAdapter(provider: POSProvider, credentials: Record<stri
       return new MicrosPOSAdapter(credentials);
     case POSProvider.FOODICS:
       return new FoodicsPOSAdapter(credentials);
+    case POSProvider.LOYVERSE:
+      return new LoyversePOSAdapter(credentials);
     default:
       throw new Error(`Unsupported POS provider: ${provider}`);
   }

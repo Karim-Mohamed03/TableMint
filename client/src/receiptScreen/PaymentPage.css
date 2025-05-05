@@ -1,0 +1,149 @@
+/* PaymentPage.css */
+.payment-container {
+    max-width: 450px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .bill-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+  }
+  
+  .bill-table th {
+    text-align: left;
+    padding-bottom: 10px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  
+  .bill-table td {
+    padding-bottom: 10px;
+    font-size: 14px;
+  }
+  
+  .total-row {
+    font-weight: bold;
+    border-top: 1px solid #eaeaea;
+    padding-top: 10px;
+  }
+  
+  .split-bill-btn, .pay-now-btn {
+    background-color: #6366f1;
+    color: white;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 15px 0;
+  }
+  
+  .apple-pay-btn {
+    background-color: #000;
+    color: white;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 15px 0;
+  }
+  
+  .tips-section {
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  .tips-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0;
+  }
+  
+  .tip-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background-color: #e5e7eb;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .tip-btn.active {
+    background-color: #6366f1;
+    color: white;
+  }
+  
+  .card-section {
+    background-color: #e5e7eb;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    height: auto;
+    min-height: 200px;
+    position: relative;
+  }
+  
+  .card-input-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  .card-input {
+    border: none;
+    border-bottom: 1px solid #9ca3af;
+    background: transparent;
+    padding: 5px 0;
+    width: 100%;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    transition: border-color 0.3s;
+  }
+  
+  .card-input:focus {
+    outline: none;
+    border-bottom: 2px solid #6366f1;
+  }
+  
+  .card-input-label {
+    font-size: 12px;
+    color: #6b7280;
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .total-amount {
+    font-weight: 500;
+    margin: 15px 0;
+  }
+
+  .card-types {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 15px;
+  }
+  
+  .card-type-icon {
+    width: 40px;
+    height: 25px;
+    object-fit: contain;
+    opacity: 0.7;
+  }

@@ -24,7 +24,13 @@ const GooglePayButton = () => {
       },
       requestPayerName: true,
       requestPayerEmail: true,
-      googlePay: true,
+      supportedPaymentMethods: [{
+        supportedMethods: 'google_pay',
+        data: {
+          environment: 'PRODUCTION',
+          // add other required Google Pay fields
+        },
+      }]
     });
 
     

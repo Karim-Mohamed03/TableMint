@@ -20,7 +20,7 @@ const GooglePayButton = () => {
       currency: "egp", // Keep your currency as EGP
       total: {
         label: "Table 15 Payment",
-        amount: 3500, // Amount in smallest currency unit (e.g., cents)
+        amount: 3800, // Amount in smallest currency unit (e.g., cents)
       },
       requestPayerName: true,
       requestPayerEmail: true,
@@ -106,7 +106,7 @@ export default function PaymentPage() {
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   
-  const basePrice = 30.00;
+  const basePrice = 35.00;
   
   const handleTipSelection = (tipAmount) => {
     setTip(tipAmount);

@@ -6,7 +6,7 @@ import { Elements, PaymentRequestButtonElement, useStripe } from "@stripe/react-
 
 // Replace with your Stripe publishable key
 const stripePromise = loadStripe("pk_live_51MNLkFEACKuyUvsyNSqbD6GO0IPagT0p7kHfVa6wwrTMqoitlxqsUVy3quACHWRXKzoacFJx2zEQ6rEwB8zZHi7p00yDKjWX4X");
-
+//hello
 // Google Pay Button component
 const GooglePayButton = () => {
   const stripe = useStripe();

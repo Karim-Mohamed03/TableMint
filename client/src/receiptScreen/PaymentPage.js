@@ -24,6 +24,7 @@ const GooglePayButton = () => {
       },
       requestPayerName: true,
       requestPayerEmail: true,
+      googlePay: true,
     });
 
     

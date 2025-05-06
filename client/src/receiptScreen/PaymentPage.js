@@ -1,6 +1,99 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 // import { X } from "lucide-react";
 import "./PaymentPage.css"; // Importing CSS styles
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentRequestButtonElement, useStripe } from "@stripe/react-stripe-js";
+
+// Replace with your Stripe publishable key
+const stripePromise = loadStripe("pk_live_51MNLkFEACKuyUvsyNSqbD6GO0IPagT0p7kHfVa6wwrTMqoitlxqsUVy3quACHWRXKzoacFJx2zEQ6rEwB8zZHi7p00yDKjWX4X");
+
+// Google Pay Button component
+const GooglePayButton = () => {
+  const stripe = useStripe();
+  const [paymentRequest, setPaymentRequest] = useState(null);
+
+  useEffect(() => {
+    if (!stripe) return;
+
+    const pr = stripe.paymentRequest({
+      country: "US", // Using US as it's widely supported
+      currency: "egp", // Keep your currency as EGP
+      total: {
+        label: "Table 15 Payment",
+        amount: 3500, // Amount in smallest currency unit (e.g., cents)
+      },
+      requestPayerName: true,
+      requestPayerEmail: true,
+    });
+
+    // Check if Google Pay is available
+    pr.canMakePayment().then(result => {
+      if (result && result.googlePay) {
+        setPaymentRequest(pr);
+      }
+    });
+
+    // Handle payment method
+    pr.on("paymentmethod", async (event) => {
+      // Send to your backend
+      try {
+        const response = await fetch("/api/create-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paymentMethodId: event.paymentMethod.id,
+            amount: 3500, // Same as above
+          }),
+        });
+
+        const { clientSecret } = await response.json();
+
+        // Confirm the payment with Stripe
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret,
+          { payment_method: event.paymentMethod.id },
+          { handleActions: false }
+        );
+
+        if (error) {
+          console.error("Payment failed:", error);
+          event.complete("fail");
+        } else if (paymentIntent.status === "requires_action") {
+          // Handle 3D Secure authentication if needed
+          stripe.confirmCardPayment(clientSecret).then(function(result) {
+            if (result.error) {
+              // Show error message
+              event.complete("fail");
+            } else {
+              // Payment successful
+              event.complete("success");
+              // Handle post-payment success (redirect, show confirmation, etc.)
+            }
+          });
+        } else {
+          // Payment successful
+          event.complete("success");
+          // Handle post-payment success (redirect, show confirmation, etc.)
+        }
+      } catch (err) {
+        console.error("Error processing payment:", err);
+        event.complete("fail");
+      }
+    });
+  }, [stripe]);
+
+  if (paymentRequest) {
+    return (
+      <PaymentRequestButtonElement
+        options={{ paymentRequest }}
+        className="google-pay-button"
+      />
+    );
+  }
+
+  // Show a message if Google Pay is not available
+  return <div className="google-pay-unavailable">Google Pay not available</div>;
+};
 
 export default function PaymentPage() {
   const [tip, setTip] = useState(5);
@@ -88,134 +181,144 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="payment-container">
-      {/* Header with table number and close button */}
-      <div className="header">
-        <h1 className="table-title">Table 15</h1>
-        {/* <button className="close-button">
-          <X size={20} />
-        </button> */}
-      </div>
-      
-      {/* Bill Details */}
-      <table className="bill-table">
-        <thead>
-          <tr>
-            <th style={{ width: '50%' }}>Item</th>
-            <th style={{ width: '25%', textAlign: 'center' }}>QTY</th>
-            <th style={{ width: '25%', textAlign: 'right' }}>Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style={{textAlign: 'left'}}>Cheese Burger</td>
-            <td style={{ textAlign: 'center' }}>1</td>
-            <td style={{ textAlign: 'right' }}>30.00</td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr className="total-row">
-            <td style={{textAlign: 'left'}}>Your Bill</td>
-            <td></td>
-            <td style={{ textAlign: 'right' }}>EGP 30.00</td>
-          </tr>
-        </tfoot>
-      </table>
-      
-      {/* Split Bill Button */}
-      <button className="split-bill-btn">
-        Lets Split The Bill!
-      </button>
-      
-      {/* Tip Section */}
-      <div className="tips-section">
-        <p>Add Tips</p>
-        <div className="tips-buttons">
-          <button 
-            className={`tip-btn ${tip === 5 ? 'active' : ''}`}
-            onClick={() => handleTipSelection(5)}
-          >
-            5
-          </button>
-          <button 
-            className={`tip-btn ${tip === 10 ? 'active' : ''}`}
-            onClick={() => handleTipSelection(10)}
-          >
-            10
-          </button>
-          <button 
-            className={`tip-btn ${tip === 15 ? 'active' : ''}`}
-            onClick={() => handleTipSelection(15)}
-          >
-            15
-          </button>
-          <button className="tip-btn">
-            {/* Custom tip button */}
-          </button>
+    <Elements stripe={stripePromise}>
+      <div className="payment-container">
+        {/* Header with table number and close button */}
+        <div className="header">
+          <h1 className="table-title">Table 15</h1>
+          {/* <button className="close-button">
+            <X size={20} />
+          </button> */}
         </div>
         
-        {/* Total amount */}
-        <p className="total-amount">You are paying: EGP {totalAmount.toFixed(2)}</p>
-      </div>
-      
-      {/* Payment Methods */}
-      <button className="apple-pay-btn">
-        Apple Pay
-      </button>
-      
-      {/* Card Input Section */}
-      <div className="card-section">
-        <div className="card-input-group">
-          <div style={{ flex: '2', textAlign: 'left' }}>
-            <label className="card-input-label">Card Number</label>
-            <input 
-              type="text" 
-              className="card-input" 
-              placeholder="XXXX XXXX XXXX XXXX"
-              value={cardNumber}
-              onChange={handleCardNumberChange}
-              maxLength={19}
-            />
+        {/* Bill Details */}
+        <table className="bill-table">
+          <thead>
+            <tr>
+              <th style={{ width: '50%' }}>Item</th>
+              <th style={{ width: '25%', textAlign: 'center' }}>QTY</th>
+              <th style={{ width: '25%', textAlign: 'right' }}>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{textAlign: 'left'}}>Cheese Burger</td>
+              <td style={{ textAlign: 'center' }}>1</td>
+              <td style={{ textAlign: 'right' }}>30.00</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr className="total-row">
+              <td style={{textAlign: 'left'}}>Your Bill</td>
+              <td></td>
+              <td style={{ textAlign: 'right' }}>EGP 30.00</td>
+            </tr>
+          </tfoot>
+        </table>
+        
+        {/* Split Bill Button */}
+        <button className="split-bill-btn">
+          Lets Split The Bill!
+        </button>
+        
+        {/* Tip Section */}
+        <div className="tips-section">
+          <p>Add Tips</p>
+          <div className="tips-buttons">
+            <button 
+              className={`tip-btn ${tip === 5 ? 'active' : ''}`}
+              onClick={() => handleTipSelection(5)}
+            >
+              5
+            </button>
+            <button 
+              className={`tip-btn ${tip === 10 ? 'active' : ''}`}
+              onClick={() => handleTipSelection(10)}
+            >
+              10
+            </button>
+            <button 
+              className={`tip-btn ${tip === 15 ? 'active' : ''}`}
+              onClick={() => handleTipSelection(15)}
+            >
+              15
+            </button>
+            <button className="tip-btn">
+              {/* Custom tip button */}
+            </button>
           </div>
           
-          <div style={{ flex: '1', textAlign: 'left' }}>
-            <label className="card-input-label">CVV</label>
-            <input 
-              type="text" 
-              className="card-input" 
-              placeholder="XXX"
-              value={cvv}
-              onChange={handleCvvChange}
-              maxLength={4}
-            />
-          </div>
-        </div>
-
-        <div style={{ flex: '1' , textAlign: 'left', marginTop: '30px' }}>
-            {/* <label className="card-input-label">MM/YY</label> */}
-            <input 
-              type="text" 
-              className="card-input" 
-              placeholder="MM/YY"
-              value={expiry}
-              onChange={handleExpiryChange}
-              maxLength={5}
-            />
+          {/* Total amount */}
+          <p className="total-amount">You are paying: EGP {totalAmount.toFixed(2)}</p>
         </div>
         
-        {/* Card Type Logos */}
-        <div className="card-types">
-          {cardLogos.visa}
-          {cardLogos.mastercard}
-          {cardLogos.amex}
-          {cardLogos.discover}
+        {/* Payment Methods */}
+        <div className="payment-methods">
+          {/* Google Pay Button */}
+          <div className="google-pay-wrapper">
+            <GooglePayButton />
+          </div>
+          
+          {/* Apple Pay Button */}
+          <button className="apple-pay-btn">
+            Apple Pay
+          </button>
         </div>
+        
+        {/* Card Input Section */}
+        <div className="card-section">
+          <div className="card-input-group">
+            <div style={{ flex: '2', textAlign: 'left' }}>
+              <label className="card-input-label">Card Number</label>
+              <input 
+                type="text" 
+                className="card-input" 
+                placeholder="XXXX XXXX XXXX XXXX"
+                value={cardNumber}
+                onChange={handleCardNumberChange}
+                maxLength={19}
+              />
+            </div>
+            
+            <div style={{ flex: '1', textAlign: 'left' }}>
+              <label className="card-input-label">CVV</label>
+              <input 
+                type="text" 
+                className="card-input" 
+                placeholder="XXX"
+                value={cvv}
+                onChange={handleCvvChange}
+                maxLength={4}
+              />
+            </div>
+          </div>
+
+          <div style={{ flex: '1' , textAlign: 'left', marginTop: '30px' }}>
+              {/* <label className="card-input-label">MM/YY</label> */}
+              <input 
+                type="text" 
+                className="card-input" 
+                placeholder="MM/YY"
+                value={expiry}
+                onChange={handleExpiryChange}
+                maxLength={5}
+              />
+          </div>
+          
+          {/* Card Type Logos */}
+          <div className="card-types">
+            {cardLogos.visa}
+            {cardLogos.mastercard}
+            {cardLogos.amex}
+            {cardLogos.discover}
+          </div>
+        </div>
+        
+        {/* Pay Now Button */}
+        <button className="pay-now-btn">
+          Pay Now
+        </button>
       </div>
-      
-      {/* Pay Now Button */}
-      <button className="pay-now-btn">
-        Pay Now
-      </button>
-    </div>
+    </Elements>
   );
 }

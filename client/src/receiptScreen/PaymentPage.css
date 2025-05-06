@@ -147,3 +147,38 @@
     object-fit: contain;
     opacity: 0.7;
   }
+
+  /* Add these styles to your PaymentPage.css file */
+
+/* Google Pay button container */
+.google-pay-wrapper {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Style the Google Pay button */
+.google-pay-button {
+  height: 40px !important;
+  width: 100% !important;
+  border-radius: 6px !important;
+}
+
+/* Adjust payment methods container for multiple buttons */
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+/* Message for unavailable Google Pay */
+.google-pay-unavailable {
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  background-color: #f2f2f2;
+  border-radius: 6px;
+  color: #666;
+  margin-bottom: 10px;
+  font-size: 14px;
+}

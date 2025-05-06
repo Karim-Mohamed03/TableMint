@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import PaymentPage from "./receiptScreen/PaymentPAge";
+import PaymentPage from "./receiptScreen/PaymentPage";
 
 function App() {
   return (

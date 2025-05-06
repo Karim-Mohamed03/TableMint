@@ -17,7 +17,7 @@ const GooglePayButton = () => {
 
     const pr = stripe.paymentRequest({
       country: "US", // Using US as it's widely supported
-      currency: "egp", // Keep your currency as EGP
+      currency: "usd", // Keep your currency as EGP
       total: {
         label: "Table 15 Payment",
         amount: 3800, // Amount in smallest currency unit (e.g., cents)

@@ -26,7 +26,7 @@ export default async function handler(
       payment_method: paymentMethodId,
       amount: amount, // Amount in smallest currency unit (e.g., cents)
       currency: 'egp', // Egyptian Pound
-      confirmation_method: 'manual',
+      confirmation_method: 'automatic',
       confirm: true,
       return_url: `${process.env.DOMAIN_URL || 'https://yourdomain.com'}/payment-success`,
       metadata: {
@@ -38,6 +38,7 @@ export default async function handler(
     res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       status: paymentIntent.status,
+      nextAction: paymentIntent.next_action || null,
     });
   } catch (error) {
     console.error('Error processing payment:', error);

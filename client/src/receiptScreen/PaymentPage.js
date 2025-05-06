@@ -26,8 +26,11 @@ const GooglePayButton = () => {
       requestPayerEmail: true,
     });
 
+    
+
     // Check if Google Pay is available
     pr.canMakePayment().then(result => {
+      console.log('canMakePayment result:', result);
       if (result && result.googlePay) {
         setPaymentRequest(pr);
       }

@@ -215,7 +215,7 @@ export default function PaymentPage() {
             <tr className="total-row">
               <td style={{textAlign: 'left'}}>Your Bill</td>
               <td></td>
-              <td style={{ textAlign: 'right' }}>EGP 30.00</td>
+              <td style={{ textAlign: 'right' }}>EGP 35.00</td>
             </tr>
           </tfoot>
         </table>

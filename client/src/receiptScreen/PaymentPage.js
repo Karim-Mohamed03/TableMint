@@ -11,6 +11,7 @@ const stripePromise = loadStripe("pk_live_51MNLkFEACKuyUvsyNSqbD6GO0IPagT0p7kHfV
 const GooglePayButton = () => {
   const stripe = useStripe();
   const [paymentRequest, setPaymentRequest] = useState(null);
+  const [isGooglePayAvailable, setIsGooglePayAvailable] = useState(false);
 
   useEffect(() => {
     if (!stripe) return;
@@ -29,9 +30,17 @@ const GooglePayButton = () => {
     // Check if Google Pay or any payment method is available
     pr.canMakePayment().then(result => {
       console.log('canMakePayment result:', result);
-      // Accept any payment method, not just googlePay specifically
-      if (result) {
+      
+      // Specifically check for Google Pay support
+      if (result && 
+          (result.googlePay || 
+           (window.navigator.userAgent.indexOf('Chrome') > -1 && result.applePay === false))) {
         setPaymentRequest(pr);
+        setIsGooglePayAvailable(true);
+      } else if (result) {
+        // Some payment method is available, but not necessarily Google Pay
+        setPaymentRequest(pr);
+        setIsGooglePayAvailable(false);
       }
     });
 
@@ -86,10 +95,22 @@ const GooglePayButton = () => {
 
   if (paymentRequest) {
     return (
-      <PaymentRequestButtonElement
-        options={{ paymentRequest }}
-        className="google-pay-button"
-      />
+      <div className="payment-button-container">
+        <PaymentRequestButtonElement
+          options={{ 
+            paymentRequest,
+            style: {
+              paymentRequestButton: {
+                type: 'buy', // 'default' | 'buy' | 'donate'
+                theme: 'dark', // 'dark' | 'light' | 'light-outline'
+                height: '48px',
+              },
+            },
+          }}
+          className="google-pay-button"
+        />
+        {!isGooglePayAvailable && <div className="payment-button-overlay">Google Pay</div>}
+      </div>
     );
   }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import './App.css';
 import TablePage from './pages/TablePage';
+import PaymentPage from "./receiptScreen/PaymentPage";
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       </header>
       <main>
         <TablePage />
+        <PaymentPage />
       </main>
       <footer>
         <p>© {new Date().getFullYear()} Test Restaurant App</p>

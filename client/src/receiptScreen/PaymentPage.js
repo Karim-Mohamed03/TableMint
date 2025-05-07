@@ -11,8 +11,6 @@ const stripePromise = loadStripe("pk_live_51MNLkFEACKuyUvsyNSqbD6GO0IPagT0p7kHfV
 const GooglePayButton = () => {
   const stripe = useStripe();
   const [paymentRequest, setPaymentRequest] = useState(null);
-  const [isGooglePayAvailable, setIsGooglePayAvailable] = useState(false);
-  const [paymentType, setPaymentType] = useState('none'); // 'none', 'googlePay', 'link'
 
   useEffect(() => {
     if (!stripe) return;
@@ -28,20 +26,12 @@ const GooglePayButton = () => {
       requestPayerEmail: true,
     });
 
-    // Check if any payment method is available
+    // Check if Google Pay or any payment method is available
     pr.canMakePayment().then(result => {
       console.log('canMakePayment result:', result);
-      
+      // Accept any payment method, not just googlePay specifically
       if (result) {
         setPaymentRequest(pr);
-        
-        if (result.googlePay) {
-          setPaymentType('googlePay');
-          setIsGooglePayAvailable(true);
-        } else if (result.link) {
-          setPaymentType('link');
-          setIsGooglePayAvailable(false);
-        }
       }
     });
 
@@ -94,101 +84,12 @@ const GooglePayButton = () => {
     });
   }, [stripe]);
 
-  // Custom Google Pay Button for Chrome browsers when Stripe doesn't detect Google Pay
-  const handleCustomGooglePay = () => {
-    if (!window.PaymentRequest) {
-      alert("Google Pay is not supported in this browser");
-      return;
-    }
-
-    try {
-      const supportedInstruments = [
-        {
-          supportedMethods: 'https://google.com/pay',
-          data: {
-            environment: 'PRODUCTION',
-            apiVersion: 2,
-            apiVersionMinor: 0,
-            merchantInfo: {
-              merchantName: 'Your Merchant Name'
-            },
-            allowedPaymentMethods: [{
-              type: 'CARD',
-              parameters: {
-                allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
-                allowedCardNetworks: ['MASTERCARD', 'VISA', 'AMEX', 'DISCOVER']
-              },
-              tokenizationSpecification: {
-                type: 'PAYMENT_GATEWAY',
-                parameters: {
-                  gateway: 'stripe',
-                  'stripe:version': '2020-08-27',
-                  'stripe:publishableKey': 'pk_live_51MNLkFEACKuyUvsyNSqbD6GO0IPagT0p7kHfVa6wwrTMqoitlxqsUVy3quACHWRXKzoacFJx2zEQ6rEwB8zZHi7p00yDKjWX4X'
-                }
-              }
-            }]
-          }
-        }
-      ];
-
-      const details = {
-        total: {
-          label: 'Table 15 Payment',
-          amount: { currency: 'USD', value: '38.00' }
-        }
-      };
-
-      const request = new PaymentRequest(supportedInstruments, details);
-      request.canMakePayment().then(canPay => {
-        if (canPay) {
-          // Proceed with payment
-          request.show().then(paymentResponse => {
-            // Here you would process the payment through your backend
-            console.log('Payment response:', paymentResponse);
-            paymentResponse.complete('success');
-          }).catch(err => {
-            console.error('Payment request show() error:', err);
-          });
-        } else {
-          alert("Google Pay is not available on this device");
-        }
-      }).catch(err => {
-        console.error('Payment request canMakePayment() error:', err);
-      });
-    } catch (err) {
-      console.error('Google Pay initialization error:', err);
-      alert("An error occurred initializing Google Pay");
-    }
-  };
-
-  if (paymentRequest && paymentType === 'googlePay') {
+  if (paymentRequest) {
     return (
       <PaymentRequestButtonElement
-        options={{ 
-          paymentRequest,
-          style: {
-            paymentRequestButton: {
-              type: 'buy',
-              theme: 'dark',
-              height: '48px',
-            },
-          },
-        }}
+        options={{ paymentRequest }}
         className="google-pay-button"
       />
-    );
-  } else if (paymentRequest && paymentType === 'link') {
-    // Create a custom Google Pay styled button when Link is the only option available
-    return (
-      <button 
-        className="custom-google-pay-btn" 
-        onClick={handleCustomGooglePay}
-      >
-        <span className="gpay-logo">
-          <span className="gpay-text">G</span>
-          <span className="gpay-text">Pay</span>
-        </span>
-      </button>
     );
   }
 

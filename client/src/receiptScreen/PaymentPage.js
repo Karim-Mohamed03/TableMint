@@ -16,29 +16,21 @@ const GooglePayButton = () => {
     if (!stripe) return;
 
     const pr = stripe.paymentRequest({
-      country: "US", // Using US as it's widely supported
-      currency: "usd", // Keep your currency as EGP
+      country: "US",
+      currency: "usd",
       total: {
         label: "Table 15 Payment",
-        amount: 3800, // Amount in smallest currency unit (e.g., cents)
+        amount: 3800,
       },
       requestPayerName: true,
       requestPayerEmail: true,
-      supportedPaymentMethods: [{
-        supportedMethods: 'google_pay',
-        data: {
-          environment: 'PRODUCTION',
-          // add other required Google Pay fields
-        },
-      }]
     });
 
-    
-
-    // Check if Google Pay is available
+    // Check if Google Pay or any payment method is available
     pr.canMakePayment().then(result => {
       console.log('canMakePayment result:', result);
-      if (result && result.googlePay) {
+      // Accept any payment method, not just googlePay specifically
+      if (result) {
         setPaymentRequest(pr);
       }
     });

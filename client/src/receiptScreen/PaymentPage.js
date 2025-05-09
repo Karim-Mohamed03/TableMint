@@ -30,8 +30,7 @@ const CheckoutForm = () => {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // return_url: `${window.location.origin}/complete`,
-        return_url: "http://localhost:3000/complete",
+        return_url: "https://test-app-fawn-phi.vercel.app/complete",
       },
     });
 
@@ -82,7 +81,7 @@ const GooglePayButton = ({ amount }) => {
 
     pr.on("paymentmethod", async (event) => {
       try {
-        const response = await fetch("/api/create-payment", {
+        const response = await fetch("https://test-app-fawn-phi.vercel.app/api/create-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paymentMethodId: event.paymentMethod.id }),
@@ -123,7 +122,7 @@ export default function PaymentPage() {
   const totalAmount = baseAmount + tip * 100; // Convert tip to cents
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/payments/create-payment-intent", {
+    fetch("https://test-app-fawn-phi.vercel.app/api/payments/create-payment-intent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

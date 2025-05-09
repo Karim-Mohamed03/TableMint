@@ -133,7 +133,7 @@ function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("https://test-app-fawn-phi.vercel.app/api/payments/create-payment-intent", {
+    fetch("/api/payments/create-payment-intent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

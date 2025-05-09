@@ -9,7 +9,7 @@ import {
 } from "@stripe/react-stripe-js";
 import "./PaymentPage.css";
 
-const stripePromise = loadStripe("pk_live_51RMFN4ITADYq5tc3p121uRgW9h4o4fkuUUEeEzgHtUhTougOlZy0hv0PNcbZ0onbyaIkTWv3K60qrAHYjrt9t7pm00OaYNE9Ux");
+const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
 
 // ✅ CheckoutForm Component
 const CheckoutForm = () => {
@@ -30,7 +30,8 @@ const CheckoutForm = () => {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: "https://test-app-fawn-phi.vercel.app/complete",
+        // return_url: `${window.location.origin}/complete`,
+        return_url: "http://localhost:3000/complete",
       },
     });
 
@@ -81,7 +82,7 @@ const GooglePayButton = ({ amount }) => {
 
     pr.on("paymentmethod", async (event) => {
       try {
-        const response = await fetch("https://test-app-fawn-phi.vercel.app/api/create-payment", {
+        const response = await fetch("/api/create-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paymentMethodId: event.paymentMethod.id }),
@@ -114,32 +115,55 @@ const GooglePayButton = ({ amount }) => {
 
 // ✅ PaymentPage Component
 export default function PaymentPage() {
+  const [clientSecret, setClientSecret] = useState("");
   const [tip, setTip] = useState(5);
   const [showStripeForm, setShowStripeForm] = useState(false);
   const baseAmount = 3500; // in cents (e.g., $35.00)
+
   const totalAmount = baseAmount + tip * 100; // Convert tip to cents
-  
-  // We'll use the client secret passed from App.js via Elements context
-  const stripe = useStripe();
-  const elements = useElements();
-  
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/payments/create-payment-intent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ items: [{ amount: totalAmount }] }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+        } else {
+          console.error("No client secret returned");
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching client secret:", err);
+      });
+  }, [totalAmount]);
+
   const handleTipChange = (tipAmount) => {
     setTip(tipAmount);
   };
-  
+
   const togglePaymentForm = () => {
     setShowStripeForm(!showStripeForm);
   };
-  
+
+  const options = { clientSecret };
+
   return (
     <div className="payment-container">
       <h1>Table 15 - Payment</h1>
+
       <div className="bill-summary">
         <h3>Bill Summary</h3>
         <div>Base Amount: $35.00</div>
         <div>Tip: ${tip.toFixed(2)}</div>
         <div>Total: ${(totalAmount / 100).toFixed(2)}</div>
       </div>
+
       <div className="tip-selection">
         <h4>Select a Tip</h4>
         {[5, 10, 15].map((amount) => (
@@ -152,20 +176,23 @@ export default function PaymentPage() {
           </button>
         ))}
       </div>
+
       <div className="payment-toggle">
         <button onClick={togglePaymentForm} className="toggle-btn">
           {showStripeForm ? "Use Quick Pay" : "Use Stripe Checkout"}
         </button>
       </div>
-      
-      {stripe ? (
-        showStripeForm ? (
-          <CheckoutForm />
-        ) : (
-          <div className="quick-pay">
-            <GooglePayButton amount={totalAmount / 100} />
-          </div>
-        )
+
+      {clientSecret ? (
+        <Elements stripe={stripePromise} options={options}>
+          {showStripeForm ? (
+            <CheckoutForm />
+          ) : (
+            <div className="quick-pay">
+              <GooglePayButton amount={totalAmount / 100} />
+            </div>
+          )}
+        </Elements>
       ) : (
         <div>Loading payment form...</div>
       )}

@@ -7,7 +7,7 @@ import TablePage from "./pages/TablePage";
 import PaymentPage from "./receiptScreen/PaymentPage";
 import CompletePage from "./receiptScreen/CompletePage";
 
-const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
+const stripePromise = loadStripe("pk_live_51RMFN4ITADYq5tc3p121uRgW9h4o4fkuUUEeEzgHtUhTougOlZy0hv0PNcbZ0onbyaIkTWv3K60qrAHYjrt9t7pm00OaYNE9Ux");
 
 function App() {
   const [clientSecret, setClientSecret] = useState("");

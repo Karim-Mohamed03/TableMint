@@ -122,23 +122,46 @@ export default function PaymentPage() {
   const totalAmount = baseAmount + tip * 100; // Convert tip to cents
 
   useEffect(() => {
-    fetch("https://test-app-fawn-phi.vercel.app/api/payments/create-payment-intent", {
+    // For a backend that's deployed separately from Vercel
+    const apiUrl = 'https://test-app-fawn-phi.vercel.app/api/payments/create-payment-intent';
+      
+    fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ items: [{ amount: totalAmount }] }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        // Check if the response is ok before trying to parse JSON
+        if (!res.ok) {
+          throw new Error(`Server responded with status: ${res.status}`);
+        }
+        return res.text().then(text => {
+          // Check if the response is empty
+          if (!text) {
+            throw new Error('Empty response received from server');
+          }
+          // Try to parse the text as JSON
+          try {
+            return JSON.parse(text);
+          } catch (err) {
+            console.error('Failed to parse response as JSON:', text);
+            throw new Error('Invalid JSON response from server');
+          }
+        });
+      })
       .then((data) => {
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
         } else {
-          console.error("No client secret returned");
+          console.error("No client secret returned:", data);
         }
       })
       .catch((err) => {
         console.error("Error fetching client secret:", err);
+        // Set up a mock client secret for demo purposes
+        setClientSecret("demo_client_secret_for_stripe_elements");
       });
   }, [totalAmount]);
 
@@ -150,7 +173,15 @@ export default function PaymentPage() {
     setShowStripeForm(!showStripeForm);
   };
 
-  const options = { clientSecret };
+  // Create a function to determine if we're using a mock client secret
+  const isMockSecret = (secret) => secret === "demo_client_secret_for_stripe_elements";
+  
+  // Configure Stripe Elements options based on whether we have a real or mock secret
+  const options = clientSecret ? (
+    isMockSecret(clientSecret) 
+      ? { mode: 'payment', currency: 'gbp', amount: totalAmount } 
+      : { clientSecret }
+  ) : {};
 
   return (
     <div className="payment-container">
@@ -185,7 +216,14 @@ export default function PaymentPage() {
       {clientSecret ? (
         <Elements stripe={stripePromise} options={options}>
           {showStripeForm ? (
-            <CheckoutForm />
+            isMockSecret(clientSecret) ? (
+              <div className="mock-payment-notice">
+                <p>Payment form in demo mode - backend connection not available</p>
+                <CheckoutForm />
+              </div>
+            ) : (
+              <CheckoutForm />
+            )
           ) : (
             <div className="quick-pay">
               <GooglePayButton amount={totalAmount / 100} />

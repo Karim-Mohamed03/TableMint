@@ -49,7 +49,7 @@ class POSService:
         Returns:
             Dict: Order details from the POS system.
         """
-        return self.adapter.retrieve_order(order_id)
+        return self.adapter.retrieve(order_id)
         
     def search_orders(self, **kwargs) -> Dict[str, Any]:
         """

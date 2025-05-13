@@ -147,7 +147,7 @@ class SquareAdapter(POSAdapter):
             }
             
     def search(self, **kwargs) -> Dict[str, Any]:
-        
+    
         try:
             # Extract parameters from kwargs
             location_ids = kwargs.get('location_ids', [self.location_id])
@@ -155,27 +155,40 @@ class SquareAdapter(POSAdapter):
             closed_at_end = kwargs.get('closed_at_end')
             states = kwargs.get('states')
             customer_ids = kwargs.get('customer_ids')
-            sort_field = kwargs.get('sort_field', 'CLOSED_AT')
+            sort_field = kwargs.get('sort_field')
             sort_order = kwargs.get('sort_order', 'DESC')
             limit = kwargs.get('limit', 20)
             cursor = kwargs.get('cursor')
             return_entries = kwargs.get('return_entries', True)
             filter_source_names = kwargs.get('filter_source_names')
             
+            # Set default sort field based on states
+            # If states contains only OPEN, use CREATED_AT
+            # If states contains COMPLETED or CANCELED, use CLOSED_AT
+            # If sort_field is explicitly provided, use that instead
+            if not sort_field:
+                if states and all(state in ['COMPLETED', 'CANCELED'] for state in states):
+                    sort_field = 'CLOSED_AT'
+                else:
+                    sort_field = 'CREATED_AT'
+                
             # Build the filter and sort query
-            query: Dict[str, Any] = {"filter": {}, "sort": {"sort_field": sort_field, "sort_order": sort_order}}
+            query = {"filter": {}, "sort": {"sort_field": sort_field, "sort_order": sort_order}}
 
+            # Add date_time_filter if start/end dates are provided
             if closed_at_start or closed_at_end:
-                date_filter: Dict[str, Any] = {"closed_at": {}}
+                date_time_filter = {"closed_at": {}}
                 if closed_at_start:
-                    date_filter["closed_at"]["start_at"] = closed_at_start
+                    date_time_filter["closed_at"]["start_at"] = closed_at_start
                 if closed_at_end:
-                    date_filter["closed_at"]["end_at"] = closed_at_end
-                query["filter"]["date_time_filter"] = date_filter
+                    date_time_filter["closed_at"]["end_at"] = closed_at_end
+                query["filter"]["date_time_filter"] = date_time_filter
 
+            # Add state filter if states are provided
             if states:
                 query["filter"]["state_filter"] = {"states": states}
 
+            # Add customer filter if customer IDs are provided
             if customer_ids:
                 query["filter"]["customer_filter"] = {"customer_ids": customer_ids}
                 
@@ -183,42 +196,66 @@ class SquareAdapter(POSAdapter):
             if filter_source_names:
                 query["filter"]["source_filter"] = {"source_names": filter_source_names}
 
-            # Construct request body
-            search_body: Dict[str, Any] = {
+            # Construct complete request body
+            search_body = {
                 "location_ids": location_ids,
                 "query": query,
                 "limit": limit,
                 "return_entries": return_entries
             }
+            
+            # Add cursor for pagination if provided
             if cursor:
                 search_body["cursor"] = cursor
 
+            # Call the Square Orders API search method
             result = self.client.orders.search(**search_body)
-            # Prepare JSON-serializable response
-            response: Dict[str, Any] = {"success": True}
-            if return_entries and hasattr(result, 'order_entries'):
+            
+            # Handle different result structures depending on what was requested
+            response = {"success": True}
+            
+            # Check for errors first
+            if hasattr(result, 'errors') and result.errors:
+                return {
+                    "success": False,
+                    "error": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors]
+                }
+                
+            # Extract the appropriate data based on the response structure
+            if hasattr(result, 'body'):
+                # If response has a body attribute containing the results
+                if return_entries and 'order_entries' in result.body:
+                    response["order_entries"] = result.body['order_entries']
+                elif not return_entries and 'orders' in result.body:
+                    response["orders"] = result.body['orders']
+                
+                # Add cursor for pagination if present
+                if 'cursor' in result.body:
+                    response["cursor"] = result.body['cursor']
+                    
+            elif hasattr(result, 'order_entries') and return_entries:
+                # Direct access to order_entries
                 response["order_entries"] = [
                     entry.dict() if hasattr(entry, 'dict') else entry
                     for entry in result.order_entries
                 ]
-            if not return_entries and hasattr(result, 'orders'):
+            elif hasattr(result, 'orders') and not return_entries:
+                # Direct access to orders
                 response["orders"] = [
                     order.dict() if hasattr(order, 'dict') else order
                     for order in result.orders
                 ]
+                
+            # Add cursor if available directly on the result
             if hasattr(result, 'cursor') and result.cursor:
                 response["cursor"] = result.cursor
-            if hasattr(result, 'errors') and result.errors:
-                response["errors"] = [
-                    error.dict() if hasattr(error, 'dict') else error
-                    for error in result.errors
-                ]
+                
             return response
 
         except Exception as e:
             return {
                 "success": False,
-                "errors": str(e)
+                "error": str(e)
             }
             
     def add_item_to_order(self, order_id: str, item_data: Dict[str, Any]) -> Dict[str, Any]:

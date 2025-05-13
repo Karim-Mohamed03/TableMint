@@ -1,184 +1,589 @@
-/* PaymentPage.css */
+/* Apple-inspired payment page styling */
+:root {
+  --primary-color: #0071e3;
+  --text-color: #1d1d1f;
+  --secondary-text: #86868b;
+  --border-color: #d2d2d7;
+  --background-color: #f5f5f7;
+  --card-background: #ffffff;
+  --success-color: #34c759;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
 .payment-container {
-    max-width: 450px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  }
-  
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  
-  .bill-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 10px;
-  }
-  
-  .bill-table th {
-    text-align: left;
-    padding-bottom: 10px;
-    font-weight: 500;
-    font-size: 14px;
-  }
-  
-  .bill-table td {
-    padding-bottom: 10px;
-    font-size: 14px;
-  }
-  
-  .total-row {
-    font-weight: bold;
-    border-top: 1px solid #eaeaea;
-    padding-top: 10px;
-  }
-  
-  .split-bill-btn, .pay-now-btn {
-    background-color: #6366f1;
-    color: white;
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    margin: 15px 0;
-  }
-  
-  .apple-pay-btn {
-    background-color: #000;
-    color: white;
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    margin: 15px 0;
-  }
-  
-  .tips-section {
-    text-align: center;
-    margin: 20px 0;
-  }
-  
-  .tips-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 15px 0;
-  }
-  
-  .tip-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: none;
-    background-color: #e5e7eb;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .tip-btn.active {
-    background-color: #6366f1;
-    color: white;
-  }
-  
-  .card-section {
-    background-color: #e5e7eb;
-    padding: 20px;
-    border-radius: 8px;
-    margin: 15px 0;
-    height: auto;
-    min-height: 200px;
-    position: relative;
-  }
-  
-  .card-input-group {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  
-  .card-input {
-    border: none;
-    border-bottom: 1px solid #9ca3af;
-    background: transparent;
-    padding: 5px 0;
-    width: 100%;
-    font-size: 16px;
-    letter-spacing: 0.5px;
-    transition: border-color 0.3s;
-  }
-  
-  .card-input:focus {
-    outline: none;
-    border-bottom: 2px solid #6366f1;
-  }
-  
-  .card-input-label {
-    font-size: 12px;
-    color: #6b7280;
-    display: block;
-    margin-bottom: 5px;
-  }
-  
-  .total-amount {
-    font-weight: 500;
-    margin: 15px 0;
-  }
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  background-color: var(--card-background);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+}
 
-  .card-types {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 15px;
-  }
-  
-  .card-type-icon {
-    width: 40px;
-    height: 25px;
-    object-fit: contain;
-    opacity: 0.7;
-  }
+.payment-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
 
-  /* Add these styles to your PaymentPage.css file */
+.payment-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  text-align: left;
+}
 
-/* Google Pay button container */
-.google-pay-wrapper {
+.subtitle {
+  font-size: 16px;
+  color: var(--secondary-text);
+  margin: 0;
+  text-align: left;
+}
+
+.bill-summary {
+  background-color: var(--background-color);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.bill-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  color: var(--secondary-text);
+}
+
+.total {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Split bill section */
+.split-bill-section {
+  margin-bottom: 24px;
+}
+
+.split-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  margin-bottom: 10px;
+  padding: 12px;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--primary-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-/* Style the Google Pay button */
-.google-pay-button {
-  height: 40px !important;
-  width: 100% !important;
-  border-radius: 6px !important;
+.split-button:hover {
+  background-color: rgba(0, 113, 227, 0.05);
+  border-color: var(--primary-color);
 }
 
-/* Adjust payment methods container for multiple buttons */
-.payment-methods {
+.split-button svg {
+  stroke: var(--primary-color);
+}
+
+.tip-section {
+  margin-bottom: 32px;
+}
+
+/* Bill Split Wheel Styling */
+.bill-split-wheel-container {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  /* margin: 16px 0 4px; */
   width: 100%;
-  margin-bottom: 15px;
 }
 
-/* Message for unavailable Google Pay */
-.google-pay-unavailable {
+.visualization-wheel {
+  background-color: transparent;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
   width: 100%;
-  padding: 10px;
-  text-align: center;
-  background-color: #f2f2f2;
-  border-radius: 6px;
-  color: #666;
-  margin-bottom: 10px;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* SVG text styling */
+.wheel-total-label {
+  font-size: 12px;
+  fill: var(--secondary-text);
+  font-weight: 500;
+}
+
+.wheel-total-amount {
+  font-size: 40px;
+  fill: var(--text-color);
+  font-weight: 600;
+}
+
+/* Legend styling */
+.wheel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-amount {
+  font-weight: 600;
+}
+
+.legend-percent {
+  color: var(--secondary-text);
+}
+
+/* Animation for wheel */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bill-split-wheel-container svg {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Modal backdrop and modal fixed styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+}
+
+.modal-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.split-bill-modal {
+  background-color: var(--card-background);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  transform: translateY(100%);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.split-bill-modal.open {
+  transform: translateY(0);
+}
+
+.tip-label {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.tip-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.tip-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tip-btn:hover {
+  border-color: var(--primary-color);
+}
+
+.tip-btn.active {
+  background-color: rgba(0, 113, 227, 0.1);
+  border-color: var(--primary-color);
+}
+
+.tip-percent {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-color);
+}
+
+.tip-amount {
+  margin-top: 4px;
   font-size: 14px;
+  color: var(--secondary-text);
+}
+
+.payment-section {
+  margin-top: 40px;
+}
+
+#payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+#payment-element {
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.pay-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 12px;
+}
+
+.pay-button:hover {
+  background-color: #0062c2;
+}
+
+.pay-button:disabled {
+  background-color: #b0b0b6;
+  cursor: not-allowed;
+}
+
+.payment-message {
+  color: #ff3b30;
+  margin-top: 12px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--secondary-text);
+}
+
+.loading-spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Split Bill Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+}
+
+.modal-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.split-bill-modal {
+  background-color: var(--card-background);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  transform: translateY(100%);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.split-bill-modal.open {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  /* border-bottom: 1px solid var(--border-color); */
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--secondary-text);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: var(--background-color);
+}
+
+.modal-body {
+  margin-bottom: 24px;
+}
+
+.option-toggle {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.option-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--secondary-text);
+  position: relative;
+  z-index: 1002;
+}
+
+.option-btn.active {
+  background-color: rgba(0, 113, 227, 0.1);
+  color: var(--primary-color);
+}
+
+.equal-split, .custom-amount {
+  background-color: var(--background-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--secondary-text);
+}
+
+.number-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--card-background);
+}
+
+.number-btn {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-color);
+  transition: background-color 0.2s ease;
+  position: relative;
+  z-index: 1002;
+}
+
+.number-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.number-input input {
+  flex: 1;
+  border: none;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 10px 0;
+  width: 50px;
+  -moz-appearance: textfield;
+}
+
+.number-input input::-webkit-outer-spin-button,
+.number-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.amount-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--card-background);
+  padding: 0 12px;
+}
+
+.currency {
+  color: var(--secondary-text);
+  font-size: 16px;
+}
+
+.amount-input input {
+  flex: 1;
+  border: none;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 10px;
+}
+
+.amount-per-person, .remaining-amount {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.amount {
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--text-color);
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-footer button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 1002;
+}
+
+.secondary-button {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+.secondary-button:hover {
+  background-color: var(--background-color);
+}
+
+.primary-button {
+  background-color: var(--primary-color);
+  border: none;
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: #0062c2;
 }

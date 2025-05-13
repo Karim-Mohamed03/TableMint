@@ -11,4 +11,6 @@ dependencies = [
     "pillow==10.1.0",
     "python-dotenv==1.0.0",
     "qrcode==7.4.2",
+    "requests>=2.32.3",
+    "squareup>=42.1.0.20250416",
 ]

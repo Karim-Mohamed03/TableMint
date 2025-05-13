@@ -2,7 +2,6 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 import json
-
 from pos.pos_service import POSService
 
 @api_view(['POST'])
@@ -19,7 +18,7 @@ def create(request):
                 'success': False,
                 'error': 'At least one line item is required'
             }, status=400)
-        
+            
         # Initialize the POS service
         pos_service = POSService()
         
@@ -32,9 +31,14 @@ def create(request):
                 'order': result.get('order', {})
             })
         else:
+            # Handle the error field which could be a string or list
+            error = result.get('error')
+            if error is None:
+                error = result.get('errors', 'Unknown error')
+                
             return JsonResponse({
                 'success': False,
-                'error': result.get('errors', 'Unknown error')
+                'error': error
             }, status=400)
             
     except json.JSONDecodeError:
@@ -42,6 +46,7 @@ def create(request):
             'success': False,
             'error': 'Invalid JSON in request body'
         }, status=400)
+        
     except Exception as e:
         return JsonResponse({
             'success': False,

@@ -86,16 +86,48 @@ class SquareAdapter(POSAdapter):
                 order=order_payload
             )
 
-            # Check for errors
-            if result.errors:
+            # Check if the result has errors attribute and it contains errors
+            if hasattr(result, 'errors') and result.errors:
                 return {
                     "success": False,
                     "error": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors]
                 }
 
+            # Check the response structure and extract the order data
+            if hasattr(result, 'order'):
+                # If the response has an 'order' attribute directly
+                order_obj = result.order
+            elif hasattr(result, 'body') and hasattr(result.body, 'order'):
+                # If the response has a 'body' attribute that contains an 'order'
+                order_obj = result.body.order
+            else:
+                # If we can't find the order in the expected places, return the whole result
+                return {
+                    "success": True,
+                    "order": result
+                }
+
+            # Convert the order object to a dictionary if needed
+            if hasattr(order_obj, 'dict'):
+                # If the order object has a dict method, use it
+                order_dict = order_obj.dict()
+            elif isinstance(order_obj, dict):
+                # If it's already a dictionary
+                order_dict = order_obj
+            else:
+                # Last resort - try to convert to dictionary using __dict__
+                try:
+                    order_dict = vars(order_obj)
+                except:
+                    # If all else fails, return the original object and let the view handle it
+                    return {
+                        "success": True,
+                        "order": order_obj
+                    }
+
             return {
                 "success": True,
-                "order": result.order
+                "order": order_dict
             }
 
         except Exception as e:

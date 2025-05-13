@@ -1,4 +1,5 @@
 # Make services a proper package
-from .square_service import SquarePaymentService
+# Using the adapter pattern for POS systems now
+from pos.pos_service import POSService
 
-__all__ = ['SquarePaymentService']
+__all__ = ['POSService']

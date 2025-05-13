@@ -5,8 +5,9 @@ from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
 import json
+import os
 
-from .square_service import SquarePaymentService
+from pos.pos_service import POSService
 from .models import Payment
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -51,28 +52,27 @@ class CreatePaymentView(View):
                 note=note,
             )
             
-            # Initialize Square service and make the payment
-            square_service = SquarePaymentService()
-            payment_result = square_service.create(
-                source_id=source_id,
-                amount=amount,
-                currency=currency,
-                idempotency_key=idempotency_key,
-                customer_id=customer_id,
-                location_id=location_id,
-                reference_id=reference_id,
-                note=note,
-                app_fee_amount=app_fee_amount,
-                autocomplete=autocomplete
-            )
+            # Initialize POS service and make the payment
+            pos_service = POSService()
+            payment_result = pos_service.process_payment({
+                'source_id': source_id,
+                'amount': amount,
+                'currency': currency,
+                'idempotency_key': idempotency_key,
+                'customer_id': customer_id,
+                'location_id': location_id,
+                'reference_id': reference_id,
+                'note': note,
+                'app_fee_amount': app_fee_amount,
+                'autocomplete': autocomplete
+            })
             
-            # The payment_result should already have the correct structure with a 'payment' key
-            # as returned by the Square API
-            
-            # Update our payment record with Square payment ID and response data
-            payment.square_payment_id = payment_result['payment']['id']
-            payment.status = payment_result['payment']['status'].lower()
-            payment.response_data = payment_result  # Store full response for later use
+            # Update our payment record with payment ID and response data
+            if payment_result.get('success', False) and 'payment' in payment_result:
+                payment_data = payment_result['payment']
+                payment.square_payment_id = payment_data.get('id', '')
+                payment.status = payment_data.get('status', '').lower()
+                payment.response_data = payment_result  # Store full response for later use
             payment.save()
             
             return JsonResponse({
@@ -110,9 +110,9 @@ class SearchOrdersView(View):
             cursor = data.get('cursor')
             return_entries = data.get('return_entries', True)
             
-            # Initialize Square service and search for orders
-            square_service = SquarePaymentService()
-            result = square_service.search_orders(
+            # Initialize POS service and search for orders
+            pos_service = POSService()
+            result = pos_service.search_orders(
                 location_ids=location_ids,
                 closed_at_start=closed_at_start,
                 closed_at_end=closed_at_end,

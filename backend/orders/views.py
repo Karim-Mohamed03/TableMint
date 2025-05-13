@@ -2,31 +2,37 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .square_client import square_client, location_id, fetch_all_orders, fetch_order_by_id
+import os
+import json
+
+from pos.pos_service import POSService
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_table_order(request, table_id):
-    # You'll need logic to map table_id to Square's order or ticket reference
+    # Initialize the POS service
+    pos_service = POSService()
+    
     try:
-        result = square_client.orders.search_orders(
-            body={
-                "location_ids": [location_id],
-                "query": {
-                    "filter": {
-                        "source_filter": {
-                            "source_names": [f"table_{table_id}"]
-                        }
-                    }
-                }
-            }
+        # Get location ID from environment or use default
+        location_id = os.environ.get('SQUARE_LOCATION_ID')
+        
+        # Search for orders related to this table
+        result = pos_service.search_orders(
+            location_ids=[location_id],
+            filter_source_names=[f"table_{table_id}"]
         )
 
-        if result.is_success():
-            orders = result.body.get("orders", [])
-            return JsonResponse({"orders": orders})
+        if result.get('success', False):
+            # Return orders based on the adapter response format
+            if 'orders' in result:
+                return JsonResponse({"orders": result['orders']})
+            elif 'order_entries' in result:
+                return JsonResponse({"orders": result['order_entries']})
+            else:
+                return JsonResponse({"orders": []})
         else:
-            return JsonResponse({"error": result.errors}, status=400)
+            return JsonResponse({"error": result.get('errors', 'Unknown error')}, status=400)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -34,49 +40,117 @@ def get_table_order(request, table_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def list_all_orders(request):
-    """Endpoint to list all orders from Square"""
-    result = fetch_all_orders()
+    """Endpoint to list all orders from the POS system"""
+    # Initialize the POS service
+    pos_service = POSService()
     
-    if result['success']:
-        return JsonResponse({"orders": result['orders']})
-    else:
-        return JsonResponse({"error": result['errors']}, status=400)
+    try:
+        # Use the new get_all_orders method which doesn't require location_id
+        result = pos_service.get_all_orders()
+        
+        if result.get('success', False):
+            # Return orders based on the adapter response format
+            if 'orders' in result:
+                return JsonResponse({"orders": result['orders']})
+            elif 'order_entries' in result:
+                return JsonResponse({"orders": result['order_entries']})
+            else:
+                return JsonResponse({"orders": []})
+        else:
+            return JsonResponse({"error": result.get('errors', 'Unknown error')}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_order_details(request, order_id):
     """Endpoint to get details of a specific order"""
-    result = fetch_order_by_id(order_id)
+    # Initialize the POS service
+    pos_service = POSService()
     
-    if result['success']:
-        return JsonResponse({"order": result['order']})
+    result = pos_service.retrieve_order(order_id)
+    
+    if result.get('success', False):
+        return JsonResponse({"order": result.get('order', {})})
     else:
-        return JsonResponse({"error": result['errors']}, status=400)
+        return JsonResponse({"error": result.get('errors', 'Unknown error')}, status=400)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def test_square_connection(request):
-    """Endpoint to test if the Square API connection is working"""
+def test_pos_connection(request):
+    """Endpoint to test if the POS API connection is working and list available locations"""
     try:
-        # Try to list locations as a simple API test
-        result = square_client.locations.list_locations()
+        # Get the POS type from the request or environment
+        pos_type = request.GET.get('pos_type', os.environ.get('POS_TYPE', 'square'))
         
-        if result.is_success():
-            locations = result.body.get('locations', [])
+        # Initialize the POS service with the specified type
+        pos_service = POSService(pos_type=pos_type)
+        
+        # Test authentication
+        is_authenticated = pos_service.is_authenticated()
+        
+        if is_authenticated:
+            # Get locations using the new list_locations method
+            locations_result = pos_service.list_locations()
+            
             return JsonResponse({
                 "success": True,
-                "message": "Successfully connected to Square API",
-                "locations": locations
+                "message": f"Successfully connected to {pos_type.capitalize()} API",
+                "pos_type": pos_type,
+                "locations": locations_result.get('locations', [])
             })
         else:
             return JsonResponse({
                 "success": False,
-                "message": "Failed to connect to Square API",
-                "errors": result.errors
+                "message": f"Failed to connect to {pos_type.capitalize()} API",
+                "pos_type": pos_type
             }, status=400)
     except Exception as e:
         return JsonResponse({
             "success": False,
-            "message": "Error connecting to Square API",
+            "message": "Error connecting to POS API",
             "error": str(e)
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_order(request):
+    """Endpoint to create a new order using the POS system"""
+    try:
+        # Parse the request body
+        data = json.loads(request.body)
+        
+        # Validate required fields
+        if 'line_items' not in data or not data['line_items']:
+            return JsonResponse({
+                'success': False,
+                'error': 'At least one line item is required'
+            }, status=400)
+        
+        # Initialize the POS service
+        pos_service = POSService()
+        
+        # Create the order using the create method
+        result = pos_service.adapter.create(data)
+        
+        if result.get('success', False):
+            return JsonResponse({
+                'success': True,
+                'order': result.get('order', {})
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result.get('errors', 'Unknown error')
+            }, status=400)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         }, status=500)

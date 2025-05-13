@@ -50,10 +50,10 @@ class SquareAdapter(POSAdapter):
     def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a new order in Square.
-        
+
         Args:
             order_data: Dictionary containing order details.
-            
+
         Returns:
             Dict: Response from Square with order details.
         """
@@ -63,7 +63,7 @@ class SquareAdapter(POSAdapter):
             if not line_items:
                 return {
                     "success": False,
-                    "errors": "At least one line item is required."
+                    "error": "At least one line item is required."
                 }
 
             # Build idempotency_key
@@ -85,25 +85,27 @@ class SquareAdapter(POSAdapter):
                 idempotency_key=idempotency_key,
                 order=order_payload
             )
-            
-            if result.is_success():
-                return {
-                    "success": True,
-                    "order": result.body.get("order")
-                }
-            else:
+
+            # Check for errors
+            if result.errors:
                 return {
                     "success": False,
-                    "errors": result.errors
+                    "error": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors]
                 }
-                
+
+            return {
+                "success": True,
+                "order": result.order
+            }
+
         except Exception as e:
             return {
                 "success": False,
-                "errors": str(e)
+                "error": str(e)
             }
+
             
-    def retrieve_order(self, order_id: str) -> Dict[str, Any]:
+    def retrieve(self, order_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific order from Square.
         

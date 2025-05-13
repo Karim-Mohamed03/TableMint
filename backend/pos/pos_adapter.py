@@ -22,7 +22,7 @@ class POSAdapter(ABC):
         pass
         
     @abstractmethod
-    def create_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a new order in the POS system.
         
@@ -35,7 +35,7 @@ class POSAdapter(ABC):
         pass
         
     @abstractmethod
-    def retrieve_order(self, order_id: str) -> Dict[str, Any]:
+    def retrieve(self, order_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific order from the POS system.
         

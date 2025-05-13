@@ -1,30 +1,49 @@
-from django.shortcuts import render
-
-# Create your views here.
 from django.http import JsonResponse
-from .square_client import square_client, location_id
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+import json
 
-def get_table_order(request, table_id):
-    # You’ll need logic to map table_id to Square's order or ticket reference
+from pos.pos_service import POSService
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create(request):
+    """Endpoint to create a new order using the POS system"""
     try:
-        result = square_client.orders.search_orders(
-            body={
-                "location_ids": [location_id],
-                "query": {
-                    "filter": {
-                        "source_filter": {
-                            "source_names": [f"table_{table_id}"]
-                        }
-                    }
-                }
-            }
-        )
-
-        if result.is_success():
-            orders = result.body.get("orders", [])
-            return JsonResponse({"orders": orders})
+        # Parse the request body
+        data = json.loads(request.body)
+        
+        # Validate required fields
+        if 'line_items' not in data or not data['line_items']:
+            return JsonResponse({
+                'success': False,
+                'error': 'At least one line item is required'
+            }, status=400)
+        
+        # Initialize the POS service
+        pos_service = POSService()
+        
+        # Create the order using the create method
+        result = pos_service.create(data)
+        
+        if result.get('success', False):
+            return JsonResponse({
+                'success': True,
+                'order': result.get('order', {})
+            })
         else:
-            return JsonResponse({"error": result.errors}, status=400)
-
+            return JsonResponse({
+                'success': False,
+                'error': result.get('errors', 'Unknown error')
+            }, status=400)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -51,7 +51,7 @@ class POSService:
         """
         return self.adapter.retrieve(order_id)
         
-    def search_orders(self, **kwargs) -> Dict[str, Any]:
+    def search(self, **kwargs) -> Dict[str, Any]:
         """
         Search for orders in the POS system based on provided criteria.
         
@@ -61,7 +61,7 @@ class POSService:
         Returns:
             Dict: Search results containing matching orders.
         """
-        return self.adapter.search_orders(**kwargs)
+        return self.adapter.search(**kwargs)
         
     def add_item_to_order(self, order_id: str, item_data: Dict[str, Any]) -> Dict[str, Any]:
         """

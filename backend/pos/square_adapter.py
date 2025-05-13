@@ -18,13 +18,6 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 class SquareAdapter(POSAdapter):
-    """
-    Square POS system adapter implementation.
-    
-    This adapter implements the POSAdapter interface for the Square payment system,
-    providing concrete implementations for all required operations.
-    """
-    
     def __init__(self):
         """Initialize Square client with access token from .env file"""
         self.client = Square(
@@ -48,15 +41,7 @@ class SquareAdapter(POSAdapter):
             return False
             
     def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a new order in Square.
 
-        Args:
-            order_data: Dictionary containing order details.
-
-        Returns:
-            Dict: Response from Square with order details.
-        """
         try:
             # Ensure we have at least one line item
             line_items = order_data.get("line_items")
@@ -138,15 +123,7 @@ class SquareAdapter(POSAdapter):
 
             
     def retrieve(self, order_id: str) -> Dict[str, Any]:
-        """
-        Retrieve a specific order from Square.
-        
-        Args:
-            order_id: The ID of the order to retrieve.
-            
-        Returns:
-            Dict: Order details from Square.
-        """
+
         try:
             result = self.client.orders.retrieve_order(
                 order_id=order_id
@@ -169,27 +146,8 @@ class SquareAdapter(POSAdapter):
                 "errors": str(e)
             }
             
-    def search_orders(self, **kwargs) -> Dict[str, Any]:
-        """
-        Search for orders in Square based on provided criteria.
+    def search(self, **kwargs) -> Dict[str, Any]:
         
-        Args:
-            **kwargs: Search parameters for Square Orders API.
-                location_ids: List of Square location IDs to filter by.
-                closed_at_start: ISO-8601 datetime string to filter orders closed after this time.
-                closed_at_end: ISO-8601 datetime string to filter orders closed before this time.
-                states: List of order state strings (e.g., ["COMPLETED"]).
-                customer_ids: List of Square customer IDs to filter by.
-                sort_field: Field to sort by (default: "CLOSED_AT").
-                sort_order: "ASC" or "DESC" (default: "DESC").
-                limit: Maximum number of records to return per page (1-1000).
-                cursor: Pagination cursor from a previous response.
-                return_entries: If True, returns "order_entries"; if False, returns "orders".
-                filter_source_names: List of source names to filter by (e.g., ["table_1"]).
-            
-        Returns:
-            Dict: Search results containing matching orders.
-        """
         try:
             # Extract parameters from kwargs
             location_ids = kwargs.get('location_ids', [self.location_id])

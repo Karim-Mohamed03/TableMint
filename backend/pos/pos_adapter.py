@@ -48,7 +48,7 @@ class POSAdapter(ABC):
         pass
         
     @abstractmethod
-    def search_orders(self, **kwargs) -> Dict[str, Any]:
+    def search(self, **kwargs) -> Dict[str, Any]:
         """
         Search for orders in the POS system based on provided criteria.
         

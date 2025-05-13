@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import get_table_order
+from .views import create
 
 urlpatterns = [
-    path('table/<int:table_id>/order/', get_table_order, name='table_order'),
+    path('create/', create, name='create'),
 ]

@@ -27,7 +27,7 @@ class POSService:
         else:
             self.adapter = POSFactory.create_adapter(pos_type)
             
-    def create_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a new order in the POS system.
         
@@ -37,9 +37,9 @@ class POSService:
         Returns:
             Dict: Response from the POS system with order details.
         """
-        return self.adapter.create_order(order_data)
+        return self.adapter.create(order_data)
         
-    def retrieve_order(self, order_id: str) -> Dict[str, Any]:
+    def retrieve(self, order_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific order from the POS system.
         

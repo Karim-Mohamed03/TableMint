@@ -3,9 +3,9 @@ import stripe
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+import os
 
-# This is your test secret API key.
-stripe.api_key = 'sk_test_51MNLkFEACKuyUvsyuJi4BZW7FuHrtKBFeJjrashJ88baTmaB2c0u1svIM7Av11La7TUTRMz74fxQ2eiGJn6kDELJ00YqDLNMO6'
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
 def calculate_order_amount(items):
     # Extract amount from the first item or use a default value

@@ -11,6 +11,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showItemsModal, setShowItemsModal] = useState(false);
   const baseAmount = 3500; // in cents (e.g., $35.00)
   const [userPaymentAmount, setUserPaymentAmount] = useState(null);
   const [splitDetails, setSplitDetails] = useState(null);
@@ -38,6 +39,10 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   
   const toggleTipModal = () => {
     setShowTipModal(!showTipModal);
+  };
+  
+  const toggleItemsModal = () => {
+    setShowItemsModal(!showItemsModal);
   };
   
   const handleSplitConfirm = (splitInfo) => {
@@ -83,6 +88,11 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   const handlePaySpecificAmount = async () => {
     // Show the split bill modal
     toggleSplitModal();
+  };
+  
+  const handlePayForMyItems = async () => {
+    // Show the pay for items modal
+    toggleItemsModal();
   };
   
   const options = clientSecret ? { clientSecret } : {};
@@ -154,11 +164,27 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
               </svg>
             </div>
             <div className="option-text">
-              <h3>Pay specific amount</h3>
+              <h3>Let's split the bill!</h3>
               <p>Split the bill with others</p>
             </div>
             <div className="option-amount">
               {splitDetails ? `$${(userPaymentAmount / 100).toFixed(2)}` : 'Custom'}
+            </div>
+          </button>
+          
+          <button className="payment-option items-amount" onClick={handlePayForMyItems}>
+            <div className="option-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="option-text">
+              <h3>Pay for my items</h3>
+              <p>Only pay for what you ordered</p>
+            </div>
+            <div className="option-amount">
+              Select items
             </div>
           </button>
         </div>
@@ -193,6 +219,16 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         baseAmount={baseAmount}
         onConfirm={handleTipConfirm}
       />
+      
+      {/* Items selection modal */}
+      <div className={`items-modal-overlay ${showItemsModal ? 'active' : ''}`} onClick={toggleItemsModal}>
+        <div className="items-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <div className="modal-drag-handle"></div>
+          </div>
+          {/* Content will be added later */}
+        </div>
+      </div>
       
       <style jsx>{`
         .split-row {
@@ -268,6 +304,55 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           align-items: center;
           justify-content: center;
           height: 50vh;
+        }
+        
+        /* Items Modal Styles */
+        .items-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          z-index: 1000;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+        
+        .items-modal-overlay.active {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        
+        .items-modal {
+          background: white;
+          width: 100%;
+          max-width: 500px;
+          border-radius: 20px 20px 0 0;
+          padding: 16px;
+          transform: translateY(100%);
+          transition: transform 0.3s ease;
+        }
+        
+        .items-modal-overlay.active .items-modal {
+          transform: translateY(0);
+        }
+        
+        .modal-header {
+          display: flex;
+          justify-content: center;
+          padding-bottom: 16px;
+        }
+        
+        .modal-drag-handle {
+          width: 40px;
+          height: 5px;
+          background-color: #e0e0e0;
+          border-radius: 3px;
         }
       `}</style>
     </div>

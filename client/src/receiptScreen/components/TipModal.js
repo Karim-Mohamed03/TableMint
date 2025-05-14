@@ -12,9 +12,8 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
     }
   }, [isOpen, currentTip]);
   
-  // Predefined tip percentages
+  // Predefined tip percentages (removed 0% option)
   const tipPercentages = [
-    { value: 0, percent: "0%" },
     { value: 5, percent: "15%" },
     { value: 7, percent: "20%" },
     { value: 10, percent: "28%" }
@@ -38,6 +37,12 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
         setIsCustomTip(true);
       }
     }
+  };
+  
+  const handleNoTip = () => {
+    setSelectedTip(0);
+    setCustomTip("");
+    setIsCustomTip(false);
   };
   
   const handleConfirm = () => {
@@ -69,41 +74,62 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
           <h2>Add a tip</h2>
           <div style={{ width: 20 }}></div> {/* Empty div for balance */}
         </div>
+        <div>
+            <div className="tip-title">Say thanks with a tip</div>
+            <div className="tip-desc-label">This will be added to any discretionary service charge which goes directly to the restaurant team.</div>
+        </div>
         
         <div className="modal-body">
-          <div className="bill-amount-display">
+          {/* <div className="bill-amount-display">
             <div className="amount-label">Bill Amount</div>
             <div className="amount-value">${(baseAmount / 100).toFixed(2)}</div>
-          </div>
+          </div> */}
           
-          <div className="tip-options-grid">
-            {tipPercentages.map((option) => (
-              <button 
-                key={option.value} 
-                className={`tip-option ${selectedTip === option.value && !isCustomTip ? "active" : ""}`} 
-                onClick={() => handleTipSelect(option.value)}
-              >
-                <span className="tip-percent">{option.percent}</span>
-                <span className="tip-amount">${option.value.toFixed(2)}</span>
-              </button>
-            ))}
+          <div className="tip-options-container">
+            {/* Three tip options in a single row */}
+            <div className="tip-options-row">
+              {tipPercentages.map((option) => (
+                <button 
+                  key={option.value} 
+                  className={`tip-option ${selectedTip === option.value && !isCustomTip ? "active" : ""}`} 
+                  onClick={() => handleTipSelect(option.value)}
+                >
+                  <span className="tip-percent">{option.percent}</span>
+                  <span className="tip-amount">${option.value.toFixed(2)}</span>
+                </button>
+              ))}
+            </div>
             
-            <div className={`custom-tip-container ${isCustomTip ? "active" : ""}`}>
-              <div className="custom-tip-label">Custom</div>
-              <div className="custom-tip-input">
-                <span className="currency">$</span>
-                <input 
-                  type="text" 
-                  value={customTip} 
-                  onChange={handleCustomTipChange}
-                  placeholder="0.00"
-                  onClick={() => setIsCustomTip(true)}
-                />
+            {/* Custom amount and No tip in the second row */}
+            <div className="custom-no-tip-row">
+              <div className={`custom-tip-container ${isCustomTip ? "active" : ""}`}>
+                <div className="custom-tip-label">Custom</div>
+                <div className="custom-tip-input">
+                  <span className="currency">$</span>
+                  <input 
+                    type="text" 
+                    value={customTip} 
+                    onChange={handleCustomTipChange}
+                    placeholder="0.00"
+                    onClick={() => setIsCustomTip(true)}
+                  />
+                </div>
               </div>
+              
+              <button 
+                className={`no-tip-button ${selectedTip === 0 && !isCustomTip ? "active" : ""}`}
+                onClick={handleNoTip}
+              >
+                No tip
+              </button>
             </div>
           </div>
+
+          <div>
+            <div className="tip-summary">You're paying: ${((baseAmount / 100) + selectedTip).toFixed(2)} </div>
+          </div>
           
-          <div className="tip-summary">
+          {/* <div className="tip-summary">
             <div className="summary-row">
               <div className="summary-label">Tip amount</div>
               <div className="summary-value">${selectedTip.toFixed(2)}</div>
@@ -122,7 +148,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
                 ${((baseAmount / 100) + selectedTip).toFixed(2)}
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
         
         <div className="modal-footer">
@@ -187,6 +213,19 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
           flex-shrink: 0;
         }
         
+        .tip-title {
+          font-size: 30px;
+          font-weight: 600;
+          color: #1d1d1f;
+          margin-bottom: 4px;
+        }
+        
+        .tip-desc-label {
+          font-size: 14px;
+          color: #86868b;
+          margin-bottom: 16px;
+        }
+        
         .modal-header h2 {
           font-size: 18px;
           font-weight: 600;
@@ -206,34 +245,26 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
           padding-right: 5px;
         }
         
-        .bill-amount-display {
-          background-color: #f5f5f7;
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 24px;
-          text-align: center;
-        }
-        
-        .amount-label {
-          font-size: 14px;
-          color: #86868b;
-          margin-bottom: 4px;
-        }
-        
-        .amount-value {
-          font-size: 24px;
-          font-weight: 600;
-          color: #1d1d1f;
-        }
-        
-        .tip-options-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
+        .tip-options-container {
+          display: flex;
+          flex-direction: column;
           gap: 12px;
           margin-bottom: 24px;
         }
         
+        .tip-options-row {
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+        }
+        
+        .custom-no-tip-row {
+          display: flex;
+          gap: 12px;
+        }
+        
         .tip-option {
+          flex: 1;
           border: 1px solid #e0e0e0;
           border-radius: 12px;
           padding: 16px;
@@ -264,10 +295,10 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
         }
         
         .custom-tip-container {
+          flex: 1;
           border: 1px solid #e0e0e0;
           border-radius: 12px;
           padding: 16px;
-          grid-column: span 2;
           display: flex;
           flex-direction: column;
           background-color: #ffffff;
@@ -310,10 +341,33 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
           color: #1d1d1f;
         }
         
-        .tip-summary {
-          background-color: #f5f5f7;
+        .no-tip-button {
+          flex: 1;
+          border: 1px solid #e0e0e0;
           border-radius: 12px;
           padding: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #ffffff;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 16px;
+          font-weight: 600;
+          color: #1d1d1f;
+        }
+        
+        .no-tip-button.active {
+          border-color: #0071e3;
+          background-color: #f0f7ff;
+        }
+        
+        .tip-summary {
+          background-color: none;
+          border-radius: 12px;
+          padding: 16px;
+          font-size: 18px;
+          font-weight: 600;
         }
         
         .summary-row {
@@ -325,7 +379,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
         .summary-row.total {
           margin-top: 12px;
           padding-top: 12px;
-          border-top: 1px solid #e0e0e0;
+          
         }
         
         .summary-label {

@@ -39,7 +39,7 @@ class POSService:
         """
         return self.adapter.create(order_data)
         
-    def retrieve(self, order_id: str) -> Dict[str, Any]:
+    def get(self, order_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific order from the POS system.
         
@@ -49,7 +49,7 @@ class POSService:
         Returns:
             Dict: Order details from the POS system.
         """
-        return self.adapter.retrieve(order_id)
+        return self.adapter.get(order_id)
         
     def search(self, **kwargs) -> Dict[str, Any]:
         """

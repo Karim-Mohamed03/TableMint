@@ -122,29 +122,19 @@ class SquareAdapter(POSAdapter):
             }
 
             
-    def retrieve(self, order_id: str) -> Dict[str, Any]:
-
+    def get(self, order_id: str) -> Dict[str, Any]:
         try:
-            result = self.client.orders.retrieve_order(
+            result = self.client.orders.get(
                 order_id=order_id
             )
-            
-            if result.is_success():
-                return {
-                    "success": True,
-                    "order": result.body.get('order')
-                }
-            else:
-                return {
-                    "success": False,
-                    "errors": result.errors
-                }
-                
+            return result
         except Exception as e:
             return {
                 "success": False,
                 "errors": str(e)
             }
+
+    
             
     def search(self, **kwargs) -> Dict[str, Any]:
     

@@ -35,7 +35,7 @@ class POSAdapter(ABC):
         pass
         
     @abstractmethod
-    def retrieve(self, order_id: str) -> Dict[str, Any]:
+    def get(self, order_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific order from the POS system.
         

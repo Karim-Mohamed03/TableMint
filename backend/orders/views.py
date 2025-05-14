@@ -121,3 +121,119 @@ def search(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get(request, order_id):
+    """Endpoint to retrieve a specific order by ID using the POS system"""
+    try:
+        # Initialize the POS service
+        pos_service = POSService()
+        
+        # Get the order using the get method
+        result = pos_service.get(order_id=order_id)
+        
+        # Helper function to recursively convert objects to dictionaries
+        def convert_to_dict(obj):
+            if isinstance(obj, dict):
+                return {k: convert_to_dict(v) for k, v in obj.items()}
+            elif hasattr(obj, '__dict__'):
+                # Convert object to dict and filter out private attributes
+                obj_dict = {k: v for k, v in vars(obj).items() if not k.startswith('_')}
+                return {k: convert_to_dict(v) for k, v in obj_dict.items()}
+            elif isinstance(obj, list):
+                return [convert_to_dict(item) for item in obj]
+            elif isinstance(obj, (str, int, float, bool, type(None))):
+                return obj
+            else:
+                # Convert any other object to string representation
+                return str(obj)
+        
+        # Handle the response based on the available fields: order and errors
+        if hasattr(result, 'order'):
+            # Convert the entire order object to a serializable dictionary
+            order_dict = convert_to_dict(result.order)
+            
+            # Return in the same format as create function
+            return JsonResponse({
+                'success': True,
+                'order': order_dict
+            })
+        elif hasattr(result, 'errors'):
+            # Handle error response
+            return JsonResponse({
+                'success': False,
+                'error': convert_to_dict(result.errors)
+            }, status=400)
+        
+        # Handle dictionary response
+        elif isinstance(result, dict):
+            if 'order' in result:
+                # Make sure the order is serializable
+                result['order'] = convert_to_dict(result['order'])
+                return JsonResponse({
+                    'success': True,
+                    'order': result['order']
+                })
+            elif 'errors' in result:
+                # Make sure errors are serializable
+                return JsonResponse({
+                    'success': False,
+                    'error': convert_to_dict(result['errors'])
+                }, status=400)
+            elif 'success' in result:
+                # Already in the expected format, but ensure everything is serializable
+                return JsonResponse(convert_to_dict(result))
+            else:
+                # Unexpected dict format
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Response does not contain order data'
+                }, status=404)
+        else:
+            # Try to convert the entire result
+            try:
+                serializable_result = convert_to_dict(result)
+                if isinstance(serializable_result, dict) and 'order' in serializable_result:
+                    return JsonResponse({
+                        'success': True,
+                        'order': serializable_result['order']
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Could not extract order data from response'
+                    }, status=500)
+            except Exception as conversion_error:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to convert response: {str(conversion_error)}'
+                }, status=500)
+            
+    except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback_str
+        }, status=500)
+                
+    except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback_str
+        }, status=500)
+            
+    except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback_str
+        }, status=500)

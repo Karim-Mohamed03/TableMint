@@ -48,6 +48,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
   const handleConfirm = () => {
     // Pass the selected tip amount to the parent component
     onConfirm(selectedTip);
+    onClose();
   };
   
   // Calculate tip percentage based on base amount
@@ -80,10 +81,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
         </div>
         
         <div className="modal-body">
-          {/* <div className="bill-amount-display">
-            <div className="amount-label">Bill Amount</div>
-            <div className="amount-value">${(baseAmount / 100).toFixed(2)}</div>
-          </div> */}
+          
           
           <div className="tip-options-container">
             {/* Three tip options in a single row */}

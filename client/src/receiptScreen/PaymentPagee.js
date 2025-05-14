@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Elements } from "@stripe/react-stripe-js";
+import axios from "axios";
 import CheckoutForm from "./components/CheckoutForm";
 import SplitBillModal from "./components/SplitBillModal";
 import TipModal from "./components/TipModal";
@@ -7,30 +8,87 @@ import "./PaymentPage.css";
 
 // PaymentPage Component
 export default function PaymentPage({ stripePromise, clientSecret, updatePaymentAmount, createPaymentIntent, isCreatingPaymentIntent }) {
-  const [tip, setTip] = useState(5);
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showItemsModal, setShowItemsModal] = useState(false);
-  const baseAmount = 3500; // in cents (e.g., $35.00)
   const [userPaymentAmount, setUserPaymentAmount] = useState(null);
   const [splitDetails, setSplitDetails] = useState(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState(null);
   
-  // Calculate total based on whether it's a split bill or not
-  const totalAmount = baseAmount + tip * 100; // Convert tip to cents
-  const amountToPay = userPaymentAmount || totalAmount;
+  // Hardcoded order ID for testing
+  const testOrderId = "xYUv76Bvje35p7n0mJrOaooole4F";
   
-  // Update payment amount in parent component when amount changes
+  // Calculate total from order details
+  const calculateOrderTotal = () => {
+    if (!orderDetails || !orderDetails.line_items) return { total: 0, currency: 'GBP' };
+    
+    let total = 0;
+    let currency = 'GBP';
+    
+    orderDetails.line_items.forEach(item => {
+      if (item.total_money) {
+        total += item.total_money.amount;
+        currency = item.total_money.currency;
+      }
+    });
+    
+    return { total, currency };
+  };
+  
+  // Update payment amount in parent component when order total changes
   useEffect(() => {
-    updatePaymentAmount(amountToPay);
-  }, [amountToPay, updatePaymentAmount]);
+    const { total } = calculateOrderTotal();
+    if (userPaymentAmount) {
+      updatePaymentAmount(userPaymentAmount);
+    } else {
+      updatePaymentAmount(total);
+    }
+  }, [orderDetails, userPaymentAmount, updatePaymentAmount]);
   
-  const handleTipChange = (tipAmount) => {
-    setTip(tipAmount);
-    // Reset split payment if tip changes
-    setUserPaymentAmount(null);
-    setSplitDetails(null);
+  // Fetch order details on page load
+  useEffect(() => {
+    fetchOrderDetails(testOrderId);
+  }, []);
+  
+  // Function to fetch order details from backend
+  const fetchOrderDetails = async (orderId) => {
+    setOrderLoading(true);
+    setOrderError(null);
+    
+    try {
+      const response = await axios.get(`http://localhost:8000/api/orders/get/${orderId}/`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = response.data;
+      
+      if (data.success) {
+        setOrderDetails(data.order);
+        console.log("Order details:", data.order);
+      } else {
+        setOrderError(data.error || "Failed to fetch order details");
+        console.error("Error fetching order:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      
+      if (error.response) {
+        setOrderError(`Server error: ${error.response.status} - ${error.response.data.error || 'Unknown error'}`);
+      } else if (error.request) {
+        setOrderError("No response from server. Is the backend running?");
+      } else {
+        setOrderError(`Request failed: ${error.message}`);
+      }
+    } finally {
+      setOrderLoading(false);
+    }
   };
   
   const toggleSplitModal = () => {
@@ -46,58 +104,62 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   };
   
   const handleSplitConfirm = (splitInfo) => {
-    // Set the amount the user will pay
     setUserPaymentAmount(splitInfo.amountToPay);
     setSplitDetails(splitInfo);
-    
-    // Close the modal
     setShowSplitModal(false);
   };
-
+  
   const handleTipConfirm = async (tipAmount) => {
-    setTip(tipAmount);
-    setShowTipModal(false);
-    
     try {
-      // Calculate final amount with the selected tip
-      const finalAmount = baseAmount + tipAmount * 100;
+      const { total } = calculateOrderTotal();
+      // Convert tipAmount from dollars to cents (multiply by 100)
+      const tipInCents = tipAmount * 100;
+      const finalAmount = total + tipInCents;
       
-      // Show processing state
+      // Save the tipAmount for display
+      setUserPaymentAmount(finalAmount);
+      
       setPaymentProcessing(true);
-      
-      // Create payment intent with the final amount
       await createPaymentIntent(finalAmount);
-      
-      // Show checkout form after payment intent is created
       setShowCheckout(true);
+      setShowTipModal(false);
     } catch (error) {
       console.error("Error creating payment intent:", error);
     } finally {
       setPaymentProcessing(false);
     }
   };
-
+  
   const handlePayFullAmount = () => {
-    // Reset any split payment
     setUserPaymentAmount(null);
     setSplitDetails(null);
-    // Show the tip modal
     setShowTipModal(true);
   };
-
+  
   const handlePaySpecificAmount = async () => {
-    // Show the split bill modal
     toggleSplitModal();
   };
   
   const handlePayForMyItems = async () => {
-    // Show the pay for items modal
     toggleItemsModal();
   };
   
   const options = clientSecret ? { clientSecret } : {};
   
-  // Render a loading spinner when payment intent is being created
+  // Format currency for display - updated to remove division by 100
+  const formatCurrency = (amount, currency = 'GBP') => {
+    if (!amount && amount !== 0) return '£0';
+    
+    const formatter = new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency,
+    });
+    
+    // No longer dividing by 100 since the amount is already in the correct format
+    return formatter.format(amount / 100);
+  };
+  
+  // Render a loading spinner when payment intent is being created or order is loading
   if (paymentProcessing || isCreatingPaymentIntent) {
     return (
       <div className="payment-container">
@@ -109,33 +171,79 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
     );
   }
   
+  // Calculate order total from line items
+  const { total: orderTotal, currency } = calculateOrderTotal();
+  
   return (
     <div className="payment-container">
       <div className="payment-header">
-        <h1>Table 15</h1>
-        <p className="subtitle">Complete your payment</p>
+        <h1>Your Order</h1>
+        <p className="subtitle">Order #{orderDetails?.id?.substring(0, 8)}</p>
       </div>
       
-      <div className="bill-summary">
-        <div className="bill-row">
-          <span>Subtotal</span>
-          <span>${(baseAmount / 100).toFixed(2)}</span>
+      {orderLoading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading order details...</p>
         </div>
-        <div className="bill-row">
-          <span>Tip</span>
-          <span>${tip.toFixed(2)}</span>
+      ) : orderError ? (
+        <div className="error-message">
+          <p>Error loading order: {orderError}</p>
         </div>
-        {splitDetails && (
-          <div className="bill-row split-row">
-            <span>Your portion ({splitDetails.splitMethod === 'equal' ? `1/${splitDetails.numberOfPeople}` : 'custom'})</span>
-            <span>${(userPaymentAmount / 100).toFixed(2)}</span>
+      ) : orderDetails ? (
+        <div className="order-summary">
+          <div className="order-items">
+            <h2>Order Items</h2>
+            {orderDetails.line_items?.map((item, index) => (
+              <div className="order-item" key={index}>
+                <div className="quantity-badge">×{item.quantity}</div>
+                <div className="item-name">{item.name}</div>
+                <div className="item-price">
+                  {formatCurrency(
+                    parseInt(item.quantity, 10) * item.base_price_money?.amount,
+                    item.base_price_money?.currency
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-        <div className="bill-row total">
-          <span>Total{splitDetails ? ' (you pay)' : ''}</span>
-          <span>${(amountToPay / 100).toFixed(2)}</span>
+          
+          <div className="order-total">
+            <div className="total-row">
+              <span>Subtotal</span>
+              <span className="total-amount">
+                {orderTotal ? formatCurrency(orderTotal, currency) : '0.00'}
+              </span>
+            </div>
+            
+            {userPaymentAmount && userPaymentAmount !== orderTotal && (
+              <>
+                <div className="total-row tip-row">
+                  <span>Tip</span>
+                  <span className="tip-amount">
+                    {formatCurrency(userPaymentAmount - orderTotal, currency)}
+                  </span>
+                </div>
+                
+                <div className="total-row final-row">
+                  <span>Final Total</span>
+                  <span className="final-amount">
+                    {formatCurrency(userPaymentAmount, currency)}
+                  </span>
+                </div>
+              </>
+            )}
+            
+            <div className="tax-disclaimer">
+              <small>Inclusive of all taxes and charges</small>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="empty-order">
+          <p>No order details available</p>
+        </div>
+      )}
       
       {!showCheckout ? (
         <div className="payment-options">
@@ -151,7 +259,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
               <p>Pay the entire bill yourself</p>
             </div>
             <div className="option-amount">
-              ${(totalAmount / 100).toFixed(2)}
+              {formatCurrency(orderTotal, currency)}
             </div>
           </button>
           
@@ -168,7 +276,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
               <p>Split the bill with others</p>
             </div>
             <div className="option-amount">
-              {splitDetails ? `$${(userPaymentAmount / 100).toFixed(2)}` : 'Custom'}
+              {splitDetails ? formatCurrency(userPaymentAmount, currency) : 'Custom'}
             </div>
           </button>
           
@@ -206,17 +314,17 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
       <SplitBillModal 
         isOpen={showSplitModal} 
         onClose={toggleSplitModal} 
-        baseAmount={baseAmount} 
-        tip={tip} 
-        totalAmount={totalAmount}
+        baseAmount={orderTotal} 
+        tip={0} 
+        totalAmount={orderTotal}
         onConfirm={handleSplitConfirm}
       />
       
       <TipModal
         isOpen={showTipModal}
         onClose={toggleTipModal}
-        currentTip={tip}
-        baseAmount={baseAmount}
+        currentTip={0}
+        baseAmount={orderTotal}
         onConfirm={handleTipConfirm}
       />
       
@@ -231,14 +339,6 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
       </div>
       
       <style jsx>{`
-        .split-row {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px dashed var(--border-color);
-          color: var(--primary-color);
-          font-weight: 600;
-        }
-        
         .payment-options {
           display: flex;
           flex-direction: column;
@@ -297,7 +397,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           font-weight: 600;
           color: var(--primary-color);
         }
-
+        
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -353,6 +453,143 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           height: 5px;
           background-color: #e0e0e0;
           border-radius: 3px;
+        }
+
+        /* Updated Order summary styles */
+        .order-summary {
+          background: #ffffff;
+          border-radius: 12px;
+          padding: 20px;
+          margin-top: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .order-items {
+          margin-bottom: 24px;
+        }
+        
+        .order-items h2 {
+          font-size: 18px;
+          margin-bottom: 16px;
+          color: #1d1d1f;
+        }
+        
+        .order-item {
+          display: flex;
+          align-items: center;
+          padding: 8px 0;
+          border-bottom: 1px solid #f5f5f7;
+        }
+        
+        .quantity-badge {
+          background-color: #f5f5f7;
+          color: #333;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: 500;
+          margin-right: 12px;
+        }
+        
+        .item-name {
+          flex: 1;
+          font-size: 16px;
+          font-weight: 500;
+          margin-left: 0;
+        }
+        
+        .item-price {
+          font-weight: 600;
+          color: #1d1d1f;
+          text-align: right;
+        }
+        
+        .order-total {
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 2px solid #f5f5f7;
+        }
+        
+        .total-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        
+        .total-row.tip-row {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px dashed #e0e0e0;
+        }
+        
+        .total-row.final-row {
+          margin-top: 8px;
+          padding-top: 12px;
+          border-top: 1px solid #e0e0e0;
+          font-size: 20px;
+        }
+        
+        .tip-amount {
+          color: #34a853;
+        }
+        
+        .final-amount {
+          color: #0071e3;
+          font-weight: 700;
+        }
+        
+        .total-amount {
+          color: var(--primary-color);
+        }
+        
+        .currency-symbol {
+          font-weight: 700;
+          margin-right: 2px;
+        }
+        
+        .tax-disclaimer {
+          text-align: right;
+          color: #86868b;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+        
+        .error-message {
+          background-color: #ffebee;
+          color: #d32f2f;
+          padding: 16px;
+          border-radius: 8px;
+          margin: 20px 0;
+          text-align: center;
+        }
+        
+        .empty-order {
+          background-color: #f5f5f7;
+          padding: 40px 16px;
+          border-radius: 8px;
+          margin: 20px 0;
+          text-align: center;
+          color: #86868b;
+        }
+        
+        .payment-header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        
+        .payment-header h1 {
+          margin-bottom: 4px;
+        }
+        
+        .subtitle {
+          color: #86868b;
+          margin: 0;
         }
       `}</style>
     </div>

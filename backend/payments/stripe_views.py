@@ -4,6 +4,15 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Get the base directory (backend folder)
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Always load environment variables from .env.example
+env_file = os.path.join(BASE_DIR, '.env.example')
+load_dotenv(env_file)
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 

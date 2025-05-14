@@ -428,3 +428,5 @@ class SquareAdapter(POSAdapter):
                 "success": False,
                 "errors": str(e)
             }
+    
+    

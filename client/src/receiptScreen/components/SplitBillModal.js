@@ -186,8 +186,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
 
     return (
       <div className="custom-number-input">
-        <div className="number-input-label">{label}</div>
         <div className="number-input-row">
+          <div className="number-input-label">{label}</div>
           <div className="number-control">
             <button 
               type="button" 
@@ -284,7 +284,7 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
                         min={1}
                         max={numberOfPeople}
                         onChange={handleYouPayForChange}
-                        label="You pay for"
+                        label="Total people"
                         description="you pay for"
                       />
                     </div>
@@ -541,8 +541,9 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         .number-input-label {
           font-size: 14px;
           color: #86868b;
-          margin-bottom: 8px;
-          text-align: center;
+          width: 80px; /* Fixed width for alignment */
+          text-align: left;
+          margin-right: 8px;
         }
         
         .number-input-row {
@@ -551,7 +552,6 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
           align-items: center;
           justify-content: center;
           width: 100%;
-          gap: 16px;
         }
         
         .number-control {
@@ -598,7 +598,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         .input-description {
           font-size: 14px;
           color: #86868b;
-          text-align: left;
+          text-align: right;
+          width: 90px; /* Fixed width for alignment */
         }
         
         .payment-info {

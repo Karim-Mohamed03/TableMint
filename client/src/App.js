@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import { loadStripe } from "@stripe/stripe-js";
@@ -11,19 +11,18 @@ function App() {
   const [clientSecret, setClientSecret] = useState("");
   const [error, setError] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(3500); // Default amount in cents
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
 
   // Create a callback for updating the payment amount from child components
   const updatePaymentAmount = useCallback((amount) => {
     setPaymentAmount(amount);
   }, []);
 
-  // Create or update payment intent when payment amount changes
-  useEffect(() => {
-    createPaymentIntent(paymentAmount);
-  }, [paymentAmount]);
-
-  const createPaymentIntent = (amount) => {
-    fetch("http://localhost:8000/api/payments/create-payment-intent", {
+  // Create payment intent function - will be called only when needed
+  const createPaymentIntent = useCallback((amount) => {
+    setIsCreatingPaymentIntent(true);
+    
+    return fetch("http://localhost:8000/api/payments/create-payment-intent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,20 +33,22 @@ function App() {
       .then((data) => {
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
+          setIsCreatingPaymentIntent(false);
+          return data.clientSecret;
         } else {
           console.error("No client secret returned");
           setError("Failed to fetch payment intent");
+          setIsCreatingPaymentIntent(false);
+          throw new Error("No client secret returned");
         }
       })
       .catch((err) => {
         console.error("Error fetching client secret:", err);
         setError("An error occurred. Please try again.");
+        setIsCreatingPaymentIntent(false);
+        throw err;
       });
-  };
-
-  const appearance = {
-    theme: "stripe",
-  };
+  }, []);
 
   return (
     <div className="App">
@@ -57,19 +58,13 @@ function App() {
             <Route 
               path="/" 
               element={
-                clientSecret ? (
-                  <PaymentPage 
-                    stripePromise={stripePromise} 
-                    clientSecret={clientSecret}
-                    updatePaymentAmount={updatePaymentAmount}
-                  />
-                ) : (
-                  <div className="loading-container">
-                    <div className="loading-spinner"></div>
-                    <p>Loading Payment Page...</p>
-                    {error && <p className="error-message">{error}</p>}
-                  </div>
-                )
+                <PaymentPage 
+                  stripePromise={stripePromise} 
+                  clientSecret={clientSecret}
+                  updatePaymentAmount={updatePaymentAmount}
+                  createPaymentIntent={createPaymentIntent}
+                  isCreatingPaymentIntent={isCreatingPaymentIntent}
+                />
               } 
             />
             <Route path="/complete" element={<CompletePage />} />

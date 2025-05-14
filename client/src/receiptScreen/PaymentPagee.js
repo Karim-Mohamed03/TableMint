@@ -2,58 +2,120 @@ import { useState, useEffect } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "./components/CheckoutForm";
 import SplitBillModal from "./components/SplitBillModal";
+import TipModal from "./components/TipModal";
 import "./PaymentPage.css";
 
 // PaymentPage Component
-export default function PaymentPage({ stripePromise, clientSecret, updatePaymentAmount }) {
+export default function PaymentPage({ stripePromise, clientSecret, updatePaymentAmount, createPaymentIntent, isCreatingPaymentIntent }) {
   const [tip, setTip] = useState(5);
   const [showSplitModal, setShowSplitModal] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [showItemsModal, setShowItemsModal] = useState(false);
   const baseAmount = 3500; // in cents (e.g., $35.00)
   const [userPaymentAmount, setUserPaymentAmount] = useState(null);
   const [splitDetails, setSplitDetails] = useState(null);
-
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  
   // Calculate total based on whether it's a split bill or not
   const totalAmount = baseAmount + tip * 100; // Convert tip to cents
   const amountToPay = userPaymentAmount || totalAmount;
-
-  const tipPercentages = [
-    { value: 0, percent: "0%" },
-    { value: 5, percent: "15%" },
-    { value: 7, percent: "20%" },
-    { value: 10, percent: "28%" }
-  ];
-
+  
   // Update payment amount in parent component when amount changes
   useEffect(() => {
     updatePaymentAmount(amountToPay);
   }, [amountToPay, updatePaymentAmount]);
-
+  
   const handleTipChange = (tipAmount) => {
     setTip(tipAmount);
     // Reset split payment if tip changes
     setUserPaymentAmount(null);
     setSplitDetails(null);
   };
-
+  
   const toggleSplitModal = () => {
     setShowSplitModal(!showSplitModal);
   };
-
+  
+  const toggleTipModal = () => {
+    setShowTipModal(!showTipModal);
+  };
+  
+  const toggleItemsModal = () => {
+    setShowItemsModal(!showItemsModal);
+  };
+  
   const handleSplitConfirm = (splitInfo) => {
     // Set the amount the user will pay
     setUserPaymentAmount(splitInfo.amountToPay);
     setSplitDetails(splitInfo);
+    
+    // Close the modal
+    setShowSplitModal(false);
   };
 
-  const options = { clientSecret };
+  const handleTipConfirm = async (tipAmount) => {
+    setTip(tipAmount);
+    setShowTipModal(false);
+    
+    try {
+      // Calculate final amount with the selected tip
+      const finalAmount = baseAmount + tipAmount * 100;
+      
+      // Show processing state
+      setPaymentProcessing(true);
+      
+      // Create payment intent with the final amount
+      await createPaymentIntent(finalAmount);
+      
+      // Show checkout form after payment intent is created
+      setShowCheckout(true);
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
 
+  const handlePayFullAmount = () => {
+    // Reset any split payment
+    setUserPaymentAmount(null);
+    setSplitDetails(null);
+    // Show the tip modal
+    setShowTipModal(true);
+  };
+
+  const handlePaySpecificAmount = async () => {
+    // Show the split bill modal
+    toggleSplitModal();
+  };
+  
+  const handlePayForMyItems = async () => {
+    // Show the pay for items modal
+    toggleItemsModal();
+  };
+  
+  const options = clientSecret ? { clientSecret } : {};
+  
+  // Render a loading spinner when payment intent is being created
+  if (paymentProcessing || isCreatingPaymentIntent) {
+    return (
+      <div className="payment-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Preparing payment...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="payment-container">
       <div className="payment-header">
         <h1>Table 15</h1>
         <p className="subtitle">Complete your payment</p>
       </div>
-
+      
       <div className="bill-summary">
         <div className="bill-row">
           <span>Subtotal</span>
@@ -74,46 +136,72 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           <span>${(amountToPay / 100).toFixed(2)}</span>
         </div>
       </div>
-
-      <div className="split-bill-section">
-        <button className="split-button" onClick={toggleSplitModal}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15.8333 4.16667C15.8333 5.5474 14.714 6.66667 13.3333 6.66667C11.9526 6.66667 10.8333 5.5474 10.8333 4.16667C10.8333 2.78595 11.9526 1.66667 13.3333 1.66667C14.714 1.66667 15.8333 2.78595 15.8333 4.16667Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9.16667 15.8333C9.16667 17.2141 8.04738 18.3333 6.66667 18.3333C5.28596 18.3333 4.16667 17.2141 4.16667 15.8333C4.16667 14.4526 5.28596 13.3333 6.66667 13.3333C8.04738 13.3333 9.16667 14.4526 9.16667 15.8333Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M10.8333 5.83333L4.16667 14.1667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          {splitDetails ? 'Change split amount' : 'Split the bill'}
-        </button>
-      </div>
-
-      <div className="tip-section">
-        <p className="tip-label">Add a tip</p>
-        <div className="tip-options">
-          {tipPercentages.map((option) => (
-            <button 
-              key={option.value} 
-              className={`tip-btn ${tip === option.value ? "active" : ""}`} 
-              onClick={() => handleTipChange(option.value)}
-            >
-              <span className="tip-percent">{option.percent}</span>
-              <span className="tip-amount">${option.value}</span>
-            </button>
-          ))}
+      
+      {!showCheckout ? (
+        <div className="payment-options">
+          <button className="payment-option full-amount" onClick={handlePayFullAmount}>
+            <div className="option-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 5L19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="option-text">
+              <h3>Pay full amount</h3>
+              <p>Pay the entire bill yourself</p>
+            </div>
+            <div className="option-amount">
+              ${(totalAmount / 100).toFixed(2)}
+            </div>
+          </button>
+          
+          <button className="payment-option specific-amount" onClick={handlePaySpecificAmount}>
+            <div className="option-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 5L5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16 5H19V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 19H5V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="option-text">
+              <h3>Let's split the bill!</h3>
+              <p>Split the bill with others</p>
+            </div>
+            <div className="option-amount">
+              {splitDetails ? `$${(userPaymentAmount / 100).toFixed(2)}` : 'Custom'}
+            </div>
+          </button>
+          
+          <button className="payment-option items-amount" onClick={handlePayForMyItems}>
+            <div className="option-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="option-text">
+              <h3>Pay for my items</h3>
+              <p>Only pay for what you ordered</p>
+            </div>
+            <div className="option-amount">
+              Select items
+            </div>
+          </button>
         </div>
-      </div>
-
-      <div className="payment-section">
-        {clientSecret ? (
-          <Elements stripe={stripePromise} options={options}>
-            <CheckoutForm />
-          </Elements>
-        ) : (
-          <div className="loading">
-            <div className="loading-spinner"></div>
-            <p>Preparing payment form...</p>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="payment-section">
+          {clientSecret ? (
+            <Elements stripe={stripePromise} options={options}>
+              <CheckoutForm />
+            </Elements>
+          ) : (
+            <div className="loading">
+              <div className="loading-spinner"></div>
+              <p>Preparing payment form...</p>
+            </div>
+          )}
+        </div>
+      )}
       
       <SplitBillModal 
         isOpen={showSplitModal} 
@@ -123,7 +211,25 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         totalAmount={totalAmount}
         onConfirm={handleSplitConfirm}
       />
-
+      
+      <TipModal
+        isOpen={showTipModal}
+        onClose={toggleTipModal}
+        currentTip={tip}
+        baseAmount={baseAmount}
+        onConfirm={handleTipConfirm}
+      />
+      
+      {/* Items selection modal */}
+      <div className={`items-modal-overlay ${showItemsModal ? 'active' : ''}`} onClick={toggleItemsModal}>
+        <div className="items-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <div className="modal-drag-handle"></div>
+          </div>
+          {/* Content will be added later */}
+        </div>
+      </div>
+      
       <style jsx>{`
         .split-row {
           margin-top: 8px;
@@ -131,6 +237,122 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           border-top: 1px dashed var(--border-color);
           color: var(--primary-color);
           font-weight: 600;
+        }
+        
+        .payment-options {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-top: 24px;
+        }
+        
+        .payment-option {
+          display: flex;
+          align-items: center;
+          background-color: #ffffff;
+          border: 1px solid #e0e0e0;
+          border-radius: 12px;
+          padding: 16px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          text-align: left;
+        }
+        
+        .payment-option:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+          border-color: var(--primary-color);
+        }
+        
+        .option-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          background-color: #f5f5f7;
+          border-radius: 50%;
+          margin-right: 16px;
+          color: var(--primary-color);
+        }
+        
+        .option-text {
+          flex: 1;
+        }
+        
+        .option-text h3 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #1d1d1f;
+        }
+        
+        .option-text p {
+          margin: 4px 0 0;
+          font-size: 14px;
+          color: #86868b;
+        }
+        
+        .option-amount {
+          font-size: 18px;
+          font-weight: 600;
+          color: var(--primary-color);
+        }
+
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 50vh;
+        }
+        
+        /* Items Modal Styles */
+        .items-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          z-index: 1000;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+        
+        .items-modal-overlay.active {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        
+        .items-modal {
+          background: white;
+          width: 100%;
+          max-width: 500px;
+          border-radius: 20px 20px 0 0;
+          padding: 16px;
+          transform: translateY(100%);
+          transition: transform 0.3s ease;
+        }
+        
+        .items-modal-overlay.active .items-modal {
+          transform: translateY(0);
+        }
+        
+        .modal-header {
+          display: flex;
+          justify-content: center;
+          padding-bottom: 16px;
+        }
+        
+        .modal-drag-handle {
+          width: 40px;
+          height: 5px;
+          background-color: #e0e0e0;
+          border-radius: 3px;
         }
       `}</style>
     </div>

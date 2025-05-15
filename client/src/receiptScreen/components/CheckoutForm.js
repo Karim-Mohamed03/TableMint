@@ -1,15 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   PaymentElement, 
   useStripe, 
   useElements 
 } from "@stripe/react-stripe-js";
 
-const CheckoutForm = () => {
+const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [returnUrl, setReturnUrl] = useState("");
+
+  // Create return URL with query parameters
+  useEffect(() => {
+    let url = "http://localhost:3000/complete";
+    
+    // Add query parameters if we have them
+    if (baseAmount || tipAmount || orderId) {
+      url += "?";
+      
+      const params = [];
+      if (baseAmount) params.push(`base_amount=${baseAmount}`);
+      if (tipAmount) params.push(`tip_amount=${tipAmount}`);
+      if (orderId) params.push(`order_id=${orderId}`);
+      
+      url += params.join("&");
+    }
+    
+    setReturnUrl(url);
+  }, [baseAmount, tipAmount, orderId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +43,14 @@ const CheckoutForm = () => {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: "http://localhost:3000/complete",
+        return_url: returnUrl,
+        payment_method_data: {
+          // Store tip and base amounts in the metadata
+          metadata: {
+            base_amount: baseAmount || 0,
+            tip_amount: tipAmount || 0
+          }
+        }
       },
     });
 

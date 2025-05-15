@@ -77,9 +77,14 @@ def create_square_external_payment(order_id, base_sum):
         
         # Get the total amount from the database record
         order_total_amount = order_payment.total_money
-        order_tip_amount = order_payment.tip_amount
+        
+        # Calculate the sum of all tip amounts for this order
+        tip_sum = PhillyCheesesteakPayment.objects.filter(
+            order_id=order_id
+        ).aggregate(sum_tip_amount=Sum('tip_amount'))['sum_tip_amount'] or 0
         
         logger.info(f"Order total from database (cents): {order_total_amount}, Base sum (cents): {base_sum}")
+        logger.info(f"Total tips for this order (cents): {tip_sum}")
         
         # Check if the sum of base amounts matches the order total
         if base_sum != order_total_amount:
@@ -98,21 +103,24 @@ def create_square_external_payment(order_id, base_sum):
         
         # If they match, create the external payment
         logger.info(f"Creating external payment in Square for order_id: {order_id} with amount: {base_sum} cents (${base_sum/100:.2f})")
+        logger.info(f"Including total tips of {tip_sum} cents (${tip_sum/100:.2f})")
         square_adapter = SquareAdapter()
         result = square_adapter.create_external_payment(
             order_id=order_id,
             amount=base_sum,  # Already in cents, pass directly
             source="stripe",
-            tip_amount=order_tip_amount
+            tip_amount=tip_sum  # Pass the sum of all tips for this order
         )
         
         if result.get('success'):
-            logger.info(f"Successfully created external payment in Square for order_id: {order_id} - Amount: ${base_sum/100:.2f}")
+            logger.info(f"Successfully created external payment in Square for order_id: {order_id} - Amount: ${base_sum/100:.2f}, Tips: ${tip_sum/100:.2f}")
             return {
                 'success': True,
                 'order_id': order_id,
                 'amount': base_sum,
                 'amount_formatted': f"${base_sum/100:.2f}",
+                'tip_sum': tip_sum,
+                'tip_sum_formatted': f"${tip_sum/100:.2f}",
                 'order_total': order_total_amount,
                 'order_total_formatted': f"${order_total_amount/100:.2f}",
                 'match': True,
@@ -127,6 +135,8 @@ def create_square_external_payment(order_id, base_sum):
                 'order_id': order_id,
                 'amount': base_sum,
                 'amount_formatted': f"${base_sum/100:.2f}",
+                'tip_sum': tip_sum,
+                'tip_sum_formatted': f"${tip_sum/100:.2f}",
                 'match': True
             }
             

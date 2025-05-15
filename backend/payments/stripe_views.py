@@ -77,6 +77,7 @@ def create_square_external_payment(order_id, base_sum):
         
         # Get the total amount from the database record
         order_total_amount = order_payment.total_money
+        order_tip_amount = order_payment.tip_amount
         
         logger.info(f"Order total from database (cents): {order_total_amount}, Base sum (cents): {base_sum}")
         
@@ -101,7 +102,8 @@ def create_square_external_payment(order_id, base_sum):
         result = square_adapter.create_external_payment(
             order_id=order_id,
             amount=base_sum,  # Already in cents, pass directly
-            source="stripe"
+            source="stripe",
+            tip_amount=order_tip_amount
         )
         
         if result.get('success'):

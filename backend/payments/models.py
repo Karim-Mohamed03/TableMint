@@ -65,3 +65,30 @@ class OrderSearch(models.Model):
     
     def __str__(self):
         return f"Order Search {self.id}: {self.result_count} results - {self.created_at}"
+
+
+class PhillyCheesesteakPayment(models.Model):
+    """Model to store Marwan's Philly Cheesesteak payment information."""
+    
+    # Required fields
+    order_id = models.CharField(max_length=255)
+    payment_id = models.CharField(max_length=255)
+    location_id = models.CharField(max_length=255)
+    
+    # Amount information (updated to separate base amount and tip)
+    amount = models.IntegerField(help_text="Total amount in cents (base amount + tip)")
+    base_amount = models.IntegerField(help_text="Base amount without tip, in cents", null=True)
+    tip_amount = models.IntegerField(help_text="Tip amount in cents", null=True)
+    
+    # Order total from Square
+    total_money = models.IntegerField(help_text="Total amount from Square order in cents", null=True)
+    total_currency = models.CharField(max_length=3, default="GBP")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        base_display = f"${self.base_amount/100:.2f}" if self.base_amount is not None else "N/A"
+        tip_display = f"${self.tip_amount/100:.2f}" if self.tip_amount is not None else "N/A"
+        total_display = f"${self.total_money/100:.2f}" if self.total_money is not None else "N/A"
+        return f"Philly Payment: Order {self.order_id}, Base: {base_display}, Tip: {tip_display}, Order Total: {total_display}"

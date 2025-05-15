@@ -18,9 +18,12 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState(null);
+  // New state to track tip separately - moved to top level
+  const [tipInCents, setTipInCents] = useState(0);
+  const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   
   // Hardcoded order ID for testing
-  const testOrderId = "xYUv76Bvje35p7n0mJrOaooole4F";
+  const testOrderId = "FKiotG1WWs5w8np2hsM755tbuh4F";
   
   // Calculate total from order details
   const calculateOrderTotal = () => {
@@ -38,6 +41,14 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
     
     return { total, currency };
   };
+  
+  // Calculate order total from line items
+  const { total: orderTotal, currency } = calculateOrderTotal();
+  
+  // Update base amount when order total changes - moved to top level section
+  useEffect(() => {
+    setBaseAmountInCents(orderTotal);
+  }, [orderTotal]);
   
   // Update payment amount in parent component when order total changes
   useEffect(() => {
@@ -107,14 +118,22 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
     setUserPaymentAmount(splitInfo.amountToPay);
     setSplitDetails(splitInfo);
     setShowSplitModal(false);
+    // Show tip modal after confirming split amount
+    setShowTipModal(true);
   };
   
   const handleTipConfirm = async (tipAmount) => {
     try {
-      const { total } = calculateOrderTotal();
+      // Get base amount - either from split details or total order
+      const baseAmount = userPaymentAmount || calculateOrderTotal().total;
+      
       // Convert tipAmount from dollars to cents (multiply by 100)
       const tipInCents = tipAmount * 100;
-      const finalAmount = total + tipInCents;
+      const finalAmount = baseAmount + tipInCents;
+      
+      // Save the tip and base amounts for later use
+      setTipInCents(tipInCents);
+      setBaseAmountInCents(baseAmount);
       
       // Save the tipAmount for display
       setUserPaymentAmount(finalAmount);
@@ -170,9 +189,6 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
       </div>
     );
   }
-  
-  // Calculate order total from line items
-  const { total: orderTotal, currency } = calculateOrderTotal();
   
   return (
     <div className="payment-container">
@@ -300,7 +316,11 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         <div className="payment-section">
           {clientSecret ? (
             <Elements stripe={stripePromise} options={options}>
-              <CheckoutForm />
+              <CheckoutForm 
+                baseAmount={baseAmountInCents} 
+                tipAmount={tipInCents}
+                orderId={orderDetails?.id || testOrderId}
+              />
             </Elements>
           ) : (
             <div className="loading">
@@ -324,7 +344,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         isOpen={showTipModal}
         onClose={toggleTipModal}
         currentTip={0}
-        baseAmount={orderTotal}
+        baseAmount={userPaymentAmount || orderTotal}
         onConfirm={handleTipConfirm}
       />
       

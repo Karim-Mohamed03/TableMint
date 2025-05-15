@@ -1,4 +1,5 @@
 import os
+import logging.config
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -84,6 +85,10 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
     }
 }
+
+# Password validation
+# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+
 
 
 AUTH_PASSWORD_VALIDATORS = [

@@ -14,14 +14,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-for-developmen
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-#ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1', '1b4a-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app').split(',')
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '1b4a-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
-    '7219-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# ALLOWED_HOSTS = [
+#     'localhost',
+#     '127.0.0.1',
+#     '1b4a-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
+#     '7219-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app'
     
-]
+# ]
 
 
 INSTALLED_APPS = [
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'orders',
     'payments',
     'restaurants',
+    'webhooks',
 ]
 
 MIDDLEWARE = [
@@ -186,3 +187,7 @@ LOGGING = {
         },
     },
 }
+
+
+SQUARE_WEBHOOK_SIGNATURE_KEY = os.environ.get('SQUARE_WEBHOOK_SIGNATURE_KEY', '')
+CLOVER_WEBHOOK_API_KEY = os.environ.get('CLOVER_WEBHOOK_API_KEY', '')

@@ -24,8 +24,7 @@ urlpatterns = [
     path('api/tables/', include('tables.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/payments/', include('payments.urls')),
-    # path('api/restaurants/', include('restaurants.urls')),
-    # path('table/', include('tables.frontend_urls')),  # For frontend table views
+    path('api/pos/', include('pos.urls')),
 ]
 
 # Serve media files in development

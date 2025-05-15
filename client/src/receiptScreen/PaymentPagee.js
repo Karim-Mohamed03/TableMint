@@ -23,7 +23,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   
   // Hardcoded order ID for testing
-  const testOrderId = "FKiotG1WWs5w8np2hsM755tbuh4F";
+  const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
   
   // Calculate total from order details
   const calculateOrderTotal = () => {

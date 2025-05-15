@@ -25,7 +25,7 @@ class SquareWebhookView(View):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.adapter = SquareWebhookAdapter()
+        # self.adapter = SquareWebhookAdapter()
     
     @method_decorator(require_POST)
     def dispatch(self, request, *args, **kwargs):
@@ -34,6 +34,10 @@ class SquareWebhookView(View):
     def post(self, request, *args, **kwargs):
         # Get the raw request body
         body = request.body.decode('utf-8')
+
+        print("🔔 Square Webhook Received:", body)
+
+        return HttpResponse(status=200)
         
         # Verify the webhook signature
         signature_header = request.headers.get('Square-Signature')

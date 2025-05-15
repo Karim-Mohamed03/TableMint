@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/orders/', include('orders.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/pos/', include('pos.urls')),
+    path('api/webhooks/', include('webhooks.urls')),
 ]
 
 # Serve media files in development

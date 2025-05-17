@@ -85,12 +85,7 @@ DATABASES = {
         'USER': 'postgres',
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': 'wzcjteevoosylvyqulgm.supabase.co',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
-        'CONN_MAX_AGE': 60,  # 1 minute of persistent connections
-        'CONN_HEALTH_CHECKS': True,
+        'PORT': '5432'
     }
 }
 

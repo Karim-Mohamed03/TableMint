@@ -5,7 +5,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 from django.views import View
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
 
+from tables.models import Table
+from orders.models import Order
+from .square_adapter import SquareAdapter
+from .serializers import OrderSerializer
 from .square_webhook_adapter import SquareWebhookAdapter
 
 logger = logging.getLogger(__name__)
@@ -36,6 +44,21 @@ class SquareWebhookView(View):
         body = request.body.decode('utf-8')
 
         print("🔔 Square Webhook Received:", body)
+        
+        # Parse the webhook payload to extract order ID
+        try:
+            payload = json.loads(body)
+            event_type = payload.get('type')
+            
+            # Check if this is an order.created event
+            if event_type == 'order.created':
+                # Extract the order ID from the webhook payload
+                order_id = payload.get('data', {}).get('object', {}).get('order_created', {}).get('order_id')
+                print(f"📢 SQUARE ORDER ID: {order_id}")
+        except json.JSONDecodeError:
+            print("❌ Invalid JSON in webhook body")
+        except Exception as e:
+            print(f"❌ Error extracting order ID: {str(e)}")
 
         return HttpResponse(status=200)
         
@@ -115,3 +138,45 @@ class SquareWebhookView(View):
             return {'error': 'Failed to update order status'}
             
         return result
+
+class TableOrderView(APIView):
+    """
+    API endpoint to get orders for a specific table
+    
+    GET /api/tables/{table_id}/order/
+    """
+    
+    def get(self, request, table_id, format=None):
+        # Find the table
+        table = get_object_or_404(Table, id=table_id)
+        
+        # Get the most recent open order for this table
+        order = Order.objects.filter(
+            table=table, 
+            status='open'
+        ).order_by('-created_at').first()
+        
+        if not order:
+            return Response(
+                {"detail": f"No open order found for table {table_id}"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # If we have a Square order ID and no order items yet, try to sync with Square
+        if order.pos_reference and not order.items.exists():
+            # Initialize Square adapter
+            square_adapter = SquareAdapter()
+            
+            # Get the full order details from Square
+            square_order = square_adapter.get(order.pos_reference)
+            
+            # If successful, add the Square order items to our order
+            if square_order and 'success' in square_order and square_order['success']:
+                # Process Square order items into our database
+                # This would need additional code to parse Square line items 
+                # and create OrderItem objects
+                pass
+        
+        # Serialize and return the order
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)

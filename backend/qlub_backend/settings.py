@@ -15,14 +15,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-for-developmen
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-# ALLOWED_HOSTS = [
-#     'localhost',
-#     '127.0.0.1',
-#     '1b4a-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
-#     '7219-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app'
-    
-# ]
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '1b4a-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
+    '7219-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
+    '36d9-2001-630-e4-4220-a113-a478-33bd-909f.ngrok-free.app'
+]
 
 
 INSTALLED_APPS = [
@@ -75,14 +75,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'qlub_backend.wsgi.application'
 
 
+# Database URL format for Supabase
+DATABASE_URL = f"postgresql://postgres:{os.getenv('DB_PASSWORD', '')}@wzcjteevoosylvyqulgm.supabase.co:5432/postgres"
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'HOST': 'db.wzcjteevoosylvyqulgm.supabase.co',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PORT': '5432',
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': 'wzcjteevoosylvyqulgm.supabase.co',
+        'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
+        'CONN_MAX_AGE': 60,  # 1 minute of persistent connections
+        'CONN_HEALTH_CHECKS': True,
     }
 }
 

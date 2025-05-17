@@ -16,13 +16,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 class CloverAdapter(POSAdapter):
-    """
-    Clover POS system adapter implementation.
-    
-    This adapter implements the POSAdapter interface for the Clover payment system,
-    providing concrete implementations for all required operations.
-    """
-    
+
     def __init__(self):
         """Initialize Clover client with credentials from .env file"""
         self.api_key = os.environ.get('CLOVER_API_KEY')

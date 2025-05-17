@@ -4,6 +4,7 @@ import axios from "axios";
 import CheckoutForm from "./components/CheckoutForm";
 import SplitBillModal from "./components/SplitBillModal";
 import TipModal from "./components/TipModal";
+import ItemSelectionModal from "./components/ItemSelectionModal";
 import "./PaymentPage.css";
 
 // PaymentPage Component
@@ -21,6 +22,8 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   // New state to track tip separately - moved to top level
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+  // New state for selected items
+  const [selectedItemsDetails, setSelectedItemsDetails] = useState(null);
   
   // Hardcoded order ID for testing
   const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
@@ -122,9 +125,19 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
     setShowTipModal(true);
   };
   
+  // Handle selection of specific items
+  const handleItemSelectionConfirm = (selection) => {
+    setSelectedItemsDetails(selection);
+    setUserPaymentAmount(selection.totalAmount);
+    setBaseAmountInCents(selection.totalAmount);
+    setShowItemsModal(false);
+    // Show tip modal after confirming item selection
+    setShowTipModal(true);
+  };
+  
   const handleTipConfirm = async (tipAmount) => {
     try {
-      // Get base amount - either from split details or total order
+      // Get base amount - either from split details, selected items, or total order
       const baseAmount = userPaymentAmount || calculateOrderTotal().total;
       
       // Convert tipAmount from dollars to cents (multiply by 100)
@@ -152,14 +165,17 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   const handlePayFullAmount = () => {
     setUserPaymentAmount(null);
     setSplitDetails(null);
+    setSelectedItemsDetails(null);
     setShowTipModal(true);
   };
   
   const handlePaySpecificAmount = async () => {
+    setSelectedItemsDetails(null);
     toggleSplitModal();
   };
   
   const handlePayForMyItems = async () => {
+    setSplitDetails(null);
     toggleItemsModal();
   };
   
@@ -237,7 +253,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
                 <div className="total-row tip-row">
                   <span>Tip</span>
                   <span className="tip-amount">
-                    {formatCurrency(userPaymentAmount - orderTotal, currency)}
+                    {formatCurrency(userPaymentAmount - baseAmountInCents, currency)}
                   </span>
                 </div>
                 
@@ -308,7 +324,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
               <p>Only pay for what you ordered</p>
             </div>
             <div className="option-amount">
-              Select items
+              {selectedItemsDetails ? formatCurrency(selectedItemsDetails.totalAmount, currency) : 'Select items'}
             </div>
           </button>
         </div>
@@ -348,13 +364,19 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         onConfirm={handleTipConfirm}
       />
       
-      {/* Items selection modal */}
+      {/* Items selection modal - updated to use ItemSelectionModal component */}
       <div className={`items-modal-overlay ${showItemsModal ? 'active' : ''}`} onClick={toggleItemsModal}>
         <div className="items-modal" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <div className="modal-drag-handle"></div>
           </div>
-          {/* Content will be added later */}
+          
+          <ItemSelectionModal
+            isOpen={showItemsModal}
+            onClose={toggleItemsModal}
+            items={orderDetails?.line_items}
+            onConfirm={handleItemSelectionConfirm}
+          />
         </div>
       </div>
       
@@ -453,9 +475,11 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           width: 100%;
           max-width: 500px;
           border-radius: 20px 20px 0 0;
-          padding: 16px;
+          padding: 16px 0 0;
           transform: translateY(100%);
           transition: transform 0.3s ease;
+          max-height: 90vh;
+          overflow-y: auto;
         }
         
         .items-modal-overlay.active .items-modal {
@@ -465,7 +489,7 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         .modal-header {
           display: flex;
           justify-content: center;
-          padding-bottom: 16px;
+          padding-bottom: 8px;
         }
         
         .modal-drag-handle {
@@ -474,7 +498,6 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
           background-color: #e0e0e0;
           border-radius: 3px;
         }
-
         /* Updated Order summary styles */
         .order-summary {
           background: #ffffff;

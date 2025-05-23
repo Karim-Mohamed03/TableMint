@@ -1,3 +1,218 @@
+/* Import Nord font */
+@font-face {
+  font-family: 'Nord';
+  src: url('/fonts/Nord-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Nord';
+  src: url('/fonts/Nord-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Nord';
+  src: url('/fonts/Nord-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+/* Restaurant Branding Styles */
+.restaurant-branding {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.restaurant-logo {
+  max-width: 120px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.restaurant-name {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.payment-container-with-bg {
+  position: relative;
+}
+
+/* This creates a pseudo-element for just the top background image */
+.payment-container-with-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 150px; /* Height of the background area - adjusted to match reference */
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  z-index: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.payment-container-with-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* New styles from user */
+.payment-container-with-bg {
+  padding-top: 30px; /* Adjusted to match reference image */
+}
+  
+.restaurant-branding {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-top: 0;
+  /* Push the logo down so half of it overlaps with the background */
+  margin-top: 60px;
+}
+  
+.logo-container {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  margin-top: 0px;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  /* Position the logo to overlap with the background image */
+  top: 0;
+}
+  
+.restaurant-logo {
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+}
+  
+.restaurant-name-only {
+  background-color: #fff;
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  margin-top: -60px;
+  position: relative;
+  z-index: 2;
+  top: 0;
+}
+  
+.table-number {
+  margin-top: 12px;
+  color: #37404a;
+  font-size: 24px;
+  font-weight: 900;
+  font-family: 'Nord', sans-serif;
+  /* Override any container styling from App.css */
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+  
+/* Commented out view menu button 
+.view-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f7;
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-top: 16px;
+  font-weight: 500;
+  width: 80%;
+  max-width: 300px;
+  color: #333;
+}
+  
+.view-menu-button svg {
+  margin-right: 8px;
+}
+*/
+  
+.order-summary {
+  margin-top: 16px;
+  border-radius: 16px 16px 0 0;
+  padding: 24px;
+  background-color: #fff;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+}
+  
+.payment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+  
+.payment-header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+  
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f7;
+}
+  
+.order-item-left {
+  display: flex;
+  align-items: flex-start;
+}
+  
+.item-number {
+  margin-right: 12px;
+  color: #666;
+  min-width: 20px;
+}
+  
+.item-info {
+  flex: 1;
+}
+  
+.item-name {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+  
+.item-price {
+  color: #666;
+}
+  
+.item-total {
+  font-weight: 600;
+}
+
 /* Apple-inspired payment page styling */
 :root {
   --primary-color: #0071e3;

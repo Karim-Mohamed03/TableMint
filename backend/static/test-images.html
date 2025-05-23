@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Restaurant Branding Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .image-test {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        img {
+            max-width: 300px;
+            max-height: 200px;
+            display: block;
+            margin: 10px 0;
+        }
+        .status {
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Restaurant Branding Images</h1>
+    
+    <div class="image-test">
+        <h2>Logo Image</h2>
+        <div>URL: <span id="logo-url">/assets/logo.jpg</span></div>
+        <img id="logo-image" src="/assets/logo.jpg" alt="Restaurant Logo">
+        <div class="status" id="logo-status">Loading...</div>
+    </div>
+    
+    <div class="image-test">
+        <h2>Background Image</h2>
+        <div>URL: <span id="bg-url">/assets/background.jpg</span></div>
+        <img id="bg-image" src="/assets/background.jpg" alt="Restaurant Background">
+        <div class="status" id="bg-status">Loading...</div>
+    </div>
+    
+    <div class="image-test">
+        <h2>Direct Asset Logo Image</h2>
+        <div>URL: <span id="direct-logo-url">/static/assets/logo.jpg</span></div>
+        <img id="direct-logo-image" src="/static/assets/logo.jpg" alt="Direct Asset Logo">
+        <div class="status" id="direct-logo-status">Loading...</div>
+    </div>
+    
+    <div class="image-test">
+        <h2>Direct Asset Background Image</h2>
+        <div>URL: <span id="direct-bg-url">/static/assets/background.jpg</span></div>
+        <img id="direct-bg-image" src="/static/assets/background.jpg" alt="Direct Asset Background">
+        <div class="status" id="direct-bg-status">Loading...</div>
+    </div>
+    
+    <script>
+        // Test the logo image
+        const logoImage = document.getElementById('logo-image');
+        const logoStatus = document.getElementById('logo-status');
+        
+        logoImage.onload = function() {
+            logoStatus.textContent = 'Image loaded successfully';
+            logoStatus.className = 'status success';
+        };
+        
+        logoImage.onerror = function() {
+            logoStatus.textContent = 'Failed to load image';
+            logoStatus.className = 'status error';
+        };
+        
+        // Test the background image
+        const bgImage = document.getElementById('bg-image');
+        const bgStatus = document.getElementById('bg-status');
+        
+        bgImage.onload = function() {
+            bgStatus.textContent = 'Image loaded successfully';
+            bgStatus.className = 'status success';
+        };
+        
+        bgImage.onerror = function() {
+            bgStatus.textContent = 'Failed to load image';
+            bgStatus.className = 'status error';
+        };
+        
+        // Test the direct asset logo image
+        const directLogoImage = document.getElementById('direct-logo-image');
+        const directLogoStatus = document.getElementById('direct-logo-status');
+        
+        directLogoImage.onload = function() {
+            directLogoStatus.textContent = 'Image loaded successfully';
+            directLogoStatus.className = 'status success';
+        };
+        
+        directLogoImage.onerror = function() {
+            directLogoStatus.textContent = 'Failed to load image';
+            directLogoStatus.className = 'status error';
+        };
+        
+        // Test the direct asset background image
+        const directBgImage = document.getElementById('direct-bg-image');
+        const directBgStatus = document.getElementById('direct-bg-status');
+        
+        directBgImage.onload = function() {
+            directBgStatus.textContent = 'Image loaded successfully';
+            directBgStatus.className = 'status success';
+        };
+        
+        directBgImage.onerror = function() {
+            directBgStatus.textContent = 'Failed to load image';
+            directBgStatus.className = 'status error';
+        };
+    </script>
+</body>
+</html> 

@@ -8,7 +8,15 @@ import ItemSelectionModal from "./components/ItemSelectionModal";
 import "./PaymentPage.css";
 
 // PaymentPage Component
-export default function PaymentPage({ stripePromise, clientSecret, updatePaymentAmount, createPaymentIntent, isCreatingPaymentIntent }) {
+export default function PaymentPage({ 
+  stripePromise, 
+  clientSecret, 
+  updatePaymentAmount, 
+  createPaymentIntent, 
+  isCreatingPaymentIntent,
+  restaurantBranding,
+  isBrandingLoaded
+}) {
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -181,6 +189,76 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   
   const options = clientSecret ? { clientSecret } : {};
   
+  // Get container class name based on branding configuration
+  const getContainerClassName = () => {
+    const hasBackgroundImage = restaurantBranding.background_image_url && restaurantBranding.show_background_image;
+    console.log("Has background image?", hasBackgroundImage);
+    return `payment-container ${hasBackgroundImage ? 'payment-container-with-bg' : ''}`;
+  };
+  
+  // Updated getContainerStyle to apply background image only to the top portion
+  const getContainerStyle = () => {
+    const hasBackgroundImage = restaurantBranding.background_image_url && restaurantBranding.show_background_image;
+    console.log("Background image URL:", restaurantBranding.background_image_url);
+    if (hasBackgroundImage) {
+      return {
+        '--bg-image': `url(${restaurantBranding.background_image_url})`,
+      };
+    }
+    return {};
+  };
+  
+  const renderRestaurantBranding = () => {
+    if (!isBrandingLoaded) {
+      console.log("Branding not loaded yet");
+      return null;
+    }
+    
+    const { logo_url, name, show_logo_on_receipt } = restaurantBranding;
+    console.log("Restaurant branding in render:", { logo_url, name, show_logo_on_receipt });
+    
+    return (
+      <div className="restaurant-branding">
+        {logo_url && show_logo_on_receipt ? (
+          <div className="logo-container">
+            <img 
+              src={logo_url} 
+              alt={`${name} logo`}
+              className="restaurant-logo"
+              onLoad={() => console.log("Logo image loaded successfully")}
+              onError={(e) => {
+                console.error("Failed to load logo image:", logo_url, e);
+                // Don't hide the image, try to display a fallback or retry
+                // Just in case it's a CORS issue, attempt with crossOrigin attribute
+                e.target.crossOrigin = "anonymous";
+                // If it's a relative path issue, try adding the full domain
+                if (!logo_url.startsWith('http')) {
+                  e.target.src = `http://localhost:8000${logo_url.startsWith('/') ? '' : '/'}${logo_url}`;
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <div className="restaurant-name-only">
+            <h2>{name}</h2>
+          </div>
+        )}
+        
+        <p className="table-number">Table 12</p>
+        
+        {/* View menu button commented out
+        <div className="view-menu-button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          View the menu
+        </div>
+        */}
+      </div>
+    );
+  };
+  
   // Format currency for display - updated to remove division by 100
   const formatCurrency = (amount, currency = 'GBP') => {
     if (!amount && amount !== 0) return '£0';
@@ -193,6 +271,51 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
     // No longer dividing by 100 since the amount is already in the correct format
     return formatter.format(amount / 100);
   };
+  
+  // Add a direct image loading test
+  useEffect(() => {
+    if (restaurantBranding.logo_url) {
+      console.log("Testing direct image loading for:", restaurantBranding.logo_url);
+      
+      // Create a test image element
+      const testImage = new Image();
+      testImage.crossOrigin = "anonymous"; // Try with CORS enabled
+      testImage.onload = () => {
+        console.log("Image loaded successfully in test:", restaurantBranding.logo_url);
+      };
+      testImage.onerror = (e) => {
+        console.error("Failed to load image in test:", restaurantBranding.logo_url, e);
+        // Try with full URL if it's a relative path
+        if (!restaurantBranding.logo_url.startsWith('http')) {
+          const fullUrl = `http://localhost:8000${restaurantBranding.logo_url.startsWith('/') ? '' : '/'}${restaurantBranding.logo_url}`;
+          console.log("Retrying with full URL:", fullUrl);
+          testImage.src = fullUrl;
+        }
+      };
+      testImage.src = restaurantBranding.logo_url;
+    }
+    
+    if (restaurantBranding.background_image_url) {
+      console.log("Testing direct background image loading for:", restaurantBranding.background_image_url);
+      
+      // Create a test image element
+      const testImage = new Image();
+      testImage.crossOrigin = "anonymous"; // Try with CORS enabled
+      testImage.onload = () => {
+        console.log("Background image loaded successfully in test:", restaurantBranding.background_image_url);
+      };
+      testImage.onerror = (e) => {
+        console.error("Failed to load background image in test:", restaurantBranding.background_image_url, e);
+        // Try with full URL if it's a relative path
+        if (!restaurantBranding.background_image_url.startsWith('http')) {
+          const fullUrl = `http://localhost:8000${restaurantBranding.background_image_url.startsWith('/') ? '' : '/'}${restaurantBranding.background_image_url}`;
+          console.log("Retrying with full URL:", fullUrl);
+          testImage.src = fullUrl;
+        }
+      };
+      testImage.src = restaurantBranding.background_image_url;
+    }
+  }, [restaurantBranding.logo_url, restaurantBranding.background_image_url]);
   
   // Render a loading spinner when payment intent is being created or order is loading
   if (paymentProcessing || isCreatingPaymentIntent) {
@@ -207,10 +330,13 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
   }
   
   return (
-    <div className="payment-container">
+    <div className={getContainerClassName()} style={getContainerStyle()}>
+      {/* Restaurant Branding Section */}
+      {renderRestaurantBranding()}
+      
       <div className="payment-header">
-        <h1>Your Order</h1>
-        <p className="subtitle">Order #{orderDetails?.id?.substring(0, 8)}</p>
+        <h1>Pay your bill</h1>
+        <p className="subtitle">{formatCurrency(orderTotal, currency)}</p>
       </div>
       
       {orderLoading ? (
@@ -631,8 +757,10 @@ export default function PaymentPage({ stripePromise, clientSecret, updatePayment
         }
         
         .subtitle {
-          color: #86868b;
+          color: #000000; 
           margin: 0;
+          font-size: 22px; 
+          font-weight: 500;
         }
       `}</style>
     </div>

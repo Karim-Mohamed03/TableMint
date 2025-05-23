@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
+import os
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,9 +28,22 @@ urlpatterns = [
     path('api/payments/', include('payments.urls')),
     path('api/pos/', include('pos.urls')),
     path('api/webhooks/', include('webhooks.urls')),
+    # Include restaurant URLs
+    path('', include('restaurants.urls')),
+    
+    # Direct URL path to serve assets directly
+    path('static/assets/<path:path>', serve, {
+        'document_root': os.path.join(settings.BASE_DIR, 'assets'),
+    }),
 ]
 
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Additional static files pattern for assets folder
+    urlpatterns += [
+        path('assets/<path:path>', serve, {
+            'document_root': os.path.join(settings.BASE_DIR, 'assets'),
+        }),
+    ]

@@ -27,10 +27,8 @@ export default function PaymentPage({
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState(null);
-  // New state to track tip separately - moved to top level
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
-  // New state for selected items
   const [selectedItemsDetails, setSelectedItemsDetails] = useState(null);
   
   // Hardcoded order ID for testing
@@ -56,7 +54,7 @@ export default function PaymentPage({
   // Calculate order total from line items
   const { total: orderTotal, currency } = calculateOrderTotal();
   
-  // Update base amount when order total changes - moved to top level section
+  // Update base amount when order total changes
   useEffect(() => {
     setBaseAmountInCents(orderTotal);
   }, [orderTotal]);
@@ -129,34 +127,25 @@ export default function PaymentPage({
     setUserPaymentAmount(splitInfo.amountToPay);
     setSplitDetails(splitInfo);
     setShowSplitModal(false);
-    // Show tip modal after confirming split amount
     setShowTipModal(true);
   };
   
-  // Handle selection of specific items
   const handleItemSelectionConfirm = (selection) => {
     setSelectedItemsDetails(selection);
     setUserPaymentAmount(selection.totalAmount);
     setBaseAmountInCents(selection.totalAmount);
     setShowItemsModal(false);
-    // Show tip modal after confirming item selection
     setShowTipModal(true);
   };
   
   const handleTipConfirm = async (tipAmount) => {
     try {
-      // Get base amount - either from split details, selected items, or total order
       const baseAmount = userPaymentAmount || calculateOrderTotal().total;
-      
-      // Convert tipAmount from dollars to cents (multiply by 100)
       const tipInCents = tipAmount * 100;
       const finalAmount = baseAmount + tipInCents;
       
-      // Save the tip and base amounts for later use
       setTipInCents(tipInCents);
       setBaseAmountInCents(baseAmount);
-      
-      // Save the tipAmount for display
       setUserPaymentAmount(finalAmount);
       
       setPaymentProcessing(true);
@@ -189,133 +178,18 @@ export default function PaymentPage({
   
   const options = clientSecret ? { clientSecret } : {};
   
-  // Get container class name based on branding configuration
-  const getContainerClassName = () => {
-    const hasBackgroundImage = restaurantBranding.background_image_url && restaurantBranding.show_background_image;
-    console.log("Has background image?", hasBackgroundImage);
-    return `payment-container ${hasBackgroundImage ? 'payment-container-with-bg' : ''}`;
-  };
-  
-  // Updated getContainerStyle to apply background image only to the top portion
-  const getContainerStyle = () => {
-    const hasBackgroundImage = restaurantBranding.background_image_url && restaurantBranding.show_background_image;
-    console.log("Background image URL:", restaurantBranding.background_image_url);
-    if (hasBackgroundImage) {
-      return {
-        '--bg-image': `url(${restaurantBranding.background_image_url})`,
-      };
-    }
-    return {};
-  };
-  
-  const renderRestaurantBranding = () => {
-    if (!isBrandingLoaded) {
-      console.log("Branding not loaded yet");
-      return null;
-    }
-    
-    const { logo_url, name, show_logo_on_receipt } = restaurantBranding;
-    console.log("Restaurant branding in render:", { logo_url, name, show_logo_on_receipt });
-    
-    return (
-      <div className="restaurant-branding">
-        {logo_url && show_logo_on_receipt ? (
-          <div className="logo-container">
-            <img 
-              src={logo_url} 
-              alt={`${name} logo`}
-              className="restaurant-logo"
-              onLoad={() => console.log("Logo image loaded successfully")}
-              onError={(e) => {
-                console.error("Failed to load logo image:", logo_url, e);
-                // Don't hide the image, try to display a fallback or retry
-                // Just in case it's a CORS issue, attempt with crossOrigin attribute
-                e.target.crossOrigin = "anonymous";
-                // If it's a relative path issue, try adding the full domain
-                if (!logo_url.startsWith('http')) {
-                  e.target.src = `http://localhost:8000${logo_url.startsWith('/') ? '' : '/'}${logo_url}`;
-                }
-              }}
-            />
-          </div>
-        ) : (
-          <div className="restaurant-name-only">
-            <h2>{name}</h2>
-          </div>
-        )}
-        
-        <p className="table-number">Table 12</p>
-        
-        {/* View menu button commented out
-        <div className="view-menu-button">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          View the menu
-        </div>
-        */}
-      </div>
-    );
-  };
-  
-  // Format currency for display - updated to remove division by 100
+  // Format currency for display
   const formatCurrency = (amount, currency = 'GBP') => {
-    if (!amount && amount !== 0) return '£0';
+    if (!amount && amount !== 0) return '£0.00';
     
     const formatter = new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: currency,
+      minimumFractionDigits: 2,
     });
     
-    // No longer dividing by 100 since the amount is already in the correct format
     return formatter.format(amount / 100);
   };
-  
-  // Add a direct image loading test
-  useEffect(() => {
-    if (restaurantBranding.logo_url) {
-      console.log("Testing direct image loading for:", restaurantBranding.logo_url);
-      
-      // Create a test image element
-      const testImage = new Image();
-      testImage.crossOrigin = "anonymous"; // Try with CORS enabled
-      testImage.onload = () => {
-        console.log("Image loaded successfully in test:", restaurantBranding.logo_url);
-      };
-      testImage.onerror = (e) => {
-        console.error("Failed to load image in test:", restaurantBranding.logo_url, e);
-        // Try with full URL if it's a relative path
-        if (!restaurantBranding.logo_url.startsWith('http')) {
-          const fullUrl = `http://localhost:8000${restaurantBranding.logo_url.startsWith('/') ? '' : '/'}${restaurantBranding.logo_url}`;
-          console.log("Retrying with full URL:", fullUrl);
-          testImage.src = fullUrl;
-        }
-      };
-      testImage.src = restaurantBranding.logo_url;
-    }
-    
-    if (restaurantBranding.background_image_url) {
-      console.log("Testing direct background image loading for:", restaurantBranding.background_image_url);
-      
-      // Create a test image element
-      const testImage = new Image();
-      testImage.crossOrigin = "anonymous"; // Try with CORS enabled
-      testImage.onload = () => {
-        console.log("Background image loaded successfully in test:", restaurantBranding.background_image_url);
-      };
-      testImage.onerror = (e) => {
-        console.error("Failed to load background image in test:", restaurantBranding.background_image_url, e);
-        // Try with full URL if it's a relative path
-        if (!restaurantBranding.background_image_url.startsWith('http')) {
-          const fullUrl = `http://localhost:8000${restaurantBranding.background_image_url.startsWith('/') ? '' : '/'}${restaurantBranding.background_image_url}`;
-          console.log("Retrying with full URL:", fullUrl);
-          testImage.src = fullUrl;
-        }
-      };
-      testImage.src = restaurantBranding.background_image_url;
-    }
-  }, [restaurantBranding.logo_url, restaurantBranding.background_image_url]);
   
   // Render a loading spinner when payment intent is being created or order is loading
   if (paymentProcessing || isCreatingPaymentIntent) {
@@ -330,32 +204,66 @@ export default function PaymentPage({
   }
   
   return (
-    <div className={getContainerClassName()} style={getContainerStyle()}>
-      {/* Restaurant Branding Section */}
-      {renderRestaurantBranding()}
-      
-      <div className="payment-header">
-        <h1>Pay your bill</h1>
-        <p className="subtitle">{formatCurrency(orderTotal, currency)}</p>
+    <div className="payment-page">
+      {/* Hero Section with Background Image */}
+      <div 
+        className="hero-section"
+        style={{
+          backgroundImage: restaurantBranding?.background_image_url && restaurantBranding?.show_background_image 
+            ? `url(${restaurantBranding.background_image_url})` 
+            : 'none'
+        }}
+      >
+        {/* Restaurant Branding */}
+        <div className="restaurant-branding">
+          {isBrandingLoaded && restaurantBranding?.logo_url && restaurantBranding?.show_logo_on_receipt ? (
+            <div className="logo-container">
+              <img 
+                src={restaurantBranding.logo_url} 
+                alt={`${restaurantBranding.name} logo`}
+                className="restaurant-logo"
+              />
+            </div>
+          ) : isBrandingLoaded && restaurantBranding?.name ? (
+            <div className="restaurant-name">
+              <h1>{restaurantBranding.name}</h1>
+            </div>
+          ) : null}
+          
+          <div className="table-info">
+            <span className="table-number">Table 12</span>
+          </div>
+        </div>
       </div>
       
-      {orderLoading ? (
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Loading order details...</p>
+      {/* Main Content */}
+      <div className="main-content">
+        {/* Payment Header */}
+        <div className="payment-header">
+          <h2>Pay your bill</h2>
+          <div className="total-amount">
+            {formatCurrency(orderTotal, currency)}
+          </div>
         </div>
-      ) : orderError ? (
-        <div className="error-message">
-          <p>Error loading order: {orderError}</p>
-        </div>
-      ) : orderDetails ? (
-        <div className="order-summary">
+        
+        {/* Order Items */}
+        {orderLoading ? (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading order details...</p>
+          </div>
+        ) : orderError ? (
+          <div className="error-message">
+            <p>Error loading order: {orderError}</p>
+          </div>
+        ) : orderDetails?.line_items ? (
           <div className="order-items">
-            <h2>Order Items</h2>
-            {orderDetails.line_items?.map((item, index) => (
+            {orderDetails.line_items.map((item, index) => (
               <div className="order-item" key={index}>
-                <div className="quantity-badge">×{item.quantity}</div>
-                <div className="item-name">{item.name}</div>
+                <div className="item-info">
+                  <span className="quantity">{item.quantity}</span>
+                  <span className="item-name">{item.name}</span>
+                </div>
                 <div className="item-price">
                   {formatCurrency(
                     parseInt(item.quantity, 10) * item.base_price_money?.amount,
@@ -365,114 +273,56 @@ export default function PaymentPage({
               </div>
             ))}
           </div>
-          
-          <div className="order-total">
-            <div className="total-row">
-              <span>Subtotal</span>
-              <span className="total-amount">
-                {orderTotal ? formatCurrency(orderTotal, currency) : '0.00'}
-              </span>
-            </div>
+        ) : null}
+        
+        {/* Payment Options */}
+        {!showCheckout ? (
+          <div className="payment-options">
+            <button className="payment-option primary" onClick={handlePayFullAmount}>
+              <div className="option-content">
+                <span className="option-title">Pay the full amount</span>
+                <span className="option-subtitle">Pay for everyone's receipt</span>
+              </div>
+              <div className="option-amount">
+                {formatCurrency(orderTotal, currency)}
+              </div>
+            </button>
             
-            {userPaymentAmount && userPaymentAmount !== orderTotal && (
-              <>
-                <div className="total-row tip-row">
-                  <span>Tip</span>
-                  <span className="tip-amount">
-                    {formatCurrency(userPaymentAmount - baseAmountInCents, currency)}
-                  </span>
-                </div>
-                
-                <div className="total-row final-row">
-                  <span>Final Total</span>
-                  <span className="final-amount">
-                    {formatCurrency(userPaymentAmount, currency)}
-                  </span>
-                </div>
-              </>
-            )}
+            <button className="payment-option" onClick={handlePaySpecificAmount}>
+              <div className="option-content">
+                <span className="option-title">Let's Split the Bill!</span>
+                <span className="option-subtitle">Split the bill with others at your table</span>
+              </div>
+            </button>
             
-            <div className="tax-disclaimer">
-              <small>Inclusive of all taxes and charges</small>
-            </div>
+            <button className="payment-option" onClick={handlePayForMyItems}>
+              <div className="option-content">
+                <span className="option-title">Pay for your items</span>
+                <span className="option-subtitle">Only pay for what you ordered</span>
+              </div>
+            </button>
           </div>
-        </div>
-      ) : (
-        <div className="empty-order">
-          <p>No order details available</p>
-        </div>
-      )}
+        ) : (
+          <div className="payment-section">
+            {clientSecret ? (
+              <Elements stripe={stripePromise} options={options}>
+                <CheckoutForm 
+                  baseAmount={baseAmountInCents} 
+                  tipAmount={tipInCents}
+                  orderId={orderDetails?.id || testOrderId}
+                />
+              </Elements>
+            ) : (
+              <div className="loading">
+                <div className="loading-spinner"></div>
+                <p>Preparing payment form...</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       
-      {!showCheckout ? (
-        <div className="payment-options">
-          <button className="payment-option full-amount" onClick={handlePayFullAmount}>
-            <div className="option-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 5L19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="option-text">
-              <h3>Pay full amount</h3>
-              <p>Pay the entire bill yourself</p>
-            </div>
-            <div className="option-amount">
-              {formatCurrency(orderTotal, currency)}
-            </div>
-          </button>
-          
-          <button className="payment-option specific-amount" onClick={handlePaySpecificAmount}>
-            <div className="option-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 5L5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M16 5H19V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M8 19H5V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="option-text">
-              <h3>Let's split the bill!</h3>
-              <p>Split the bill with others</p>
-            </div>
-            <div className="option-amount">
-              {splitDetails ? formatCurrency(userPaymentAmount, currency) : 'Custom'}
-            </div>
-          </button>
-          
-          <button className="payment-option items-amount" onClick={handlePayForMyItems}>
-            <div className="option-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="option-text">
-              <h3>Pay for my items</h3>
-              <p>Only pay for what you ordered</p>
-            </div>
-            <div className="option-amount">
-              {selectedItemsDetails ? formatCurrency(selectedItemsDetails.totalAmount, currency) : 'Select items'}
-            </div>
-          </button>
-        </div>
-      ) : (
-        <div className="payment-section">
-          {clientSecret ? (
-            <Elements stripe={stripePromise} options={options}>
-              <CheckoutForm 
-                baseAmount={baseAmountInCents} 
-                tipAmount={tipInCents}
-                orderId={orderDetails?.id || testOrderId}
-              />
-            </Elements>
-          ) : (
-            <div className="loading">
-              <div className="loading-spinner"></div>
-              <p>Preparing payment form...</p>
-            </div>
-          )}
-        </div>
-      )}
-      
+      {/* Modals */}
       <SplitBillModal 
         isOpen={showSplitModal} 
         onClose={toggleSplitModal} 
@@ -490,7 +340,6 @@ export default function PaymentPage({
         onConfirm={handleTipConfirm}
       />
       
-      {/* Items selection modal - updated to use ItemSelectionModal component */}
       <div className={`items-modal-overlay ${showItemsModal ? 'active' : ''}`} onClick={toggleItemsModal}>
         <div className="items-modal" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
@@ -507,63 +356,243 @@ export default function PaymentPage({
       </div>
       
       <style jsx>{`
-        .payment-options {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-top: 24px;
+        @import url('https://fonts.googleapis.com/css2?family=Satoshi:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
         }
         
-        .payment-option {
-          display: flex;
-          align-items: center;
-          background-color: #ffffff;
-          border: 1px solid #e0e0e0;
-          border-radius: 12px;
-          padding: 16px;
-          transition: all 0.2s ease;
-          cursor: pointer;
-          text-align: left;
+        .payment-page {
+          width: 100%;
+          max-width: 100%;
+          min-height: 100vh;
+          height: 100%;
+          background-color: white;
+          position: relative;
+          overflow-x: hidden;
         }
         
-        .payment-option:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-          border-color: var(--primary-color);
-        }
-        
-        .option-icon {
+        .hero-section {
+          height: 25vh;
+          max-height: 220px;
+          width: 100%;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 48px;
-          height: 48px;
-          background-color: #f5f5f7;
-          border-radius: 50%;
-          margin-right: 16px;
-          color: var(--primary-color);
+          background-color: #2c3e50;
         }
         
-        .option-text {
-          flex: 1;
+        .hero-section::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.65);
+          z-index: 1;
         }
         
-        .option-text h3 {
+        .restaurant-branding {
+          position: absolute;
+          bottom: -50px;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 10;
+          text-align: center;
+          color: white;
+        }
+        
+        .logo-container {
+          margin-bottom: 8px;
+        }
+        
+        .restaurant-logo {
+          width: 100px;
+          height: 100px;
+          border-radius: 16px;
+          object-fit: cover;
+          background: white;
+          padding: 8px;
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+          border: 3px solid white;
+        }
+        
+        .restaurant-name h1 {
+          font-size: 20px;
+          font-weight: 700;
           margin: 0;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          background: white;
+          color: #1a1a1a;
+          padding: 8px;
+          border-radius: 12px;
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+          border: 3px solid white;
+          width: 100px;
+          height: 100px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.2;
+        }
+        
+        .table-info {
+          background: transparent;
+          border-radius: 16px;
+          padding: 4px 10px;
+          display: inline-block;
+          margin-top: 10px;
+          color: #666;
+        }
+        
+        .table-number {
+          font-size: 14px;
+        }
+        
+        .main-content {
+          padding: 70px 16px 24px;
+          width: 100%;
+          margin: 0 auto;
+        }
+        
+        .payment-header {
+          text-align: center;
+          margin-bottom: 24px;
+          padding-top: 10px;
+        }
+        
+        .payment-header h2 {
+          font-size: 22px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0 0 6px 0;
+        }
+        
+        .total-amount {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1a1a1a;
+        }
+        
+        .order-items {
+          background: white;
+          border-radius: 16px;
+          padding: 5px;
+          margin-bottom: 20px;
+          
+        }
+        
+        .order-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 0;
+        }
+        
+        .order-item:last-child {
+          border-bottom: none;
+        }
+        
+        .item-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex: 1;
+          min-width: 0; /* For text truncation */
+        }
+        
+        .quantity {
+          background: #f8f9fa;
+          color: #666;
+          border-radius: 6px;
+          padding: 3px 6px;
+          font-size: 14px;
+          font-weight: 600;
+          min-width: 22px;
+          text-align: center;
+          flex-shrink: 0;
+        }
+        
+        .item-name {
+          font-size: 15px;
+          color: #1a1a1a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .item-price {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1a1a1a;
+          padding-left: 8px;
+          flex-shrink: 0;
+        }
+        
+        .payment-options {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        
+        .payment-option {
+          background: black;
+          border: 2px solid #e9ecef;
+          border-radius: 16px;
+          padding: 16px;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          color: white;
+          width: 100%;
+        }
+        
+        .payment-option:hover, .payment-option:active {
+          border-color: #2ecc71;
+        }
+        
+        .payment-option.primary {
+          background: black;
+          color: white;
+          border-color: #1a1a1a;
+        }
+        
+        .payment-option.primary:hover, .payment-option.primary:active {
+          border-color: #2ecc71;
+        }
+        
+        .option-content {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        
+        .option-title {
           font-size: 16px;
           font-weight: 600;
-          color: #1d1d1f;
         }
         
-        .option-text p {
-          margin: 4px 0 0;
-          font-size: 14px;
-          color: #86868b;
+        .option-subtitle {
+          font-size: 13px;
+          opacity: 0.7;
         }
         
         .option-amount {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--primary-color);
+          font-size: 16px;
+          font-weight: 700;
+          color: #2ecc71;
         }
         
         .loading-container {
@@ -571,10 +600,35 @@ export default function PaymentPage({
           flex-direction: column;
           align-items: center;
           justify-content: center;
+          padding: 40px 20px;
           height: 50vh;
         }
         
-        /* Items Modal Styles */
+        .loading-spinner {
+          width: 30px;
+          height: 30px;
+          border: 3px solid #f3f3f3;
+          border-top: 3px solid #007bff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+          background: #ffebee;
+          color: #c62828;
+          padding: 16px;
+          border-radius: 12px;
+          margin: 20px 0;
+          text-align: center;
+          font-size: 14px;
+        }
+        
         .items-modal-overlay {
           position: fixed;
           top: 0;
@@ -599,7 +653,6 @@ export default function PaymentPage({
         .items-modal {
           background: white;
           width: 100%;
-          max-width: 500px;
           border-radius: 20px 20px 0 0;
           padding: 16px 0 0;
           transform: translateY(100%);
@@ -624,143 +677,60 @@ export default function PaymentPage({
           background-color: #e0e0e0;
           border-radius: 3px;
         }
-        /* Updated Order summary styles */
-        .order-summary {
-          background: #ffffff;
-          border-radius: 12px;
-          padding: 20px;
-          margin-top: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        
+        /* Mobile-specific media queries */
+        @media (max-width: 480px) {
+          .main-content {
+            padding: 70px 12px 16px;
+          }
+          
+          .payment-header h2 {
+            font-size: 18px;
+          }
+          
+          .total-amount {
+            font-size: 18px;
+          }
+          
+          .item-name {
+            max-width: 180px;
+          }
+          
+          .payment-option {
+            padding: 14px;
+          }
+          
+          .option-title {
+            font-size: 15px;
+          }
+          
+          .option-subtitle {
+            font-size: 12px;
+          }
         }
         
-        .order-items {
-          margin-bottom: 24px;
-        }
-        
-        .order-items h2 {
-          font-size: 18px;
-          margin-bottom: 16px;
-          color: #1d1d1f;
-        }
-        
-        .order-item {
-          display: flex;
-          align-items: center;
-          padding: 8px 0;
-          border-bottom: 1px solid #f5f5f7;
-        }
-        
-        .quantity-badge {
-          background-color: #f5f5f7;
-          color: #333;
-          border-radius: 50%;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 14px;
-          font-weight: 500;
-          margin-right: 12px;
-        }
-        
-        .item-name {
-          flex: 1;
-          font-size: 16px;
-          font-weight: 500;
-          margin-left: 0;
-        }
-        
-        .item-price {
-          font-weight: 600;
-          color: #1d1d1f;
-          text-align: right;
-        }
-        
-        .order-total {
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 2px solid #f5f5f7;
-        }
-        
-        .total-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 18px;
-          font-weight: 600;
-          margin-bottom: 8px;
-        }
-        
-        .total-row.tip-row {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px dashed #e0e0e0;
-        }
-        
-        .total-row.final-row {
-          margin-top: 8px;
-          padding-top: 12px;
-          border-top: 1px solid #e0e0e0;
-          font-size: 20px;
-        }
-        
-        .tip-amount {
-          color: #34a853;
-        }
-        
-        .final-amount {
-          color: #0071e3;
-          font-weight: 700;
-        }
-        
-        .total-amount {
-          color: var(--primary-color);
-        }
-        
-        .currency-symbol {
-          font-weight: 700;
-          margin-right: 2px;
-        }
-        
-        .tax-disclaimer {
-          text-align: right;
-          color: #86868b;
-          font-size: 12px;
-          margin-top: 4px;
-        }
-        
-        .error-message {
-          background-color: #ffebee;
-          color: #d32f2f;
-          padding: 16px;
-          border-radius: 8px;
-          margin: 20px 0;
-          text-align: center;
-        }
-        
-        .empty-order {
-          background-color: #f5f5f7;
-          padding: 40px 16px;
-          border-radius: 8px;
-          margin: 20px 0;
-          text-align: center;
-          color: #86868b;
-        }
-        
-        .payment-header {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        
-        .payment-header h1 {
-          margin-bottom: 4px;
-        }
-        
-        .subtitle {
-          color: #000000; 
-          margin: 0;
-          font-size: 22px; 
-          font-weight: 500;
+        /* For extremely small screens */
+        @media (max-width: 320px) {
+          .hero-section {
+            height: 20vh;
+          }
+          
+          .restaurant-logo, .restaurant-name h1 {
+            width: 80px;
+            height: 80px;
+          }
+          
+          .main-content {
+            padding-top: 50px;
+          }
+          
+          .item-name {
+            max-width: 140px;
+          }
+          
+          .payment-option {
+            padding: 12px;
+          }
         }
       `}</style>
     </div>

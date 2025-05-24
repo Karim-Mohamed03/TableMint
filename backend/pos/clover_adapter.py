@@ -19,6 +19,7 @@ class CloverAdapter(POSAdapter):
     
     def __init__(self):
         """Initialize Clover client with credentials from .env file"""
+        # self.api_key = os.environ.get('CLOVER_API_KEY')
         self.api_key = os.environ.get('CLOVER_API_KEY')
         self.merchant_id = os.environ.get('CLOVER_MERCHANT_ID')
         self.base_url = os.environ.get('CLOVER_API_URL', 'https://api.clover.com/v3')

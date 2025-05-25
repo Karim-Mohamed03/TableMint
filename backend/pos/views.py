@@ -17,6 +17,7 @@ from .serializers import OrderSerializer
 from .square_webhook_adapter import SquareWebhookAdapter
 from .ncr_adapter import ncr_adapter
 from .pos_factory import POSFactory
+from .pos_service import POSService
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +257,54 @@ def create_clover_order(request):
         }, status=400)
     except Exception as e:
         logger.error(f"Error creating Clover order: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_catalog(request):
+    """
+    API endpoint to fetch catalog items and categories from the POS system
+    
+    GET /api/pos/catalog/
+    
+    Returns:
+        JSON response with catalog data including items and categories
+    """
+    try:
+        # Initialize the POS service (will use default adapter from factory)
+        pos_service = POSService()
+        
+        # Check if the adapter is authenticated
+        if not pos_service.is_authenticated():
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
+        
+        # Get catalog data using the POS service
+        result = pos_service.get_catalog()
+        
+        if result.get('success', False):
+            return JsonResponse({
+                'success': True,
+                'objects': result.get('objects', [])
+            })
+        else:
+            # Handle the error field which could be a string or list
+            error = result.get('error')
+            if error is None:
+                error = result.get('errors', 'Unknown error')
+                
+            return JsonResponse({
+                'success': False,
+                'error': error
+            }, status=400)
+            
+    except Exception as e:
+        logger.error(f"Error fetching catalog: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)

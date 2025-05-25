@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
@@ -16,15 +17,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env from the backend directory
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+logger = logging.getLogger(__name__)
 
 class SquareAdapter(POSAdapter):
     def __init__(self):
         """Initialize Square client with access token from .env file"""
+        self.access_token = os.environ.get('SQUARE_ACCESS_TOKEN')
+        self.location_id = os.environ.get('SQUARE_LOCATION_ID')
+        
+        logger.info(f"SquareAdapter initialized with access token: {'*' * 5}{self.access_token[-4:] if self.access_token else 'None'}")
+        logger.info(f"SquareAdapter location ID: {self.location_id or 'None'}")
+        
         self.client = Square(
-            token=os.environ.get('SQUARE_ACCESS_TOKEN'),
+            token=self.access_token,
             environment=SquareEnvironment.SANDBOX
         )
-        self.location_id = os.environ.get('SQUARE_LOCATION_ID')
         
     def authenticate(self) -> bool:
         """
@@ -34,10 +41,29 @@ class SquareAdapter(POSAdapter):
             bool: True if authentication is successful, False otherwise.
         """
         try:
+            if not self.access_token:
+                logger.error("No Square access token found in environment variables")
+                return False
+                
             # Try to list locations as a simple API test
-            result = self.client.locations.list_locations()
-            return result.is_success()
-        except Exception:
+            logger.info("Testing Square API authentication...")
+            result = self.client.locations.list()
+            
+            logger.info(f"Square API response: {type(result)}")
+            
+            # Check if the request was successful by looking for errors
+            if hasattr(result, 'errors') and result.errors:
+                logger.error(f"Square authentication failed with errors: {result.errors}")
+                return False
+            elif hasattr(result, 'body') and result.body:
+                logger.info("Square authentication successful")
+                return True
+            else:
+                logger.info("Square authentication successful (no errors found)")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Square authentication exception: {str(e)}")
             return False
             
     def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -648,6 +674,56 @@ class SquareAdapter(POSAdapter):
                 "error": str(e),
                 "code": e.status_code if hasattr(e, 'status_code') else 'unknown'
             }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def get_catalog(self) -> Dict[str, Any]:
+        """
+        Fetch catalog items and categories from Square.
+        
+        Returns:
+            Dict: Catalog data including items and categories or error details.
+        """
+        try:
+            result = self.client.catalog.list()
+            
+            # Check if the request was successful by looking for errors
+            if hasattr(result, 'errors') and result.errors:
+                return {
+                    "success": False,
+                    "error": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors]
+                }
+            
+            # Extract catalog objects from the response - check for different attribute names
+            objects = []
+            if hasattr(result, 'items'):
+                objects = result.items
+            elif hasattr(result, 'body') and hasattr(result.body, 'objects'):
+                objects = result.body.objects
+            elif hasattr(result, 'objects'):
+                objects = result.objects
+            
+            # Convert objects to dictionaries if needed
+            catalog_objects = []
+            for obj in objects:
+                if hasattr(obj, 'dict'):
+                    catalog_objects.append(obj.dict())
+                elif isinstance(obj, dict):
+                    catalog_objects.append(obj)
+                else:
+                    try:
+                        catalog_objects.append(vars(obj))
+                    except:
+                        catalog_objects.append(str(obj))
+            
+            return {
+                "success": True,
+                "objects": catalog_objects
+            }
+            
         except Exception as e:
             return {
                 "success": False,

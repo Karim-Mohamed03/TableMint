@@ -4,6 +4,7 @@ import "./App.css";
 import { loadStripe } from "@stripe/stripe-js";
 import PaymentPage from "./receiptScreen/PaymentPagee";
 import CompletePage from "./receiptScreen/CompletePage";
+import MenuCategories from "./orderingSequence/menuCategories";
 import axios from "axios";
 
 const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
@@ -129,6 +130,10 @@ function App() {
                   isBrandingLoaded={isBrandingLoaded}
                 />
               } 
+            />
+            <Route 
+              path="/menu" 
+              element={<MenuCategories />} 
             />
             <Route 
               path="/complete" 

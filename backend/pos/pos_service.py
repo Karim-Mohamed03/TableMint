@@ -114,3 +114,12 @@ class POSService:
             Dict: Location information or error details.
         """
         return self.adapter.list_locations()
+        
+    def get_catalog(self) -> Dict[str, Any]:
+        """
+        Fetch catalog items and categories from the POS system.
+        
+        Returns:
+            Dict: Catalog data including items and categories or error details.
+        """
+        return self.adapter.get_catalog()

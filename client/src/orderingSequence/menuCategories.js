@@ -190,30 +190,6 @@ const MenuCategories = () => {
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
 
-  // Handle adding item to cart
-  const handleAddToCart = (item) => {
-    const itemData = item.item_data;
-    const variation = itemData?.variations?.[0];
-    const price = variation?.item_variation_data?.price_money;
-    
-    const cartItem = {
-      id: item.id,
-      name: itemData?.name || 'Unknown Item',
-      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
-      currency: price?.currency || 'USD'
-    };
-    
-    addItem(cartItem);
-    
-    // Show success feedback
-    alert(`${cartItem.name} added to cart!`);
-  };
-
-  // Navigate to cart
-  const goToCart = () => {
-    navigate('/cart');
-  };
-
   // Fetch catalog data on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -456,7 +432,6 @@ const MenuCategories = () => {
               <button 
                 className={`add-to-order-btn ${!inStock ? 'sold-out' : ''}`}
                 disabled={!inStock}
-                onClick={() => inStock && handleAddToCart(item)}
               >
                 {inStock ? 'Add to Order' : 'Out of Stock'}
               </button>

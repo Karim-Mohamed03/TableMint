@@ -149,11 +149,23 @@
   max-width: 300px;
   color: #333;
 }
+*/
+
+/* View Menu Option Styling */
+.view-menu-option {
+  background: #f5f5f7 !important;
+  color: #1a1a1a !important;
+  border: 2px solid #e9ecef !important;
+}
+
+.view-menu-option:hover, .view-menu-option:active {
+  border-color: #0071e3 !important;
+  background: #e8f4fd !important;
+}
   
 .view-menu-button svg {
   margin-right: 8px;
 }
-*/
   
 .order-summary {
   margin-top: 16px;
@@ -717,6 +729,7 @@ body {
   font-weight: 500;
   padding: 10px 0;
   width: 50px;
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 

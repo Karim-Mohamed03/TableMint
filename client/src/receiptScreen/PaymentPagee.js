@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Elements } from "@stripe/react-stripe-js";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import CheckoutForm from "./components/CheckoutForm";
 import SplitBillModal from "./components/SplitBillModal";
@@ -30,6 +31,9 @@ export default function PaymentPage({
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   const [selectedItemsDetails, setSelectedItemsDetails] = useState(null);
+  
+  // React Router navigation hook
+  const navigate = useNavigate();
   
   // Hardcoded order ID for testing
   const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
@@ -175,6 +179,10 @@ export default function PaymentPage({
     setSplitDetails(null);
     toggleItemsModal();
   };
+
+  const handleViewMenu = () => {
+    navigate('/menu');
+  };
   
   const options = clientSecret ? { clientSecret } : {};
   
@@ -299,6 +307,13 @@ export default function PaymentPage({
               <div className="option-content">
                 <span className="option-title">Pay for your items</span>
                 <span className="option-subtitle">Only pay for what you ordered</span>
+              </div>
+            </button>
+            
+            <button className="payment-option view-menu-option" onClick={handleViewMenu}>
+              <div className="option-content">
+                <span className="option-title">View Menu</span>
+                <span className="option-subtitle">Browse our full menu</span>
               </div>
             </button>
           </div>

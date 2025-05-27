@@ -9,7 +9,7 @@ urlpatterns = [
     # Main order endpoints - matches documentation
     path('create/', create, name='create_order'),  # POST /orders/
     path('search/', search, name='search_orders'),  # POST /orders/search/
-    # path('<str:order_id>/', get, name='get_order'),  # GET /orders/{order_id}/
+    #path('<str:order_id>/', get, name='get_order'),  # GET /orders/{order_id}/
     
 
     

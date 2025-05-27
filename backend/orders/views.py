@@ -737,7 +737,9 @@ def batch_get_inventory(request):
         # Parse JSON body
         try:
             data = json.loads(request.body)
+            logger.info(f"Batch inventory request data: {data}")
         except json.JSONDecodeError:
+            logger.error("Invalid JSON in batch inventory request")
             return JsonResponse({
                 'success': False,
                 'errors': ['Invalid JSON in request body'],
@@ -749,8 +751,12 @@ def batch_get_inventory(request):
         location_ids = data.get('location_ids')
         cursor = data.get('cursor')
         
+        logger.info(f"Extracted catalog_object_ids: {catalog_object_ids}")
+        logger.info(f"Extracted location_ids: {location_ids}")
+        
         # Validate required parameters
         if not catalog_object_ids or not isinstance(catalog_object_ids, list):
+            logger.error(f"Invalid catalog_object_ids: {catalog_object_ids}")
             return JsonResponse({
                 'success': False,
                 'errors': ['catalog_object_ids must be a non-empty list'],

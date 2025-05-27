@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useCart } from '../contexts/CartContext';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingCart } from 'lucide-react';
 
 // Function to fetch catalog data from the backend API
 const getCatalogData = async () => {
@@ -178,12 +181,38 @@ const getLocations = async () => {
 
 // Main MenuCategories component
 const MenuCategories = () => {
+  const navigate = useNavigate();
+  const { addItem, getItemCount } = useCart();
   const [catalogData, setCatalogData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
+
+  // Handle adding item to cart
+  const handleAddToCart = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const price = variation?.item_variation_data?.price_money;
+    
+    const cartItem = {
+      id: item.id,
+      name: itemData?.name || 'Unknown Item',
+      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
+      currency: price?.currency || 'USD'
+    };
+    
+    addItem(cartItem);
+    
+    // Show success feedback
+    alert(`${cartItem.name} added to cart!`);
+  };
+
+  // Navigate to cart
+  const goToCart = () => {
+    navigate('/cart');
+  };
 
   // Fetch catalog data on component mount
   useEffect(() => {
@@ -342,8 +371,18 @@ const MenuCategories = () => {
     <div className="menu-categories">
       {/* Header */}
       <div className="menu-header">
-        <h1>Menu</h1>
-        <p>Choose from our delicious selection</p>
+        <div className="header-content">
+          <div className="header-text">
+            <h1>Menu</h1>
+            <p>Choose from our delicious selection</p>
+          </div>
+          <button className="cart-button" onClick={goToCart}>
+            <ShoppingCart size={24} />
+            {getItemCount() > 0 && (
+              <span className="cart-badge">{getItemCount()}</span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Category Filter */}
@@ -417,6 +456,7 @@ const MenuCategories = () => {
               <button 
                 className={`add-to-order-btn ${!inStock ? 'sold-out' : ''}`}
                 disabled={!inStock}
+                onClick={() => inStock && handleAddToCart(item)}
               >
                 {inStock ? 'Add to Order' : 'Out of Stock'}
               </button>
@@ -494,6 +534,19 @@ const MenuCategories = () => {
           margin-bottom: 30px;
         }
 
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .header-text {
+          flex: 1;
+          text-align: left;
+        }
+
         .menu-header h1 {
           font-size: 32px;
           font-weight: 700;
@@ -505,6 +558,40 @@ const MenuCategories = () => {
           color: #666;
           font-size: 16px;
           margin: 0;
+        }
+
+        .cart-button {
+          position: relative;
+          background: #007bff;
+          color: white;
+          border: none;
+          border-radius: 12px;
+          padding: 12px;
+          cursor: pointer;
+          transition: background 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cart-button:hover {
+          background: #0056b3;
+        }
+
+        .cart-badge {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background: #e74c3c;
+          color: white;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          font-size: 12px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .category-filter {

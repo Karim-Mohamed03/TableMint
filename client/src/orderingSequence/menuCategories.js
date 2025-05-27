@@ -3,6 +3,7 @@ import { useCart } from '../contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
 
+
 // Function to fetch catalog data from the backend API
 const getCatalogData = async () => {
   try {
@@ -153,6 +154,8 @@ const getInventoryData = async (itemVariationMap, locationId = null) => {
   }
 };
 
+
+
 // Helper function to fetch available locations
 const getLocations = async () => {
   try {
@@ -277,6 +280,10 @@ const MenuCategories = () => {
 
     fetchData();
   }, []);
+
+  const goToCart = () => {
+    navigate('/cart');
+  };
 
   // Parse and organize catalog data
   const organizedData = React.useMemo(() => {

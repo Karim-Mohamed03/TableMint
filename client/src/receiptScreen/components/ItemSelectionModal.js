@@ -16,6 +16,8 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
       setSelectedItems(initialSelection);
     }
   }, [isOpen, items]);
+
+  //ITEM SELECTION LOGIC
   
   // Toggle item selection
   const toggleItemSelection = (index) => {

@@ -9,9 +9,6 @@ urlpatterns = [
     # Main order endpoints - matches documentation
     path('create/', create, name='create_order'),  # POST /orders/
     path('search/', search, name='search_orders'),  # POST /orders/search/
-    path('<str:order_id>/', get, name='get_order'),  # GET /orders/{order_id}/
-    
-
     
     # NCR-specific endpoints for testing
     path('ncr/create/', create_ncr_order, name='create_ncr_order'),
@@ -26,6 +23,9 @@ urlpatterns = [
     path('inventory/batch/', batch_get_inventory, name='batch_get_inventory'),
     path('inventory/location/<str:location_id>/', get_inventory_by_location, name='get_inventory_by_location'),
     path('inventory/batch-create-changes/', batch_create_changes, name='batch_create_changes'),
+    
+    # Generic order ID pattern - MUST BE LAST to avoid conflicts
+    path('<str:order_id>/', get, name='get_order'),  # GET /orders/{order_id}/
 ]
 
 #xYUv76Bvje35p7n0mJrOaooole4F

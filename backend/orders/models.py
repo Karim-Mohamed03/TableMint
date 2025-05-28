@@ -1,6 +1,13 @@
+# We'll modify the existing Order model by adding a field to track the Square order ID
+# This code should be added to your existing orders/models.py file
+
 from django.db import models
 from decimal import Decimal
 
+# Add this line to your imports
+from django.db.models import F
+
+# Since Order model is already defined, we'll just show the changes needed:
 class Order(models.Model):
     STATUS_CHOICES = (
         ('open', 'Open'),
@@ -18,6 +25,9 @@ class Order(models.Model):
     # Reference to external POS system order ID (if applicable)
     pos_reference = models.CharField(max_length=100, blank=True, null=True)
     
+    # Add this field to store the Square location ID
+    square_location_id = models.CharField(max_length=255, blank=True, null=True)
+    
     def __str__(self):
         return f"Order #{self.id} - {self.table}"
     
@@ -32,6 +42,34 @@ class Order(models.Model):
     def subtotal(self):
         """Calculate the subtotal (before tax and service charge)"""
         return sum(item.total_price for item in self.items.all())
+    
+    @classmethod
+    def get_by_square_order_id(cls, square_order_id):
+        """
+        Find an order by its Square order ID (pos_reference)
+        """
+        return cls.objects.filter(pos_reference=square_order_id).first()
+    
+    @classmethod
+    def update_or_create_from_square(cls, square_order_id, table_id, location_id, status='open'):
+        """
+        Create or update an order based on Square webhook data
+        """
+        from tables.models import Table  # Import here to avoid circular imports
+        
+        table = Table.objects.get(id=table_id)
+        
+        # Try to find an existing order with this Square order ID
+        order, created = cls.objects.update_or_create(
+            pos_reference=square_order_id,
+            defaults={
+                'table': table,
+                'status': status,
+                'square_location_id': location_id
+            }
+        )
+        
+        return order, created
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

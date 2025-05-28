@@ -1,9 +1,13 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import { loadStripe } from "@stripe/stripe-js";
 import PaymentPage from "./receiptScreen/PaymentPagee";
 import CompletePage from "./receiptScreen/CompletePage";
+import MenuCategories from "./orderingSequence/menuCategories";
+import CartPage from "./pages/CartPage";
+import { CartProvider } from "./contexts/CartContext";
+import axios from "axios";
 
 const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
 
@@ -11,19 +15,31 @@ function App() {
   const [clientSecret, setClientSecret] = useState("");
   const [error, setError] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(3500); // Default amount in cents
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
+  // New state for restaurant branding
+  
+  const [restaurantBranding, setRestaurantBranding] = useState({
+    id: null,
+    name: "Restaurant",
+    logo_url: "http://localhost:8000/static/assets/logo.jpg",
+    background_image_url: "http://localhost:8000/static/assets/background.jpg",
+    primary_color: "#0071e3",
+    secondary_color: "#f5f5f7",
+    show_logo_on_receipt: true,
+    show_background_image: true,
+  });
+  const [isBrandingLoaded, setIsBrandingLoaded] = useState(false);
 
   // Create a callback for updating the payment amount from child components
   const updatePaymentAmount = useCallback((amount) => {
     setPaymentAmount(amount);
   }, []);
 
-  // Create or update payment intent when payment amount changes
-  useEffect(() => {
-    createPaymentIntent(paymentAmount);
-  }, [paymentAmount]);
-
-  const createPaymentIntent = (amount) => {
-    fetch("http://localhost:8000/api/payments/create-payment-intent", {
+  // Create payment intent function - will be called only when needed
+  const createPaymentIntent = useCallback((amount) => {
+    setIsCreatingPaymentIntent(true);
+    
+    return fetch("http://localhost:8000/api/payments/create-payment-intent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,83 +50,114 @@ function App() {
       .then((data) => {
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
+          setIsCreatingPaymentIntent(false);
+          return data.clientSecret;
         } else {
           console.error("No client secret returned");
           setError("Failed to fetch payment intent");
+          setIsCreatingPaymentIntent(false);
+          throw new Error("No client secret returned");
         }
       })
       .catch((err) => {
         console.error("Error fetching client secret:", err);
         setError("An error occurred. Please try again.");
+        setIsCreatingPaymentIntent(false);
+        throw err;
       });
-  };
+  }, []);
 
-  const appearance = {
-    theme: "stripe",
-  };
+  // Fetch restaurant branding when the app loads - using hardcoded order ID for now
+  useEffect(() => {
+    const fetchRestaurantBranding = async () => {
+      try {
+        // For testing purposes, we're using the order ID to fetch restaurant branding
+        // In a real app, you'd use the restaurant ID directly if available
+        const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
+        
+        console.log("Fetching restaurant branding for order:", testOrderId);
+        const response = await axios.get(`http://localhost:8000/api/restaurants/order/${testOrderId}/branding/`);
+        
+        console.log("Restaurant branding API response:", response.data);
+        
+        if (response.data.success) {
+          const branding = response.data.restaurant;
+          console.log("Setting restaurant branding:", branding);
+          
+          // Keep our hardcoded URLs if the API doesn't return valid ones
+          if (!branding.logo_url) {
+            branding.logo_url = "http://localhost:8000/static/assets/logo.jpg";
+          } else if (!branding.logo_url.startsWith('http')) {
+            branding.logo_url = `http://localhost:8000${branding.logo_url.startsWith('/') ? '' : '/'}${branding.logo_url}`;
+          }
+          
+          if (!branding.background_image_url) {
+            branding.background_image_url = "http://localhost:8000/static/assets/background.jpg";
+          } else if (!branding.background_image_url.startsWith('http')) {
+            branding.background_image_url = `http://localhost:8000${branding.background_image_url.startsWith('/') ? '' : '/'}${branding.background_image_url}`;
+          }
+          
+          console.log("Logo URL:", branding.logo_url);
+          console.log("Background image URL:", branding.background_image_url);
+          setRestaurantBranding(branding);
+        } else {
+          console.error("Failed to fetch restaurant branding:", response.data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching restaurant branding:", error);
+        // Ensure isBrandingLoaded is true even if there's an error
+      } finally {
+        setIsBrandingLoaded(true);
+      }
+    };
+
+    fetchRestaurantBranding();
+  }, []);
 
   return (
-    <div className="App">
-      <main>
+    <CartProvider>
+      <div className="App">
         <Router>
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                clientSecret ? (
+          <main>
+            <Routes>
+              <Route 
+                path="/" 
+                element={
                   <PaymentPage 
                     stripePromise={stripePromise} 
                     clientSecret={clientSecret}
                     updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
                   />
-                ) : (
-                  <div className="loading-container">
-                    <div className="loading-spinner"></div>
-                    <p>Loading Payment Page...</p>
-                    {error && <p className="error-message">{error}</p>}
-                  </div>
-                )
-              } 
-            />
-            <Route path="/complete" element={<CompletePage />} />
-          </Routes>
+                } 
+              />
+              <Route 
+                path="/menu" 
+                element={<MenuCategories />} 
+              />
+              <Route 
+                path="/cart" 
+                element={<CartPage />} 
+              />
+              <Route 
+                path="/complete" 
+                element={
+                  <CompletePage 
+                    restaurantBranding={restaurantBranding}
+                  />
+                } 
+              />
+            </Routes>
+          </main>
+          <footer>
+            <p>© {new Date().getFullYear()} TableMint</p>
+          </footer>
         </Router>
-      </main>
-      <footer>
-        <p>© {new Date().getFullYear()} TableMint</p>
-      </footer>
-
-      <style jsx>{`
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 50vh;
-        }
-        
-        .loading-spinner {
-          border: 3px solid rgba(0, 0, 0, 0.1);
-          border-top: 3px solid #0071e3;
-          border-radius: 50%;
-          width: 32px;
-          height: 32px;
-          animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-        
-        .error-message {
-          color: #ff3b30;
-          text-align: center;
-          margin-top: 16px;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
+      </div>
+    </CartProvider>
   );
 }
 

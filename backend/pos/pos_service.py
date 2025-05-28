@@ -39,7 +39,7 @@ class POSService:
         """
         return self.adapter.create(order_data)
         
-    def retrieve(self, order_id: str) -> Dict[str, Any]:
+    def get(self, order_id: str) -> Dict[str, Any]:
         """
         Retrieve a specific order from the POS system.
         
@@ -49,7 +49,7 @@ class POSService:
         Returns:
             Dict: Order details from the POS system.
         """
-        return self.adapter.retrieve(order_id)
+        return self.adapter.get(order_id)
         
     def search(self, **kwargs) -> Dict[str, Any]:
         """
@@ -114,3 +114,62 @@ class POSService:
             Dict: Location information or error details.
         """
         return self.adapter.list_locations()
+        
+    def get_catalog(self) -> Dict[str, Any]:
+        """
+        Fetch catalog items and categories from the POS system.
+        
+        Returns:
+            Dict: Catalog data including items and categories or error details.
+        """
+        return self.adapter.get_catalog()
+        
+    def get_inventory(self, catalog_object_id: str, location_ids: Optional[List[str]] = None, cursor: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get inventory counts for a specific catalog object.
+        
+        Args:
+            catalog_object_id: The ID of the catalog object to retrieve inventory for.
+            location_ids: Optional list of location IDs to filter by.
+            cursor: Optional pagination cursor for retrieving additional results.
+            
+        Returns:
+            Dict: Response with inventory counts or error details.
+        """
+        return self.adapter.get_inventory(catalog_object_id=catalog_object_id, location_ids=location_ids, cursor=cursor)
+        
+    def batch_retrieve_inventory_counts(self, catalog_object_ids: List[str], location_ids: Optional[List[str]] = None, cursor: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Batch retrieve inventory counts for multiple catalog objects.
+        
+        Args:
+            catalog_object_ids: List of catalog object IDs to retrieve inventory for.
+            location_ids: Optional list of location IDs to filter by.
+            cursor: Optional pagination cursor for retrieving additional results.
+            
+        Returns:
+            Dict: Response with inventory counts or error details.
+        """
+        return self.adapter.batch_retrieve_inventory_counts(
+            catalog_object_ids=catalog_object_ids, 
+            location_ids=location_ids, 
+            cursor=cursor
+        )
+        
+    def batch_create_changes(self, idempotency_key: str, changes: List[Dict[str, Any]], ignore_unchanged_counts: Optional[bool] = None) -> Dict[str, Any]:
+        """
+        Batch create inventory changes.
+        
+        Args:
+            idempotency_key: Unique key to prevent duplicate processing.
+            changes: List of inventory changes to apply.
+            ignore_unchanged_counts: Optional flag to ignore unchanged counts.
+            
+        Returns:
+            Dict: Response with created changes or error details.
+        """
+        return self.adapter.batch_create_changes(
+            idempotency_key=idempotency_key,
+            changes=changes,
+            ignore_unchanged_counts=ignore_unchanged_counts
+        )

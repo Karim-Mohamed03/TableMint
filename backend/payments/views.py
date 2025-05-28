@@ -6,9 +6,12 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import json
 import os
+from django.db.models import Sum
 
 from pos.pos_service import POSService
-from .models import Payment
+from .models import Payment, PhillyCheesesteakPayment
+from pos.square_adapter import SquareAdapter
+from pos.pos_factory import POSFactory
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CreatePaymentView(View):
@@ -141,3 +144,105 @@ class SearchOrdersView(View):
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+
+@csrf_exempt
+def create_square_payment_from_stripe(request):
+    """
+    Create a payment in Square based on the sum of all Stripe payments recorded for a specific order.
+    This only creates the payment if the sum of base_amounts exactly matches the order's total amount.
+    
+    This keeps the Square system in sync with payments processed through Stripe.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            order_id = data.get('order_id')
+            
+            if not order_id:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Missing required field: order_id'
+                }, status=400)
+            
+            # Get the sum of base_amounts for the given order_id
+            order_base_sum = PhillyCheesesteakPayment.objects.filter(
+                order_id=order_id
+            ).aggregate(sum_base_amount=Sum('base_amount'))['sum_base_amount'] or 0
+            
+            # Create a Square adapter to interact with Square APIs
+            square_adapter = SquareAdapter()
+            
+            # Get the order details from Square to check the total amount
+            order_result = square_adapter.get(order_id)
+            
+            # Check if we got a successful response
+            if not hasattr(order_result, 'is_success') or not order_result.is_success():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Could not retrieve order details from Square',
+                    'square_error': str(order_result.errors) if hasattr(order_result, 'errors') else str(order_result)
+                }, status=500)
+            
+            # Extract the order from the response
+            order = None
+            if hasattr(order_result, 'order'):
+                order = order_result.order
+            elif hasattr(order_result, 'body') and hasattr(order_result.body, 'order'):
+                order = order_result.body.order
+            
+            if not order:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Order not found in Square response',
+                    'order_id': order_id
+                }, status=404)
+            
+            # Get the total amount from the order
+            order_total_amount = 0
+            if hasattr(order, 'total_money') and hasattr(order.total_money, 'amount'):
+                order_total_amount = order.total_money.amount
+            
+            # Check if the sum of base amounts matches the order total
+            if order_base_sum != order_total_amount:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Sum of base amounts does not match order total',
+                    'order_id': order_id,
+                    'base_sum': order_base_sum,
+                    'order_total': order_total_amount,
+                    'match': False
+                })
+            
+            # If they match, create the external payment
+            result = square_adapter.create_external_payment(
+                order_id=order_id,
+                amount=order_base_sum,
+                source="stripe"
+            )
+            
+            if result.get('success'):
+                return JsonResponse({
+                    'success': True,
+                    'order_id': order_id,
+                    'amount': order_base_sum,
+                    'order_total': order_total_amount,
+                    'match': True,
+                    'square_payment': result.get('payment')
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': result.get('error', 'Unknown error creating Square payment'),
+                    'order_id': order_id,
+                    'amount': order_base_sum,
+                    'match': True
+                }, status=500)
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

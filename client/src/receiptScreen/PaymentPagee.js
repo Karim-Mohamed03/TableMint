@@ -1,136 +1,751 @@
 import { useState, useEffect } from "react";
 import { Elements } from "@stripe/react-stripe-js";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import CheckoutForm from "./components/CheckoutForm";
 import SplitBillModal from "./components/SplitBillModal";
+import TipModal from "./components/TipModal";
+import ItemSelectionModal from "./components/ItemSelectionModal";
 import "./PaymentPage.css";
 
 // PaymentPage Component
-export default function PaymentPage({ stripePromise, clientSecret, updatePaymentAmount }) {
-  const [tip, setTip] = useState(5);
+export default function PaymentPage({ 
+  stripePromise, 
+  clientSecret, 
+  updatePaymentAmount, 
+  createPaymentIntent, 
+  isCreatingPaymentIntent,
+  restaurantBranding,
+  isBrandingLoaded
+}) {
   const [showSplitModal, setShowSplitModal] = useState(false);
-  const baseAmount = 3500; // in cents (e.g., $35.00)
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [showItemsModal, setShowItemsModal] = useState(false);
   const [userPaymentAmount, setUserPaymentAmount] = useState(null);
   const [splitDetails, setSplitDetails] = useState(null);
-
-  // Calculate total based on whether it's a split bill or not
-  const totalAmount = baseAmount + tip * 100; // Convert tip to cents
-  const amountToPay = userPaymentAmount || totalAmount;
-
-  const tipPercentages = [
-    { value: 0, percent: "0%" },
-    { value: 5, percent: "15%" },
-    { value: 7, percent: "20%" },
-    { value: 10, percent: "28%" }
-  ];
-
-  // Update payment amount in parent component when amount changes
-  useEffect(() => {
-    updatePaymentAmount(amountToPay);
-  }, [amountToPay, updatePaymentAmount]);
-
-  const handleTipChange = (tipAmount) => {
-    setTip(tipAmount);
-    // Reset split payment if tip changes
-    setUserPaymentAmount(null);
-    setSplitDetails(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState(null);
+  const [tipInCents, setTipInCents] = useState(0);
+  const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+  const [selectedItemsDetails, setSelectedItemsDetails] = useState(null);
+  
+  // React Router navigation hook
+  const navigate = useNavigate();
+  
+  // Hardcoded order ID for testing
+  const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
+  
+  // Calculate total from order details
+  const calculateOrderTotal = () => {
+    if (!orderDetails || !orderDetails.line_items) return { total: 0, currency: 'GBP' };
+    
+    let total = 0;
+    let currency = 'GBP';
+    
+    orderDetails.line_items.forEach(item => {
+      if (item.total_money) {
+        total += item.total_money.amount;
+        currency = item.total_money.currency;
+      }
+    });
+    
+    return { total, currency };
   };
-
+  
+  // Calculate order total from line items
+  const { total: orderTotal, currency } = calculateOrderTotal();
+  
+  // Update base amount when order total changes
+  useEffect(() => {
+    setBaseAmountInCents(orderTotal);
+  }, [orderTotal]);
+  
+  // Update payment amount in parent component when order total changes
+  useEffect(() => {
+    const { total } = calculateOrderTotal();
+    if (userPaymentAmount) {
+      updatePaymentAmount(userPaymentAmount);
+    } else {
+      updatePaymentAmount(total);
+    }
+  }, [orderDetails, userPaymentAmount, updatePaymentAmount]);
+  
+  // Fetch order details on page load
+  useEffect(() => {
+    fetchOrderDetails(testOrderId);
+  }, []);
+  
+  // Function to fetch order details from backend
+  const fetchOrderDetails = async (orderId) => {
+    setOrderLoading(true);
+    setOrderError(null);
+    
+    try {
+      const response = await axios.get(`http://localhost:8000/api/orders/${orderId}/`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = response.data;
+      
+      if (data.success) {
+        setOrderDetails(data.order);
+        console.log("Order details:", data.order);
+      } else {
+        setOrderError(data.error || "Failed to fetch order details");
+        console.error("Error fetching order:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      
+      if (error.response) {
+        setOrderError(`Server error: ${error.response.status} - ${error.response.data.error || 'Unknown error'}`);
+      } else if (error.request) {
+        setOrderError("No response from server. Is the backend running?");
+      } else {
+        setOrderError(`Request failed: ${error.message}`);
+      }
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+  
   const toggleSplitModal = () => {
     setShowSplitModal(!showSplitModal);
   };
-
+  
+  const toggleTipModal = () => {
+    setShowTipModal(!showTipModal);
+  };
+  
+  const toggleItemsModal = () => {
+    setShowItemsModal(!showItemsModal);
+  };
+  
   const handleSplitConfirm = (splitInfo) => {
-    // Set the amount the user will pay
     setUserPaymentAmount(splitInfo.amountToPay);
     setSplitDetails(splitInfo);
+    setShowSplitModal(false);
+    setShowTipModal(true);
+  };
+  
+  const handleItemSelectionConfirm = (selection) => {
+    setSelectedItemsDetails(selection);
+    setUserPaymentAmount(selection.totalAmount);
+    setBaseAmountInCents(selection.totalAmount);
+    setShowItemsModal(false);
+    setShowTipModal(true);
+  };
+  
+  const handleTipConfirm = async (tipAmount) => {
+    try {
+      const baseAmount = userPaymentAmount || calculateOrderTotal().total;
+      const tipInCents = tipAmount * 100;
+      const finalAmount = baseAmount + tipInCents;
+      
+      setTipInCents(tipInCents);
+      setBaseAmountInCents(baseAmount);
+      setUserPaymentAmount(finalAmount);
+      
+      setPaymentProcessing(true);
+      await createPaymentIntent(finalAmount);
+      setShowCheckout(true);
+      setShowTipModal(false);
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+  
+  const handlePayFullAmount = () => {
+    setUserPaymentAmount(null);
+    setSplitDetails(null);
+    setSelectedItemsDetails(null);
+    setShowTipModal(true);
+  };
+  
+  const handlePaySpecificAmount = async () => {
+    setSelectedItemsDetails(null);
+    toggleSplitModal();
+  };
+  
+  const handlePayForMyItems = async () => {
+    setSplitDetails(null);
+    toggleItemsModal();
   };
 
-  const options = { clientSecret };
-
+  const handleViewMenu = () => {
+    navigate('/menu');
+  };
+  
+  const options = clientSecret ? { clientSecret } : {};
+  
+  // Format currency for display
+  const formatCurrency = (amount, currency = 'GBP') => {
+    if (!amount && amount !== 0) return '£0.00';
+    
+    const formatter = new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    });
+    
+    return formatter.format(amount / 100);
+  };
+  
+  // Render a loading spinner when payment intent is being created or order is loading
+  if (paymentProcessing || isCreatingPaymentIntent) {
+    return (
+      <div className="payment-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Preparing payment...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="payment-container">
-      <div className="payment-header">
-        <h1>Table 15</h1>
-        <p className="subtitle">Complete your payment</p>
-      </div>
-
-      <div className="bill-summary">
-        <div className="bill-row">
-          <span>Subtotal</span>
-          <span>${(baseAmount / 100).toFixed(2)}</span>
-        </div>
-        <div className="bill-row">
-          <span>Tip</span>
-          <span>${tip.toFixed(2)}</span>
-        </div>
-        {splitDetails && (
-          <div className="bill-row split-row">
-            <span>Your portion ({splitDetails.splitMethod === 'equal' ? `1/${splitDetails.numberOfPeople}` : 'custom'})</span>
-            <span>${(userPaymentAmount / 100).toFixed(2)}</span>
+    <div className="payment-page">
+      {/* Hero Section with Background Image */}
+      <div 
+        className="hero-section"
+        style={{
+          backgroundImage: restaurantBranding?.background_image_url && restaurantBranding?.show_background_image 
+            ? `url(${restaurantBranding.background_image_url})` 
+            : 'none'
+        }}
+      >
+        {/* Restaurant Branding */}
+        <div className="restaurant-branding">
+          {isBrandingLoaded && restaurantBranding?.logo_url && restaurantBranding?.show_logo_on_receipt ? (
+            <div className="logo-container">
+              <img 
+                src={restaurantBranding.logo_url} 
+                alt={`${restaurantBranding.name} logo`}
+                className="restaurant-logo"
+              />
+            </div>
+          ) : isBrandingLoaded && restaurantBranding?.name ? (
+            <div className="restaurant-name">
+              <h1>{restaurantBranding.name}</h1>
+            </div>
+          ) : null}
+          
+          <div className="table-info">
+            <span className="table-number">Table 12</span>
           </div>
-        )}
-        <div className="bill-row total">
-          <span>Total{splitDetails ? ' (you pay)' : ''}</span>
-          <span>${(amountToPay / 100).toFixed(2)}</span>
         </div>
       </div>
-
-      <div className="split-bill-section">
-        <button className="split-button" onClick={toggleSplitModal}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15.8333 4.16667C15.8333 5.5474 14.714 6.66667 13.3333 6.66667C11.9526 6.66667 10.8333 5.5474 10.8333 4.16667C10.8333 2.78595 11.9526 1.66667 13.3333 1.66667C14.714 1.66667 15.8333 2.78595 15.8333 4.16667Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9.16667 15.8333C9.16667 17.2141 8.04738 18.3333 6.66667 18.3333C5.28596 18.3333 4.16667 17.2141 4.16667 15.8333C4.16667 14.4526 5.28596 13.3333 6.66667 13.3333C8.04738 13.3333 9.16667 14.4526 9.16667 15.8333Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M10.8333 5.83333L4.16667 14.1667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          {splitDetails ? 'Change split amount' : 'Split the bill'}
-        </button>
-      </div>
-
-      <div className="tip-section">
-        <p className="tip-label">Add a tip</p>
-        <div className="tip-options">
-          {tipPercentages.map((option) => (
-            <button 
-              key={option.value} 
-              className={`tip-btn ${tip === option.value ? "active" : ""}`} 
-              onClick={() => handleTipChange(option.value)}
-            >
-              <span className="tip-percent">{option.percent}</span>
-              <span className="tip-amount">${option.value}</span>
-            </button>
-          ))}
+      
+      {/* Main Content */}
+      <div className="main-content">
+        {/* Payment Header */}
+        <div className="payment-header">
+          <h2>Pay your bill</h2>
+          <div className="total-amount">
+            {formatCurrency(orderTotal, currency)}
+          </div>
         </div>
-      </div>
-
-      <div className="payment-section">
-        {clientSecret ? (
-          <Elements stripe={stripePromise} options={options}>
-            <CheckoutForm />
-          </Elements>
-        ) : (
-          <div className="loading">
+        
+        {/* Order Items */}
+        {orderLoading ? (
+          <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p>Preparing payment form...</p>
+            <p>Loading order details...</p>
+          </div>
+        ) : orderError ? (
+          <div className="error-message">
+            <p>Error loading order: {orderError}</p>
+          </div>
+        ) : orderDetails?.line_items ? (
+          <div className="order-items">
+            {orderDetails.line_items.map((item, index) => (
+              <div className="order-item" key={index}>
+                <div className="item-info">
+                  <span className="quantity">{item.quantity}</span>
+                  <span className="item-name">{item.name}</span>
+                </div>
+                <div className="item-price">
+                  {formatCurrency(
+                    parseInt(item.quantity, 10) * item.base_price_money?.amount,
+                    item.base_price_money?.currency
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        
+        {/* Payment Options */}
+        {!showCheckout ? (
+          <div className="payment-options">
+            <button className="payment-option primary" onClick={handlePayFullAmount}>
+              <div className="option-content">
+                <span className="option-title">Pay the full amount</span>
+                <span className="option-subtitle">Pay for everyone's receipt</span>
+              </div>
+              <div className="option-amount">
+                {formatCurrency(orderTotal, currency)}
+              </div>
+            </button>
+            
+            <button className="payment-option" onClick={handlePaySpecificAmount}>
+              <div className="option-content">
+                <span className="option-title">Let's Split the Bill!</span>
+                <span className="option-subtitle">Split the bill with others at your table</span>
+              </div>
+            </button>
+            
+            <button className="payment-option" onClick={handlePayForMyItems}>
+              <div className="option-content">
+                <span className="option-title">Pay for your items</span>
+                <span className="option-subtitle">Only pay for what you ordered</span>
+              </div>
+            </button>
+            
+            <button className="payment-option view-menu-option" onClick={handleViewMenu}>
+              <div className="option-content">
+                <span className="option-title">View Menu</span>
+                <span className="option-subtitle">Browse our full menu</span>
+              </div>
+            </button>
+          </div>
+        ) : (
+          <div className="payment-section">
+            {clientSecret ? (
+              <Elements stripe={stripePromise} options={options}>
+                <CheckoutForm 
+                  baseAmount={baseAmountInCents} 
+                  tipAmount={tipInCents}
+                  orderId={orderDetails?.id || testOrderId}
+                />
+              </Elements>
+            ) : (
+              <div className="loading">
+                <div className="loading-spinner"></div>
+                <p>Preparing payment form...</p>
+              </div>
+            )}
           </div>
         )}
       </div>
       
+      {/* Modals */}
       <SplitBillModal 
         isOpen={showSplitModal} 
         onClose={toggleSplitModal} 
-        baseAmount={baseAmount} 
-        tip={tip} 
-        totalAmount={totalAmount}
+        baseAmount={orderTotal} 
+        tip={0} 
+        totalAmount={orderTotal}
         onConfirm={handleSplitConfirm}
       />
-
+      
+      <TipModal
+        isOpen={showTipModal}
+        onClose={toggleTipModal}
+        currentTip={0}
+        baseAmount={userPaymentAmount || orderTotal}
+        onConfirm={handleTipConfirm}
+      />
+      
+      <div className={`items-modal-overlay ${showItemsModal ? 'active' : ''}`} onClick={toggleItemsModal}>
+        <div className="items-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <div className="modal-drag-handle"></div>
+          </div>
+          
+          <ItemSelectionModal
+            isOpen={showItemsModal}
+            onClose={toggleItemsModal}
+            items={orderDetails?.line_items}
+            onConfirm={handleItemSelectionConfirm}
+          />
+        </div>
+      </div>
+      
       <style jsx>{`
-        .split-row {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px dashed var(--border-color);
-          color: var(--primary-color);
+        @import url('https://fonts.googleapis.com/css2?family=Satoshi:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .payment-page {
+          width: 100%;
+          max-width: 100%;
+          min-height: 100vh;
+          height: 100%;
+          background-color: white;
+          position: relative;
+          overflow-x: hidden;
+        }
+        
+        .hero-section {
+          height: 25vh;
+          max-height: 220px;
+          width: 100%;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #2c3e50;
+        }
+        
+        .hero-section::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.65);
+          z-index: 1;
+        }
+        
+        .restaurant-branding {
+          position: absolute;
+          bottom: -50px;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 10;
+          text-align: center;
+          color: white;
+        }
+        
+        .logo-container {
+          margin-bottom: 8px;
+        }
+        
+        .restaurant-logo {
+          width: 100px;
+          height: 100px;
+          border-radius: 16px;
+          object-fit: cover;
+          background: white;
+          padding: 8px;
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+          border: 3px solid white;
+        }
+        
+        .restaurant-name h1 {
+          font-size: 20px;
+          font-weight: 700;
+          margin: 0;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          background: white;
+          color: #1a1a1a;
+          padding: 8px;
+          border-radius: 12px;
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+          border: 3px solid white;
+          width: 100px;
+          height: 100px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.2;
+        }
+        
+        .table-info {
+          background: transparent;
+          border-radius: 16px;
+          padding: 4px 10px;
+          display: inline-block;
+          margin-top: 10px;
+          color: #666;
+        }
+        
+        .table-number {
+          font-size: 14px;
+        }
+        
+        .main-content {
+          padding: 70px 16px 24px;
+          width: 100%;
+          margin: 0 auto;
+        }
+        
+        .payment-header {
+          text-align: center;
+          margin-bottom: 24px;
+          padding-top: 10px;
+        }
+        
+        .payment-header h2 {
+          font-size: 22px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0 0 6px 0;
+        }
+        
+        .total-amount {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1a1a1a;
+        }
+        
+        .order-items {
+          background: white;
+          border-radius: 16px;
+          padding: 5px;
+          margin-bottom: 20px;
+          
+        }
+        
+        .order-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 0;
+        }
+        
+        .order-item:last-child {
+          border-bottom: none;
+        }
+        
+        .item-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex: 1;
+          min-width: 0; /* For text truncation */
+        }
+        
+        .quantity {
+          background: #f8f9fa;
+          color: #666;
+          border-radius: 6px;
+          padding: 3px 6px;
+          font-size: 14px;
           font-weight: 600;
+          min-width: 22px;
+          text-align: center;
+          flex-shrink: 0;
+        }
+        
+        .item-name {
+          font-size: 15px;
+          color: #1a1a1a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .item-price {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1a1a1a;
+          padding-left: 8px;
+          flex-shrink: 0;
+        }
+        
+        .payment-options {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        
+        .payment-option {
+          background: black;
+          border: 2px solid #e9ecef;
+          border-radius: 16px;
+          padding: 16px;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          color: white;
+          width: 100%;
+        }
+        
+        .payment-option:hover, .payment-option:active {
+          border-color: #2ecc71;
+        }
+        
+        .payment-option.primary {
+          background: black;
+          color: white;
+          border-color: #1a1a1a;
+        }
+        
+        .payment-option.primary:hover, .payment-option.primary:active {
+          border-color: #2ecc71;
+        }
+        
+        .option-content {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        
+        .option-title {
+          font-size: 16px;
+          font-weight: 600;
+        }
+        
+        .option-subtitle {
+          font-size: 13px;
+          opacity: 0.7;
+        }
+        
+        .option-amount {
+          font-size: 16px;
+          font-weight: 700;
+          color: #2ecc71;
+        }
+        
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
+          height: 50vh;
+        }
+        
+        .loading-spinner {
+          width: 30px;
+          height: 30px;
+          border: 3px solid #f3f3f3;
+          border-top: 3px solid #007bff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+          background: #ffebee;
+          color: #c62828;
+          padding: 16px;
+          border-radius: 12px;
+          margin: 20px 0;
+          text-align: center;
+          font-size: 14px;
+        }
+        
+        .items-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          z-index: 1000;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+        
+        .items-modal-overlay.active {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        
+        .items-modal {
+          background: white;
+          width: 100%;
+          border-radius: 20px 20px 0 0;
+          padding: 16px 0 0;
+          transform: translateY(100%);
+          transition: transform 0.3s ease;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        
+        .items-modal-overlay.active .items-modal {
+          transform: translateY(0);
+        }
+        
+        .modal-header {
+          display: flex;
+          justify-content: center;
+          padding-bottom: 8px;
+        }
+        
+        .modal-drag-handle {
+          width: 40px;
+          height: 5px;
+          background-color: #e0e0e0;
+          border-radius: 3px;
+        }
+        
+        /* Mobile-specific media queries */
+        @media (max-width: 480px) {
+          .main-content {
+            padding: 70px 12px 16px;
+          }
+          
+          .payment-header h2 {
+            font-size: 18px;
+          }
+          
+          .total-amount {
+            font-size: 18px;
+          }
+          
+          .item-name {
+            max-width: 180px;
+          }
+          
+          .payment-option {
+            padding: 14px;
+          }
+          
+          .option-title {
+            font-size: 15px;
+          }
+          
+          .option-subtitle {
+            font-size: 12px;
+          }
+        }
+        
+        /* For extremely small screens */
+        @media (max-width: 320px) {
+          .hero-section {
+            height: 20vh;
+          }
+          
+          .restaurant-logo, .restaurant-name h1 {
+            width: 80px;
+            height: 80px;
+          }
+          
+          .main-content {
+            padding-top: 50px;
+          }
+          
+          .item-name {
+            max-width: 140px;
+          }
+          
+          .payment-option {
+            padding: 12px;
+          }
         }
       `}</style>
     </div>

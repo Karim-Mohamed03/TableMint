@@ -1,11 +1,10 @@
 import os
 import uuid
 import requests
+import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
-
 from dotenv import load_dotenv
-
 from .pos_adapter import POSAdapter
 
 # Get the base directory (backend folder)
@@ -14,43 +13,93 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env from the backend directory
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+logger = logging.getLogger(__name__)
 
 class CloverAdapter(POSAdapter):
-    """
-    Clover POS system adapter implementation.
-    
-    This adapter implements the POSAdapter interface for the Clover payment system,
-    providing concrete implementations for all required operations.
-    """
     
     def __init__(self):
         """Initialize Clover client with credentials from .env file"""
+        # self.api_key = os.environ.get('CLOVER_API_KEY')
         self.api_key = os.environ.get('CLOVER_API_KEY')
         self.merchant_id = os.environ.get('CLOVER_MERCHANT_ID')
         self.base_url = os.environ.get('CLOVER_API_URL', 'https://api.clover.com/v3')
         self.sandbox_mode = os.environ.get('CLOVER_SANDBOX', 'True').lower() == 'true'
         
-        # If in sandbox mode, use the sandbox URL
+        # Log initialization info for debugging
+        logger.info(f"CloverAdapter initialized with API key: {'*' * 5}{self.api_key[-4:] if self.api_key else 'None'}")
+        logger.info(f"CloverAdapter initialized with Merchant ID: {self.merchant_id or 'None'}")
+        logger.info(f"CloverAdapter using base URL: {self.base_url}")
+        logger.info(f"CloverAdapter sandbox mode: {self.sandbox_mode}")
+        
+        # If in sandbox mode, use the correct sandbox URL
         if self.sandbox_mode:
-            self.base_url = os.environ.get('CLOVER_SANDBOX_URL', 'https://sandbox.dev.clover.com/v3')
+            self.base_url = os.environ.get('CLOVER_SANDBOX_URL', 'https://apisandbox.dev.clover.com/v3')
+            logger.info(f"CloverAdapter using sandbox URL: {self.base_url}")
             
     def authenticate(self) -> bool:
-        """
-        Authenticate with Clover API.
-        
-        Returns:
-            bool: True if authentication is successful, False otherwise.
-        """
         try:
             # Try to get merchant info as a simple API test
             headers = self._get_headers()
-            response = requests.get(
-                f"{self.base_url}/merchants/{self.merchant_id}",
-                headers=headers
-            )
+            logger.info(f"Authentication headers: {headers}")
+            
+            url = f"{self.base_url}/merchants/{self.merchant_id}"
+            logger.info(f"Authentication URL: {url}")
+            
+            response = requests.get(url, headers=headers)
+            logger.info(f"Authentication response code: {response.status_code}")
+            logger.info(f"Authentication response: {response.text}")
+            
             return response.status_code == 200
-        except Exception:
+        except Exception as e:
+            logger.error(f"Authentication error: {str(e)}")
             return False
+    
+    # Implementation of abstract method 'create' required by POSAdapter
+    def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new order in Clover. Implementation of abstract method from POSAdapter.
+        
+        Args:
+            order_data: Dictionary containing order details.
+            
+        Returns:
+            Dict: Response from Clover with order details.
+        """
+        # Try to authenticate first
+        if not self.authenticate():
+            logger.error("Failed to authenticate with Clover before  order")
+            return {
+                "success": False,
+                "errors": "Authentication failed"
+            }
+            
+        return self.create_order(order_data)
+    
+    # Implementation of abstract method 'get' required by POSAdapter    
+    def get(self, order_id: str) -> Dict[str, Any]:
+        """
+        Retrieve a specific order from Clover. Implementation of abstract method from POSAdapter.
+        
+        Args:
+            order_id: The ID of the order to retrieve.
+            
+        Returns:
+            Dict: Order details from Clover.
+        """
+        return self.retrieve_order(order_id)
+    
+    # Implementation of abstract method 'search' required by POSAdapter
+    def search(self, **kwargs) -> Dict[str, Any]:
+        """
+        Search for orders in Clover. Implementation of abstract method from POSAdapter.
+        
+        Args:
+            **kwargs: Search parameters for Clover Orders API.
+            
+        Returns:
+            Dict: Search results containing matching orders.
+        """
+        return self.search_orders(**kwargs)
             
     def create_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 // Updated Bill Split Wheel Component - Circular Progress Style
 const BillSplitWheel = ({ numberOfPeople, perPersonAmount, totalAmount, splitMethod, customAmount }) => {
   // Define colors - using a blue color as in the original code
-  const primaryColor = '#0071e3';
+  const primaryColor = '#2ecc71';
   const secondaryColor = '#f0f0f0'; // Light grey for the background arc
   
   // Calculate percentage based on split method
@@ -186,8 +186,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
 
     return (
       <div className="custom-number-input">
-        <div className="number-input-label">{label}</div>
         <div className="number-input-row">
+          <div className="number-input-label">{label}</div>
           <div className="number-control">
             <button 
               type="button" 
@@ -284,7 +284,7 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
                         min={1}
                         max={numberOfPeople}
                         onChange={handleYouPayForChange}
-                        label="You pay for"
+                        label="Total people"
                         description="you pay for"
                       />
                     </div>
@@ -292,8 +292,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
                   
                   <div className="payment-info">
                     <div className="amount-per-person">
-                      <div className="label">Your share</div>
-                      <div className="amount">${perPersonAmount.toFixed(2)}</div>
+                      <div className="label">Your share ${perPersonAmount.toFixed(2)}</div>
+                      {/* <div className="amount"></div> */}
                       <div className="small-text">inclusive of all taxes & fees</div>
                     </div>
                   </div>
@@ -381,7 +381,7 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         
         .tab-active-background {
           position: absolute;
-          background-color: #0071e3;
+          background-color: black;
           border-radius: 30px;
           transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
           z-index: 1;
@@ -460,7 +460,6 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         .modal-footer {
           flex-shrink: 0;
           padding-top: 16px;
-          border-top: 1px solid #e5e5e5;
           margin-top: auto;
         }
 
@@ -477,7 +476,7 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          border: 1px solid #d1d1d6;
+          
           background: #f5f5f7;
           color: #1d1d1f;
           transition: all 0.2s ease;
@@ -495,7 +494,7 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          background-color: #0071e3;
+          background-color: #2ecc71;
           color: white;
           transition: all 0.2s ease;
         }
@@ -514,8 +513,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         .visualization-wheel {
           background-color: transparent;
           border-radius: 16px;
-          padding: 24px;
-          margin-bottom: 24px;
+          padding: 0px;
+          margin-bottom: 0px;
           display: flex;
           justify-content: center;
           width: 100%;
@@ -541,8 +540,9 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         .number-input-label {
           font-size: 14px;
           color: #86868b;
-          margin-bottom: 8px;
-          text-align: center;
+          width: 80px; /* Fixed width for alignment */
+          text-align: left;
+          margin-right: 8px;
         }
         
         .number-input-row {
@@ -551,7 +551,6 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
           align-items: center;
           justify-content: center;
           width: 100%;
-          gap: 16px;
         }
         
         .number-control {
@@ -571,7 +570,7 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
           height: 48px;
           border-radius: 50%;
           border: none;
-          background-color: #0071e3;
+          background-color: black;
           color: #ffffff;
           font-size: 18px;
           font-weight: bold;
@@ -598,13 +597,13 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         .input-description {
           font-size: 14px;
           color: #86868b;
-          text-align: left;
+          text-align: right;
+          width: 90px; /* Fixed width for alignment */
         }
         
         .payment-info {
-          margin-top: 24px;
-          padding-top: 16px;
-          border-top: 1px solid #e5e5e5;
+          margin-top: 0px;
+          padding-top: 0px;
         }
         
         .amount-per-person {

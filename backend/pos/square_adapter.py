@@ -683,13 +683,14 @@ class SquareAdapter(POSAdapter):
     
     def get_catalog(self) -> Dict[str, Any]:
         """
-        Fetch catalog items and categories from Square.
+        Fetch catalog items, categories, and images from Square.
         
         Returns:
-            Dict: Catalog data including items and categories or error details.
+            Dict: Catalog data including items, categories, and images or error details.
         """
         try:
-            result = self.client.catalog.list()
+            # Specify the types we want to fetch: ITEM, CATEGORY, and IMAGE
+            result = self.client.catalog.list(types="ITEM,CATEGORY,IMAGE")
             
             # Check if the request was successful by looking for errors
             if hasattr(result, 'errors') and result.errors:

@@ -24,7 +24,15 @@ const getCatalogData = async (locationId = null) => {
     
     if (data.success) {
       console.log('Catalog data fetched successfully:', data);
-      return data;
+      
+      // Process the catalog data to associate images with items
+      const processedData = processCatalogWithImages(data.objects);
+      
+      return {
+        ...data,
+        objects: processedData.objects,
+        imageMap: processedData.imageMap
+      };
     } else {
       console.error('Failed to fetch catalog:', data.error);
       return null;
@@ -33,6 +41,72 @@ const getCatalogData = async (locationId = null) => {
     console.error('Error calling get_catalog:', error);
     return null;
   }
+};
+
+// Helper function to process catalog data and create image mappings
+const processCatalogWithImages = (catalogObjects) => {
+  console.log('🖼️ [DEBUG] Processing catalog objects for images...');
+  
+  // Separate different object types
+  const images = catalogObjects.filter(obj => obj.type === 'IMAGE');
+  const items = catalogObjects.filter(obj => obj.type === 'ITEM');
+  const categories = catalogObjects.filter(obj => obj.type === 'CATEGORY');
+  const otherObjects = catalogObjects.filter(obj => !['IMAGE', 'ITEM', 'CATEGORY'].includes(obj.type));
+  
+  console.log(`🖼️ [DEBUG] Found ${images.length} images, ${items.length} items, ${categories.length} categories`);
+  
+  // Create image map for quick lookup: imageId -> imageUrl
+  const imageMap = {};
+  images.forEach(imageObj => {
+    if (imageObj.image_data && imageObj.image_data.url) {
+      imageMap[imageObj.id] = {
+        url: imageObj.image_data.url,
+        name: imageObj.image_data.name,
+        caption: imageObj.image_data.caption
+      };
+      console.log(`🖼️ [DEBUG] Mapped image ${imageObj.id}: ${imageObj.image_data.url}`);
+    }
+  });
+  
+  // Add image URLs to items
+  const itemsWithImages = items.map(item => {
+    const itemData = { ...item };
+    
+    // Check if item has image_ids
+    if (item.item_data && item.item_data.image_ids && item.item_data.image_ids.length > 0) {
+      console.log(`🖼️ [DEBUG] Item ${item.id} (${item.item_data.name}) has ${item.item_data.image_ids.length} image(s)`);
+      
+      // Get image URLs for this item
+      const itemImages = item.item_data.image_ids
+        .map(imageId => imageMap[imageId])
+        .filter(image => image); // Remove any undefined images
+      
+      if (itemImages.length > 0) {
+        itemData.item_data = {
+          ...item.item_data,
+          images: itemImages,
+          primaryImage: itemImages[0] // First image is primary
+        };
+        console.log(`🖼️ [DEBUG] Added ${itemImages.length} image(s) to item ${item.id}`);
+      } else {
+        console.log(`🖼️ [DEBUG] No valid images found for item ${item.id}`);
+      }
+    } else {
+      console.log(`🖼️ [DEBUG] Item ${item.id} (${item.item_data?.name}) has no image_ids`);
+    }
+    
+    return itemData;
+  });
+  
+  // Return processed objects (excluding raw IMAGE objects since they're now embedded in items)
+  const processedObjects = [...itemsWithImages, ...categories, ...otherObjects];
+  
+  console.log(`🖼️ [DEBUG] Processing complete. ${itemsWithImages.filter(item => item.item_data?.images).length} items have images`);
+  
+  return {
+    objects: processedObjects,
+    imageMap: imageMap
+  };
 };
 
 // Function to fetch inventory data for a single item variation
@@ -278,6 +352,7 @@ const MenuCategories = () => {
   const { locationId } = useParams(); // Extract location_id from URL
   const { addItem, getItemCount } = useCart();
   const [catalogData, setCatalogData] = useState(null);
+  const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -299,6 +374,12 @@ const MenuCategories = () => {
       if (catalogResponse && catalogResponse.success) {
         console.log(`✅ [DEBUG] Catalog fetch successful, setting catalog data`);
         setCatalogData(catalogResponse.objects);
+        
+        // Set image map if available
+        if (catalogResponse.imageMap) {
+          console.log(`🖼️ [DEBUG] Setting image map with ${Object.keys(catalogResponse.imageMap).length} images`);
+          setImageMap(catalogResponse.imageMap);
+        }
         
         // Extract item variation IDs for inventory check, but keep mapping to item IDs
         const items = catalogResponse.objects.filter(obj => obj.type === 'ITEM');
@@ -541,6 +622,39 @@ const MenuCategories = () => {
 
           return (
             <div key={item.id} className="menu-item-card">
+              <div className="item-image-container">
+                {/* Item Image */}
+                {itemData?.primaryImage ? (
+                  <img 
+                    src={itemData.primaryImage.url} 
+                    alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
+                    className="item-image"
+                    onError={(e) => {
+                      console.log(`🖼️ [DEBUG] Image failed to load for item ${item.id}: ${itemData.primaryImage.url}`);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="no-image-placeholder">
+                    <span>No Image</span>
+                  </div>
+                )}
+                
+                {/* Add/Out of Stock Button */}
+                {inStock ? (
+                  <button 
+                    className="add-button"
+                    onClick={() => handleAddToCart(item)}
+                  >
+                    +
+                  </button>
+                ) : (
+                  <div className="out-of-stock-overlay">
+                    <span>Out of Stock</span>
+                  </div>
+                )}
+              </div>
+              
               <div className="item-content">
                 <div className="item-header">
                   <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
@@ -585,14 +699,6 @@ const MenuCategories = () => {
                   {itemData?.is_alcoholic && <span className="alcoholic-tag">Contains Alcohol</span>}
                 </div>
               </div>
-              
-              <button 
-                className={`add-to-order-btn ${!isAvailable ? 'sold-out' : ''}`}
-                disabled={!isAvailable}
-                onClick={() => isAvailable && handleAddToCart(item)}
-              >
-                {soldOutAtLocation ? 'Out of Stock at Location' : !inStock ? 'Out of Stock' : 'Add to Order'}
-              </button>
             </div>
           );
         })}
@@ -768,10 +874,13 @@ const MenuCategories = () => {
         .menu-item-card {
           background: white;
           border-radius: 16px;
-          padding: 20px;
+          overflow: hidden;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
           border: 1px solid #e5e5e7;
+          display: flex;
+          flex-direction: column;
+          position: relative;
         }
 
         .menu-item-card:hover {
@@ -779,8 +888,85 @@ const MenuCategories = () => {
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         }
 
+        .item-image-container {
+          width: 100%;
+          height: 200px;
+          overflow: hidden;
+          background: #f8f9fa;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+        }
+
+        .item-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.3s ease;
+        }
+
+        .no-image-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f8f9fa;
+          color: #999;
+          font-size: 14px;
+        }
+
+        .menu-item-card:hover .item-image {
+          transform: scale(1.05);
+        }
+
+        .add-button {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: #007bff;
+          color: white;
+          border: none;
+          font-size: 24px;
+          font-weight: 300;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        .add-button:hover {
+          background: #0056b3;
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+
+        .out-of-stock-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 600;
+          font-size: 16px;
+        }
+
         .item-content {
-          margin-bottom: 16px;
+          padding: 20px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
         }
 
         .item-header {
@@ -891,33 +1077,6 @@ const MenuCategories = () => {
           font-weight: 600;
         }
 
-        .add-to-order-btn {
-          width: 100%;
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 12px;
-          border-radius: 12px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s ease;
-        }
-
-        .add-to-order-btn:hover {
-          background: #0056b3;
-        }
-
-        .add-to-order-btn.sold-out {
-          background: #6c757d;
-          color: #ffffff;
-          cursor: not-allowed;
-        }
-
-        .add-to-order-btn.sold-out:hover {
-          background: #6c757d;
-        }
-
         .no-items {
           text-align: center;
           padding: 60px 20px;
@@ -956,4 +1115,4 @@ const MenuCategories = () => {
 
 // Export the component and utility functions
 export default MenuCategories;
-export { getCatalogData, getInventoryData };
+export { getCatalogData, getInventoryData, processCatalogWithImages };

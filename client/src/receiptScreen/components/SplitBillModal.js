@@ -292,8 +292,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
                   
                   <div className="payment-info">
                     <div className="amount-per-person">
-                      <div className="label">Your share</div>
-                      <div className="amount">${perPersonAmount.toFixed(2)}</div>
+                      <div className="label">Your share ${perPersonAmount.toFixed(2)}</div>
+                      {/* <div className="amount"></div> */}
                       <div className="small-text">inclusive of all taxes & fees</div>
                     </div>
                   </div>
@@ -602,9 +602,8 @@ const SplitBillModal = ({ isOpen, onClose, baseAmount, tip, totalAmount, onConfi
         }
         
         .payment-info {
-          margin-top: 24px;
-          padding-top: 16px;
-          border-top: 1px solid #e5e5e5;
+          margin-top: 0px;
+          padding-top: 0px;
         }
         
         .amount-per-person {

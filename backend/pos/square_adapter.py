@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
@@ -729,4 +730,274 @@ class SquareAdapter(POSAdapter):
                 "success": False,
                 "error": str(e)
             }
+        
+
+    def get_inventory(self, catalog_object_id: str, location_ids: str = None) -> Dict[str, Any]:
+        try:
+            logger.info(f"=== GET INVENTORY DEBUG ===")
+            logger.info(f"Input - catalog_object_id: {catalog_object_id}")
+            logger.info(f"Input - location_ids: {location_ids}")
+            
+            # Convert location_ids to list format
+            location_ids_list = [location_ids] if location_ids else None
+            logger.info(f"Converted location_ids to: {location_ids_list}")
+            
+            # Call the Square Inventory API
+            logger.info("Making Square API call...")
+            result = self.client.inventory.get(
+                catalog_object_id=catalog_object_id,
+                location_ids=location_ids_list
+            )
+            logger.info(f"Square API call completed. Result type: {type(result)}")
+            
+            # Initialize response with Square API format
+            response = {
+                "errors": [],
+                "counts": []
+            }
+            
+                            # Handle SyncPager - iterate through pages to get inventory counts
+            if hasattr(result, '__iter__'):  # SyncPager is iterable
+                logger.info("Result is iterable (SyncPager), iterating through pages...")
+                
+                try:
+                    # Iterate through all pages - each "page" is actually an InventoryCount object
+                    for inventory_count in result:
+                        logger.info(f"Processing inventory count: {type(inventory_count)}")
+                        
+                        # Each item from the pager is an InventoryCount object
+                        # Extract the inventory count data directly
+                        count_dict = {
+                            "catalog_object_id": getattr(inventory_count, 'catalog_object_id', ''),
+                            "catalog_object_type": getattr(inventory_count, 'catalog_object_type', ''),
+                            "state": getattr(inventory_count, 'state', ''),
+                            "location_id": getattr(inventory_count, 'location_id', ''),
+                            "quantity": str(getattr(inventory_count, 'quantity', '0')),
+                            "calculated_at": getattr(inventory_count, 'calculated_at', '')
+                        }
+                        response["counts"].append(count_dict)
+                        logger.info(f"Added inventory count: {count_dict}")
+                            
+                except Exception as pager_error:
+                    logger.error(f"Error iterating through pager: {str(pager_error)}")
+                    # Try alternative approach - get items directly
+                    try:
+                        items = list(result.items())
+                        logger.info(f"Got {len(items)} items from pager.items()")
+                        for item in items:
+                            logger.info(f"Item type: {type(item)}, content: {item}")
+                            # Process items if they contain inventory data
+                    except Exception as items_error:
+                        logger.error(f"Error getting items from pager: {str(items_error)}")
+            
+            else:
+                # Fallback: treat as regular response object
+                logger.info("Result is not iterable, treating as regular response")
+                body = result.body if hasattr(result, 'body') else result
+                
+                # Handle errors
+                if hasattr(body, 'errors') and body.errors:
+                    for error in body.errors:
+                        error_dict = {
+                            "category": getattr(error, 'category', str(error)),
+                            "code": getattr(error, 'code', ''),
+                            "detail": getattr(error, 'detail', str(error))
+                        }
+                        response["errors"].append(error_dict)
+                
+                # Handle counts
+                if hasattr(body, 'counts') and body.counts:
+                    for count in body.counts:
+                        count_dict = {
+                            "catalog_object_id": getattr(count, 'catalog_object_id', ''),
+                            "catalog_object_type": getattr(count, 'catalog_object_type', ''),
+                            "state": getattr(count, 'state', ''),
+                            "location_id": getattr(count, 'location_id', ''),
+                            "quantity": str(getattr(count, 'quantity', '0')),
+                            "calculated_at": getattr(count, 'calculated_at', '')
+                        }
+                        response["counts"].append(count_dict)
+            
+            logger.info(f"Final response: {response}")
+            logger.info("=== END GET INVENTORY DEBUG ===")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Exception in get_inventory: {str(e)}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return {
+                "errors": [str(e)],
+                "counts": []
+            }
+
+    def batch_retrieve_inventory_counts(self, catalog_object_ids: List[str], location_ids: Optional[List[str]] = None, cursor: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Retrieve inventory counts for multiple catalog objects using Square's batch API.
+        
+        Args:
+            catalog_object_ids: List of catalog object IDs to retrieve inventory for.
+            location_ids: Optional list of location IDs to filter by.
+            cursor: Optional pagination cursor for retrieving additional results.
+            
+        Returns:
+            Dict: Response matching Square API format with 'errors' and 'counts' fields.
+        """
+        try:
+            if not catalog_object_ids:
+                return {
+                    "success": False,
+                    "errors": ["At least one catalog_object_id is required"],
+                    "counts": []
+                }
+            
+            # Build the request body for batch retrieval
+            request_body = {
+                "catalog_object_ids": catalog_object_ids
+            }
+            
+            if location_ids:
+                request_body["location_ids"] = location_ids
+            if cursor:
+                request_body["cursor"] = cursor
+            
+            # Call Square's batch inventory API
+            result = self.client.inventory.batch_retrieve_inventory_counts(**request_body)
+            
+            # Check if the result has errors
+            if hasattr(result, 'errors') and result.errors:
+                return {
+                    "success": False,
+                    "errors": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors],
+                    "counts": []
+                }
+            
+            # Extract the response data
+            response = {"success": True}
+            
+            if hasattr(result, 'body'):
+                body = result.body
+                response["errors"] = body.errors if hasattr(body, 'errors') and body.errors else []
+                
+                if hasattr(body, 'counts'):
+                    counts = body.counts
+                    response["counts"] = []
+                    for count in counts:
+                        if hasattr(count, 'dict'):
+                            response["counts"].append(count.dict())
+                        elif isinstance(count, dict):
+                            response["counts"].append(count)
+                        else:
+                            try:
+                                response["counts"].append(vars(count))
+                            except:
+                                response["counts"].append(str(count))
+                else:
+                    response["counts"] = []
+                    
+                if hasattr(body, 'cursor') and body.cursor:
+                    response["cursor"] = body.cursor
+                    
+            elif hasattr(result, 'counts'):
+                response["errors"] = []
+                counts = result.counts
+                response["counts"] = []
+                for count in counts:
+                    if hasattr(count, 'dict'):
+                        response["counts"].append(count.dict())
+                    elif isinstance(count, dict):
+                        response["counts"].append(count)
+                    else:
+                        try:
+                            response["counts"].append(vars(count))
+                        except:
+                            response["counts"].append(str(count))
+                            
+                if hasattr(result, 'cursor') and result.cursor:
+                    response["cursor"] = result.cursor
+            else:
+                response["errors"] = []
+                response["counts"] = []
+                
+            return response
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "errors": [str(e)],
+                "counts": []
+            }
+        
+    def batch_create_changes(self, idempotency_key: str, changes: List[Dict[str, Any]], ignore_unchanged_counts: Optional[bool] = None) -> Dict[str, Any]:
+        try:
+            # Call the Square Inventory API exactly as documented
+            result = self.client.inventory.batch_create_changes(
+                idempotency_key=idempotency_key,
+                changes=changes,
+                ignore_unchanged_counts=ignore_unchanged_counts
+            )
+            
+            # Initialize response with Square API format
+            response = {
+                "errors": [],
+                "counts": []
+            }
+            
+            # Get the body from result
+            body = result.body if hasattr(result, 'body') else result
+            
+            # Handle errors
+            if hasattr(body, 'errors') and body.errors:
+                for error in body.errors:
+                    response["errors"].append({
+                        "category": error.category if hasattr(error, 'category') else str(error),
+                        "code": error.code if hasattr(error, 'code') else '',
+                        "detail": error.detail if hasattr(error, 'detail') else str(error)
+                    })
+            
+            # Handle counts
+            if hasattr(body, 'counts') and body.counts:
+                for count in body.counts:
+                    count_dict = {
+                        "catalog_object_id": getattr(count, 'catalog_object_id', ''),
+                        "catalog_object_type": getattr(count, 'catalog_object_type', ''),
+                        "state": getattr(count, 'state', ''),
+                        "location_id": getattr(count, 'location_id', ''),
+                        "quantity": str(getattr(count, 'quantity', '0')),
+                        "calculated_at": getattr(count, 'calculated_at', '')
+                    }
+                    response["counts"].append(count_dict)
+            
+            # Handle changes (Beta feature)
+            if hasattr(body, 'changes') and body.changes:
+                response["changes"] = []
+                for change in body.changes:
+                    change_dict = {}
+                    # Extract change attributes based on Square API response format
+                    if hasattr(change, 'type'):
+                        change_dict["type"] = getattr(change, 'type', '')
+                    if hasattr(change, 'physical_count'):
+                        physical_count = change.physical_count
+                        change_dict["physical_count"] = {
+                            "reference_id": getattr(physical_count, 'reference_id', ''),
+                            "catalog_object_id": getattr(physical_count, 'catalog_object_id', ''),
+                            "state": getattr(physical_count, 'state', ''),
+                            "location_id": getattr(physical_count, 'location_id', ''),
+                            "quantity": str(getattr(physical_count, 'quantity', '0')),
+                            "team_member_id": getattr(physical_count, 'team_member_id', ''),
+                            "occurred_at": getattr(physical_count, 'occurred_at', '')
+                        }
+                    response["changes"].append(change_dict)
+                
+            return response
+            
+        except Exception as e:
+            return {
+                "errors": [str(e)],
+                "counts": []
+            }
+                
+
+            
 

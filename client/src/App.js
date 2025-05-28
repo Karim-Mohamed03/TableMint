@@ -5,6 +5,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import PaymentPage from "./receiptScreen/PaymentPagee";
 import CompletePage from "./receiptScreen/CompletePage";
 import MenuCategories from "./orderingSequence/menuCategories";
+import CartPage from "./pages/CartPage";
+import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
 
 const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
@@ -113,74 +115,49 @@ function App() {
   }, []);
 
   return (
-    <div className="App">
-      <main>
+    <CartProvider>
+      <div className="App">
         <Router>
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                <PaymentPage 
-                  stripePromise={stripePromise} 
-                  clientSecret={clientSecret}
-                  updatePaymentAmount={updatePaymentAmount}
-                  createPaymentIntent={createPaymentIntent}
-                  isCreatingPaymentIntent={isCreatingPaymentIntent}
-                  restaurantBranding={restaurantBranding}
-                  isBrandingLoaded={isBrandingLoaded}
-                />
-              } 
-            />
-            <Route 
-              path="/menu" 
-              element={<MenuCategories />} 
-            />
-            <Route 
-              path="/complete" 
-              element={
-                <CompletePage 
-                  restaurantBranding={restaurantBranding}
-                />
-              } 
-            />
-          </Routes>
+          <main>
+            <Routes>
+              <Route 
+                path="/" 
+                element={
+                  <PaymentPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
+              />
+              <Route 
+                path="/menu" 
+                element={<MenuCategories />} 
+              />
+              <Route 
+                path="/cart" 
+                element={<CartPage />} 
+              />
+              <Route 
+                path="/complete" 
+                element={
+                  <CompletePage 
+                    restaurantBranding={restaurantBranding}
+                  />
+                } 
+              />
+            </Routes>
+          </main>
+          <footer>
+            <p>© {new Date().getFullYear()} TableMint</p>
+          </footer>
         </Router>
-      </main>
-      <footer>
-        <p>© {new Date().getFullYear()} TableMint</p>
-      </footer>
-
-      <style jsx>{`
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 50vh;
-        }
-        
-        .loading-spinner {
-          border: 3px solid rgba(0, 0, 0, 0.1);
-          border-top: 3px solid #0071e3;
-          border-radius: 50%;
-          width: 32px;
-          height: 32px;
-          animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-        
-        .error-message {
-          color: #ff3b30;
-          text-align: center;
-          margin-top: 16px;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
+      </div>
+    </CartProvider>
   );
 }
 

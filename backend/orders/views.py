@@ -1,9 +1,12 @@
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import json
 from pos.pos_service import POSService
 from pos.ncr_adapter import NCRAdapter
+from pos.square_adapter import SquareAdapter
 import datetime
 import uuid
 
@@ -621,4 +624,323 @@ def create_ncr_order_table(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+    
+
+# @csrf_exempt
+# @require_http_methods(["GET"])
+# def get_inventory(request):
+#     try:
+#         # Get query parameters
+#         catalog_object_id = request.GET.get('catalog_object_id')
+#         location_ids_param = request.GET.get('location_ids')
+#         cursor = request.GET.get('cursor')
+        
+#         # Validate required parameters
+#         if not catalog_object_id:
+#             return JsonResponse({
+#                 'errors': ['catalog_object_id is required']
+#             }, status=400)
+        
+#         # Parse location_ids if provided
+#         location_ids = None
+#         if location_ids_param:
+#             location_ids = [loc.strip() for loc in location_ids_param.split(',') if loc.strip()]
+        
+#         # Initialize Square adapter
+#         square_adapter = SquareAdapter()
+        
+#         # Check authentication
+#         if not square_adapter.authenticate():
+#             return JsonResponse({
+#                 'errors': ['Failed to authenticate with Square API']
+#             }, status=401)
+        
+#         # Get inventory data
+#         result = square_adapter.get_inventory(
+#             catalog_object_id=catalog_object_id,
+#             location_ids=location_ids,
+#             cursor=cursor
+#         )
+        
+#         # Return the result in Square API format
+#         if 'errors' in result and result['errors']:
+#             return JsonResponse(result, status=400)
+#         else:
+#             return JsonResponse(result, status=200)
+            
+#     except Exception as e:
+#         logger.error(f"Error in get_inventory view: {str(e)}")
+#         return JsonResponse({
+#             'errors': [str(e)]
+#         }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_inventory(request):
+    try:
+        # Get query parameters
+        catalog_object_id = request.GET.get('catalog_object_id')
+        location_ids = request.GET.get('location_ids')  # New parameter
+        
+        # Validate required parameters
+        if not catalog_object_id:
+            return JsonResponse({
+                'errors': ['catalog_object_id is required'],
+                'counts': []
+            }, status=400)
+        
+        # Initialize Square adapter
+        square_adapter = SquareAdapter()
+        
+        # Check authentication
+        if not square_adapter.authenticate():
+            return JsonResponse({
+                'errors': ['Failed to authenticate with Square API'],
+                'counts': []
+            }, status=401)
+        
+        # Get inventory data using our fixed function with location_ids
+        result = square_adapter.get_inventory(
+            catalog_object_id=catalog_object_id,
+            location_ids=location_ids  # Pass location_ids to the function
+        )
+        
+        # Return the result in Square API format
+        if 'errors' in result and result['errors']:
+            return JsonResponse(result, status=400)
+        else:
+            return JsonResponse(result, status=200)
+            
+    except Exception as e:
+        logger.error(f"Error in get_inventory view: {str(e)}")
+        return JsonResponse({
+            'errors': [str(e)],
+            'counts': []
+        }, status=500)
+    
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+def batch_get_inventory(request):
+    """
+    Get inventory counts for multiple catalog objects in a single request.
+    
+    Request Body (JSON):
+    {
+        "catalog_object_ids": ["id1", "id2", "id3"],
+        "location_ids": ["loc1", "loc2"] (optional),
+        "cursor": "pagination_cursor" (optional)
+    }
+    """
+    try:
+        # Parse JSON body
+        try:
+            data = json.loads(request.body)
+            logger.info(f"Batch inventory request data: {data}")
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON in batch inventory request")
+            return JsonResponse({
+                'success': False,
+                'errors': ['Invalid JSON in request body'],
+                'counts': []
+            }, status=400)
+        
+        # Extract parameters
+        catalog_object_ids = data.get('catalog_object_ids', [])
+        location_ids = data.get('location_ids')
+        cursor = data.get('cursor')
+        
+        logger.info(f"Extracted catalog_object_ids: {catalog_object_ids}")
+        logger.info(f"Extracted location_ids: {location_ids}")
+        
+        # Validate required parameters
+        if not catalog_object_ids or not isinstance(catalog_object_ids, list):
+            logger.error(f"Invalid catalog_object_ids: {catalog_object_ids}")
+            return JsonResponse({
+                'success': False,
+                'errors': ['catalog_object_ids must be a non-empty list'],
+                'counts': []
+            }, status=400)
+        
+        # Initialize Square adapter
+        square_adapter = SquareAdapter()
+        
+        # Check authentication
+        if not square_adapter.authenticate():
+            return JsonResponse({
+                'success': False,
+                'errors': ['Failed to authenticate with Square API'],
+                'counts': []
+            }, status=401)
+        
+        # Get batch inventory data
+        result = square_adapter.batch_retrieve_inventory_counts(
+            catalog_object_ids=catalog_object_ids,
+            location_ids=location_ids,
+            cursor=cursor
+        )
+        
+        # Return the result
+        if result.get('success'):
+            return JsonResponse(result, status=200)
+        else:
+            return JsonResponse(result, status=400)
+            
+    except Exception as e:
+        logger.error(f"Error in batch_get_inventory view: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'errors': [str(e)],
+            'counts': []
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_inventory_by_location(request, location_id):
+    """
+    Get inventory counts for all items at a specific location.
+    This is a helper view that combines catalog and inventory data.
+    
+    URL: /api/inventory/location/<location_id>/
+    
+    Query Parameters:
+        - cursor (optional): Pagination cursor
+    """
+    try:
+        cursor = request.GET.get('cursor')
+        
+        # Initialize Square adapter
+        square_adapter = SquareAdapter()
+        
+        # Check authentication
+        if not square_adapter.authenticate():
+            return JsonResponse({
+                'success': False,
+                'errors': ['Failed to authenticate with Square API'],
+                'counts': []
+            }, status=401)
+        
+        # First, get catalog items
+        catalog_result = square_adapter.get_catalog()
+        
+        if not catalog_result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'errors': ['Failed to retrieve catalog: ' + str(catalog_result.get('error', 'Unknown error'))],
+                'counts': []
+            }, status=400)
+        
+        # Extract catalog object IDs for items and item variations
+        catalog_objects = catalog_result.get('objects', [])
+        catalog_object_ids = []
+        
+        for obj in catalog_objects:
+            if isinstance(obj, dict):
+                obj_type = obj.get('type')
+                if obj_type in ['ITEM', 'ITEM_VARIATION']:
+                    catalog_object_ids.append(obj.get('id'))
+        
+        if not catalog_object_ids:
+            return JsonResponse({
+                'success': True,
+                'errors': [],
+                'counts': [],
+                'message': 'No items found in catalog'
+            }, status=200)
+        
+        # Get inventory for all catalog items at this location
+        result = square_adapter.batch_retrieve_inventory_counts(
+            catalog_object_ids=catalog_object_ids,
+            location_ids=[location_id],
+            cursor=cursor
+        )
+        
+        # Return the result
+        if result.get('success'):
+            return JsonResponse(result, status=200)
+        else:
+            return JsonResponse(result, status=400)
+            
+    except Exception as e:
+        logger.error(f"Error in get_inventory_by_location view: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'errors': [str(e)],
+            'counts': []
+        }, status=500)
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+def batch_create_changes(request):
+    try:
+        # Parse JSON request body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'errors': ['Invalid JSON in request body'],
+                'counts': []
+            }, status=400)
+        
+        # Get required parameters
+        idempotency_key = data.get('idempotency_key')
+        changes = data.get('changes')
+        ignore_unchanged_counts = data.get('ignore_unchanged_counts')
+        
+        # Validate required parameters
+        if not idempotency_key:
+            return JsonResponse({
+                'errors': ['idempotency_key is required'],
+                'counts': []
+            }, status=400)
+            
+        if not changes or not isinstance(changes, list):
+            return JsonResponse({
+                'errors': ['changes is required and must be an array'],
+                'counts': []
+            }, status=400)
+        
+        # Validate idempotency_key length (1-128 characters as per documentation)
+        if len(idempotency_key) < 1 or len(idempotency_key) > 128:
+            return JsonResponse({
+                'errors': ['idempotency_key must be between 1 and 128 characters'],
+                'counts': []
+            }, status=400)
+        
+        # Validate changes array length (max 100 as per documentation)
+        if len(changes) > 100:
+            return JsonResponse({
+                'errors': ['changes array cannot exceed 100 items'],
+                'counts': []
+            }, status=400)
+        
+        # Initialize POS service
+        pos_service = POSService()
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            return JsonResponse({
+                'errors': ['Failed to authenticate with POS system'],
+                'counts': []
+            }, status=401)
+        
+        # Create inventory changes
+        result = pos_service.batch_create_changes(
+            idempotency_key=idempotency_key,
+            changes=changes,
+            ignore_unchanged_counts=ignore_unchanged_counts
+        )
+        
+        # Return the result in Square API format
+        if 'errors' in result and result['errors']:
+            return JsonResponse(result, status=400)
+        else:
+            return JsonResponse(result, status=200)
+            
+    except Exception as e:
+        logger.error(f"Error in batch_create_changes view: {str(e)}")
+        return JsonResponse({
+            'errors': [str(e)],
+            'counts': []
         }, status=500)

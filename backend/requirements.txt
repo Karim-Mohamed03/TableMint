@@ -26,6 +26,8 @@ djangorestframework==3.14.0
     # via backend (pyproject.toml)
 exceptiongroup==1.3.0
     # via anyio
+gunicorn==23.0.0
+    # via backend (pyproject.toml)
 h11==0.16.0
     # via httpcore
 httpcore==1.0.9
@@ -37,6 +39,8 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
+packaging==25.0
+    # via gunicorn
 pillow==10.1.0
     # via backend (pyproject.toml)
 psycopg2-binary==2.9.10

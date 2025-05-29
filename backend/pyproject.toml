@@ -15,4 +15,6 @@ dependencies = [
     "requests>=2.32.3",
     "squareup>=42.1.0.20250416",
     "stripe>=12.1.0",
+    "gunicorn>=21.2.0"
 ]
+

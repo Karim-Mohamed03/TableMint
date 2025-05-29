@@ -200,3 +200,15 @@ LOGGING = {
 
 SQUARE_WEBHOOK_SIGNATURE_KEY = os.environ.get('SQUARE_WEBHOOK_SIGNATURE_KEY', '')
 CLOVER_WEBHOOK_API_KEY = os.environ.get('CLOVER_WEBHOOK_API_KEY', '')
+
+# Email Configuration
+# For production with Gmail SMTP:
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')  # Your Gmail address
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # Your Gmail App Password
+
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@marwansphillycheesesteak.com')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL

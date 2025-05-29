@@ -8,12 +8,7 @@ import CartConfirmationModal from '../components/CartConfirmationModal';
 // Function to fetch catalog data from the backend API
 const getCatalogData = async (locationId = null) => {
   try {
-    const url = new URL('https://tablemint.onrender.com/api/pos/catalog/');
-    if (locationId) {
-      url.searchParams.append('location_id', locationId);
-    }
-
-    const response = await fetch(url.toString(), {
+    const response = await fetch('http://localhost:8000/api/pos/catalog/', {
       method: 'GET',
     });
 
@@ -117,7 +112,7 @@ const getItemInventory = async (catalogObjectId, locationId = null) => {
   
   try {
     // Fix the URL construction - remove the extra query parameter
-    const url = new URL('https://tablemint.onrender.com/api/orders/inventory/');
+    const url = new URL('http://localhost:8000/api/orders/inventory/');
     url.searchParams.append('catalog_object_id', catalogObjectId);
     if (locationId) {
       url.searchParams.append('location_ids', locationId);
@@ -239,7 +234,7 @@ const getInventoryData = async (itemVariationMap, locationId = null) => {
 // Helper function to fetch available locations
 const getLocations = async () => {
   try {
-    const response = await fetch('https://tablemint.onrender.com/api/pos/locations/', {
+    const response = await fetch('http://localhost:8000/api/pos/locations/', {
       method: 'GET',
     });
 

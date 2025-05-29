@@ -14,7 +14,7 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
 
   // Create return URL with query parameters
   useEffect(() => {
-    let url = "http://localhost:3000/complete";
+    let url = "https://tablemint.onrender.com/complete";
     
     // Add query parameters if we have them
     if (baseAmount || tipAmount || orderId) {

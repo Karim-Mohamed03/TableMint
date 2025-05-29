@@ -16,6 +16,8 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
       setSelectedItems(initialSelection);
     }
   }, [isOpen, items]);
+
+  //ITEM SELECTION LOGIC
   
   // Toggle item selection
   const toggleItemSelection = (index) => {
@@ -96,23 +98,18 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
       
       <div className="items-list">
         {selectedItems.map((item, index) => (
-          <div key={index} className={`item-row ${item.selected ? 'selected' : ''}`}>
+          <div 
+            key={index} 
+            className={`item-row ${item.selected ? 'selected' : ''}`}
+            onClick={() => toggleItemSelection(index)}
+          >
             <div className="item-selection">
-              <input
-                type="checkbox"
-                checked={item.selected}
-                onChange={() => toggleItemSelection(index)}
-                id={`item-${index}`}
-                className="item-checkbox"
-              />
-              <label htmlFor={`item-${index}`} className="item-label">
-                <div className="item-details">
-                  <div className="item-name">{item.name}</div>
-                  <div className="item-price">
-                    {formatCurrency(item.base_price_money?.amount * item.payQuantity, item.base_price_money?.currency)}
-                  </div>
+              <div className="item-details">
+                <div className="item-name">{item.name}</div>
+                <div className="item-price">
+                  {formatCurrency(item.base_price_money?.amount * item.payQuantity, item.base_price_money?.currency)}
                 </div>
-              </label>
+              </div>
             </div>
             
             {item.selected && item.quantity > 1 && (
@@ -121,13 +118,19 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
                 <div className="quantity-controls">
                   <button 
                     className="quantity-btn"
-                    onClick={() => updatePayQuantity(index, item.payQuantity - 1)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updatePayQuantity(index, item.payQuantity - 1);
+                    }}
                     disabled={item.payQuantity <= 1}
                   >−</button>
                   <span className="quantity-value">{item.payQuantity}</span>
                   <button 
                     className="quantity-btn"
-                    onClick={() => updatePayQuantity(index, item.payQuantity + 1)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updatePayQuantity(index, item.payQuantity + 1);
+                    }}
                     disabled={item.payQuantity >= item.quantity}
                   >+</button>
                 </div>
@@ -140,7 +143,7 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
       
       <div className="items-summary">
         <div className="summary-row">
-          <span>Total</span>
+          <span>You are paying</span>
           <span className="summary-amount">{formatCurrency(calculateTotal())}</span>
         </div>
       </div>
@@ -152,13 +155,13 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
           onClick={handleConfirm}
           disabled={!hasSelectedItems}
         >
-          Confirm and Add Tip
+          Confirm
         </button>
       </div>
       
       <style jsx>{`
         .items-modal-content {
-          padding: 16px 24px 24px;
+          padding: 16px 20px 24px;
         }
         
         .modal-title {
@@ -188,104 +191,146 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
           padding: 16px;
           border-radius: 12px;
           margin-bottom: 12px;
-          background-color: #f5f5f7;
+          background-color:rgb(255, 255, 255);
           transition: all 0.2s ease;
+          cursor: pointer;
+          border: 1px solid #f0f0f0;
+        }
+        
+        .item-row:hover {
+          background-color: rgb(250, 250, 250);
         }
         
         .item-row.selected {
-          background-color: #f0f7ff;
-          border: 1px solid #0071e3;
+          background-color:rgb(245, 245, 245);
+          border: 1px solid #2ecc71;
         }
         
         .item-selection {
           display: flex;
           align-items: center;
-        }
-        
-        .item-checkbox {
-          width: 20px;
-          height: 20px;
-          margin-right: 16px;
-          accent-color: #0071e3;
-        }
-        
-        .item-label {
-          flex: 1;
-          cursor: pointer;
+          width: 100%;
         }
         
         .item-details {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          width: 100%;
+        }
+        
+        .item-image {
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
+          background-color: #e0e0e0;
+          flex-shrink: 0;
+          object-fit: cover;
+        }
+        
+        .item-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
         
         .item-name {
-          font-weight: 500;
+          font-weight: 600;
           font-size: 16px;
           color: #1d1d1f;
         }
         
-        .item-price {
-          font-weight: 600;
+        .item-description {
+          font-size: 14px;
+          color: #86868b;
+        }
+        
+        .item-quantity-badge {
+          background-color: #e0e0e0;
           color: #1d1d1f;
+          font-size: 14px;
+          font-weight: 600;
+          padding: 4px 8px;
+          border-radius: 12px;
+          flex-shrink: 0;
         }
         
         .quantity-selector {
-          display: flex;
-          align-items: center;
           margin-top: 16px;
           padding-top: 16px;
-          border-top: 1px dashed #e0e0e0;
+          border-top: 1px solid #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
         }
         
         .quantity-label {
           font-size: 14px;
           color: #86868b;
-          margin-right: 12px;
+          font-weight: 500;
         }
         
         .quantity-controls {
           display: flex;
           align-items: center;
-          background: white;
-          border-radius: 20px;
-          overflow: hidden;
-          border: 1px solid #e0e0e0;
+          background-color: #f8f9fa;
+          border-radius: 24px;
+          padding: 4px;
+          gap: 2px;
         }
         
         .quantity-btn {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: none;
+          background-color: #ffffff;
+          color: #1d1d1f;
+          font-size: 16px;
+          font-weight: 600;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: none;
-          border: none;
-          font-size: 18px;
           cursor: pointer;
-          color: #0071e3;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .quantity-btn:hover:not(:disabled) {
+          background-color: #2ecc71;
+          color: white;
+          transform: scale(1.05);
+        }
+        
+        .quantity-btn:active:not(:disabled) {
+          transform: scale(0.95);
         }
         
         .quantity-btn:disabled {
-          color: #86868b;
+          background-color: #f0f0f0;
+          color: #c0c0c0;
           cursor: not-allowed;
+          box-shadow: none;
         }
         
         .quantity-value {
-          width: 36px;
-          text-align: center;
+          font-size: 16px;
           font-weight: 600;
+          color: #1d1d1f;
+          min-width: 32px;
+          text-align: center;
+          padding: 0 8px;
         }
         
         .quantity-total {
-          margin-left: 12px;
           font-size: 14px;
           color: #86868b;
         }
         
         .items-summary {
-          background-color: #f9f9f9;
+          background-color: white;
           border-radius: 12px;
           padding: 16px;
           margin-bottom: 24px;
@@ -294,43 +339,57 @@ const ItemSelectionModal = ({ isOpen, onClose, items, onConfirm }) => {
         .summary-row {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           font-size: 18px;
           font-weight: 600;
+          color: #1d1d1f;
         }
         
         .summary-amount {
-          color: #0071e3;
+          color: #2ecc71;
         }
         
         .modal-footer {
           display: flex;
-          gap: 12px;
+          gap: 5px;
         }
         
-        .cancel-button, .confirm-button {
+        .cancel-button {
           flex: 1;
-          padding: 16px;
-          border-radius: 30px;
+          padding: 14px;
+          border: 1px solid #d2d2d7;
+          border-radius: 12px;
+          background-color: transparent;
+          color: #1d1d1f;
+          font-size: 16px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .cancel-button:hover {
+          background-color: #f5f5f7;
+        }
+        
+        .confirm-button {
+          flex: 1;
+          padding: 10px;
+          border: none;
+          border-radius: 12px;
+          background-color: black;
+          color: white;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          border: none;
         }
         
-        .cancel-button {
-          background-color: #f5f5f7;
-          color: #1d1d1f;
-          border: 1px solid #e0e0e0;
-        }
-        
-        .confirm-button {
-          background-color: #0071e3;
-          color: white;
+        .confirm-button:hover:not(:disabled) {
+          background-color: #27ae60;
         }
         
         .confirm-button:disabled {
-          background-color: #a2c5eb;
+          background-color: #b0b0b6;
           cursor: not-allowed;
         }
       `}</style>

@@ -30,7 +30,7 @@ class Table(models.Model):
         # Generate the URL for this table
         table_url = settings.ALLOWED_HOSTS[0]
         if table_url == 'localhost' or '127.0.0.1' in table_url:
-            url = f"http://localhost:8000/table/{self.pk}"
+            url = f"https://tablemint.onrender.com/table/{self.pk}"
         else:
             url = f"https://{table_url}/table/{self.pk}"
             

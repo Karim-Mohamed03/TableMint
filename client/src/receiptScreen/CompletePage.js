@@ -70,6 +70,11 @@ const CompletePageContent = () => {
   const [recordError, setRecordError] = useState(null);
   const [baseAmount, setBaseAmount] = useState(null);
   const [tipAmount, setTipAmount] = useState(null);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState(null);
   
   useEffect(() => {
     if (!stripe) {
@@ -147,7 +152,7 @@ const CompletePageContent = () => {
   // Function to record successful payment to the backend
   const recordPaymentToPhillyCheesesteak = async (paymentId, amount, orderId, baseAmt, tipAmt) => {
     try {
-      const response = await axios.post('http://localhost:8000/api/payments/record-philly-payment', {
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/record-philly-payment', {
         payment_id: paymentId,
         amount: amount,
         order_id: orderId,
@@ -164,6 +169,46 @@ const CompletePageContent = () => {
       console.error("Error recording payment:", error);
       setRecordError("Error connecting to payment service");
     }
+  };
+  
+  // Function to send email receipt
+  const sendEmailReceipt = async () => {
+    if (!email || !email.includes('@')) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    setEmailSending(true);
+    setEmailError(null);
+    
+    try {
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/send-email-receipt', {
+        email: email,
+        payment_id: intentId,
+        order_id: orderId,
+        total_amount: paymentAmount,
+        base_amount: baseAmount,
+        tip_amount: tipAmount,
+        status: status
+      });
+      
+      if (response.data.success) {
+        setEmailSent(true);
+        setShowEmailInput(false);
+      } else {
+        setEmailError(response.data.error || 'Failed to send email');
+      }
+    } catch (error) {
+      console.error("Error sending email:", error);
+      setEmailError('Error sending email. Please try again.');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+  
+  const handleEmailReceipt = () => {
+    if (emailSent) return;
+    setShowEmailInput(true);
   };
   
   const statusContent = STATUS_CONTENT_MAP[status] || STATUS_CONTENT_MAP.default;
@@ -189,10 +234,7 @@ const CompletePageContent = () => {
         
         {intentId && (
           <div className="payment-details">
-            <div className="detail-row">
-              <span className="detail-label">Payment ID</span>
-              <span className="detail-value">{intentId}</span>
-            </div>
+            
             <div className="detail-row">
               <span className="detail-label">Status</span>
               <span className="detail-value status-badge">{status}</span>
@@ -211,34 +253,57 @@ const CompletePageContent = () => {
                   <span className="detail-label">Tip Amount</span>
                   <span className="detail-value">{formatCurrency(tipAmount)}</span>
                 </div>
-                <div className="detail-row">
-                  <span className="detail-label">Record Status</span>
-                  <span className="detail-value status-badge">
-                    {paymentRecorded ? "Recorded" : recordError ? "Failed" : "Processing..."}
-                  </span>
-                </div>
+                
               </>
             )}
           </div>
         )}
         
         <div className="action-buttons">
-          {intentId && (
-            <a 
-              href={`https://dashboard.stripe.com/payments/${intentId}`} 
+          {intentId && status === 'succeeded' && (
+            <button 
               className="secondary-button"
-              rel="noopener noreferrer" 
-              target="_blank"
+              onClick={handleEmailReceipt}
+              disabled={emailSent}
             >
-              View in Stripe
-              <ExternalLinkIcon />
-            </a>
+              {emailSent ? 'Receipt Sent' : 'Email Receipt'}
+            </button>
           )}
           
           <a href="/" className="primary-button">
             Return to Home
           </a>
         </div>
+        
+        {showEmailInput && (
+          <div className="email-input-section">
+            <input 
+              type="email" 
+              placeholder="Enter your email address" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              disabled={emailSending}
+              className="email-input"
+            />
+            <div className="email-buttons">
+              <button 
+                onClick={() => setShowEmailInput(false)}
+                className="cancel-button"
+                disabled={emailSending}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={sendEmailReceipt} 
+                disabled={emailSending || !email}
+                className="send-button"
+              >
+                {emailSending ? 'Sending...' : 'Send Receipt'}
+              </button>
+            </div>
+            {emailError && <p className="email-error">{emailError}</p>}
+          </div>
+        )}
       </div>
     </div>
   );

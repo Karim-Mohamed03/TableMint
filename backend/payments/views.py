@@ -194,7 +194,7 @@ def create_square_payment_from_stripe(request):
                 order = order_result.order
             elif hasattr(order_result, 'body') and hasattr(order_result.body, 'order'):
                 order = order_result.body.order
-            
+            # If the order is not found in the expected structure, return an error
             if not order:
                 return JsonResponse({
                     'success': False,

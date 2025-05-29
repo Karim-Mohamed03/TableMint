@@ -152,7 +152,7 @@ const CompletePageContent = () => {
   // Function to record successful payment to the backend
   const recordPaymentToPhillyCheesesteak = async (paymentId, amount, orderId, baseAmt, tipAmt) => {
     try {
-      const response = await axios.post('http://localhost:8000/api/payments/record-philly-payment', {
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/record-philly-payment', {
         payment_id: paymentId,
         amount: amount,
         order_id: orderId,
@@ -182,7 +182,7 @@ const CompletePageContent = () => {
     setEmailError(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/payments/send-email-receipt', {
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/send-email-receipt', {
         email: email,
         payment_id: intentId,
         order_id: orderId,

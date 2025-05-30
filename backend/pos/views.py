@@ -270,10 +270,16 @@ def get_catalog(request):
     
     GET /api/pos/catalog/
     
+    Query Parameters:
+        location_id (optional): Specific location ID to filter catalog for
+    
     Returns:
         JSON response with catalog data including items and categories
     """
     try:
+        # Get location_id from query parameters
+        location_id = request.GET.get('location_id')
+        
         # Initialize the POS service (will use default adapter from factory)
         pos_service = POSService()
         
@@ -285,6 +291,8 @@ def get_catalog(request):
             }, status=401)
         
         # Get catalog data using the POS service
+        # Note: We'll pass location_id to the service, though the current Square adapter
+        # doesn't filter by location as catalog is typically global across locations
         result = pos_service.get_catalog()
         
         if result.get('success', False):

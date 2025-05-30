@@ -457,12 +457,6 @@ const MenuCategories = () => {
             <h1>Menu</h1>
             <p>Choose from our delicious selection</p>
           </div>
-          <button className="cart-button" onClick={goToCart}>
-            <ShoppingCart size={24} />
-            {getItemCount() > 0 && (
-              <span className="cart-badge">{getItemCount()}</span>
-            )}
-          </button>
         </div>
       </div>
 
@@ -578,6 +572,16 @@ const MenuCategories = () => {
         </div>
       )}
 
+      {/* Bottom Cart Button */}
+      {getItemCount() > 0 && (
+        <div className="bottom-cart-container">
+          <button className="bottom-cart-button" onClick={goToCart}>
+            <ShoppingCart size={20} />
+            <span className="cart-text">View cart • {getItemCount()}</span>
+          </button>
+        </div>
+      )}
+
   <style jsx>{`
         .menu-categories {
           max-width: 100%;
@@ -668,44 +672,6 @@ const MenuCategories = () => {
           color: #718096;
           font-size: 14px;
           margin: 0;
-        }
-
-        .cart-button {
-          position: relative;
-          background: #00ccbc;
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 48px;
-          height: 48px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
-        }
-
-        .cart-button:hover {
-          background: #00a693;
-          transform: scale(1.05);
-        }
-
-        .cart-badge {
-          position: absolute;
-          top: -4px;
-          right: -4px;
-          background: #ff6b6b;
-          color: white;
-          border-radius: 50%;
-          min-width: 20px;
-          height: 20px;
-          font-size: 12px;
-          font-weight: bold;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 6px;
         }
 
         .category-filter {
@@ -959,6 +925,42 @@ const MenuCategories = () => {
           text-align: center;
           padding: 60px 20px;
           color: #718096;
+        }
+
+        .bottom-cart-container {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 1000;
+          padding: 0 20px;
+        }
+
+        .bottom-cart-button {
+          background: #000000;
+          color: white;
+          border: none;
+          border-radius: 25px;
+          padding: 12px 24px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 16px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          min-width: 160px;
+          justify-content: center;
+        }
+
+        .bottom-cart-button:hover {
+          background: #333333;
+          transform: scale(1.02);
+        }
+
+        .cart-text {
+          white-space: nowrap;
         }
 
         /* Mobile-first design - no media queries needed as this is already mobile-optimized */

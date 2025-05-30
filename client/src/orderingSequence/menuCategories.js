@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
 import CartConfirmationModal from '../components/CartConfirmationModal';
 
 
 // Function to fetch catalog data from the backend API
 const getCatalogData = async (locationId = null) => {
+const getCatalogData = async (locationId = null) => {
   try {
-    const response = await fetch('http://localhost:8000/api/pos/catalog/', {
+    const url = new URL('http://localhost:8000/api/pos/catalog/');
+    if (locationId) {
+      url.searchParams.append('location_id', locationId);
+    }
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
     });
 
@@ -342,9 +349,95 @@ const isItemSoldOutAtLocation = (item, locationId) => {
   return false;
 };
 
+// Helper function to check if an item is available at a specific location
+const isItemAvailableAtLocation = (item, locationId) => {
+  // If no locationId is specified, show all items
+  if (!locationId) {
+    console.log(`✅ [LOCATION FILTER] No locationId specified, showing all items`);
+    return true;
+  }
+
+  console.log(`🔍 [LOCATION FILTER] Checking item ${item.id} (${item.item_data?.name}) for location ${locationId}`);
+
+  // Check if item is present at all locations at the item level
+  if (item.present_at_all_locations) {
+    console.log(`📍 [LOCATION FILTER] Item ${item.id} is present at all locations (item level)`);
+    return true; // Show item regardless of sold_out status
+  }
+
+  // Check if item has present_at_location_ids at the item level
+  if (item.present_at_location_ids && Array.isArray(item.present_at_location_ids)) {
+    console.log(`📍 [LOCATION FILTER] Item ${item.id} present_at_location_ids (item level):`, item.present_at_location_ids);
+    
+    if (item.present_at_location_ids.includes(locationId)) {
+      console.log(`✅ [LOCATION FILTER] Item ${item.id} is available at location ${locationId} (found in item-level present_at_location_ids)`);
+      return true; // Show item regardless of sold_out status
+    }
+  }
+
+  // Check variations for location availability
+  const variations = item.item_data?.variations || [];
+  console.log(`🔍 [LOCATION FILTER] Checking ${variations.length} variations for item ${item.id}`);
+  
+  for (const variation of variations) {
+    console.log(`🔍 [VARIATION] Checking variation ${variation.id}`);
+    console.log(`  - present_at_all_locations: ${variation.present_at_all_locations}`);
+    console.log(`  - present_at_location_ids: ${JSON.stringify(variation.present_at_location_ids)}`);
+    
+    // Check if variation is present at all locations
+    if (variation.present_at_all_locations) {
+      console.log(`✅ [LOCATION FILTER] Variation ${variation.id} is present at all locations`);
+      return true; // Show item regardless of sold_out status
+    }
+    
+    // Check if variation has present_at_location_ids
+    if (variation.present_at_location_ids && Array.isArray(variation.present_at_location_ids)) {
+      console.log(`📍 [LOCATION FILTER] Variation ${variation.id} present_at_location_ids:`, variation.present_at_location_ids);
+      
+      if (variation.present_at_location_ids.includes(locationId)) {
+        console.log(`✅ [LOCATION FILTER] Variation ${variation.id} is available at location ${locationId}`);
+        return true; // Show item regardless of sold_out status
+      }
+    }
+  }
+
+  // If no variations are available at this location, item is not available
+  console.log(`❌ [LOCATION FILTER] Item ${item.id} has no variations available at location ${locationId}`);
+  return false;
+};
+
+// Helper function to check if an item is sold out at a specific location
+const isItemSoldOutAtLocation = (item, locationId) => {
+  // If no locationId is specified, can't determine sold out status
+  if (!locationId) {
+    return false;
+  }
+
+  console.log(`🔍 [SOLD OUT CHECK] Checking if item ${item.id} (${item.item_data?.name}) is sold out at location ${locationId}`);
+
+  // Check variations for sold out status
+  const variations = item.item_data?.variations || [];
+  
+  for (const variation of variations) {
+    const locationOverrides = variation.item_variation_data?.location_overrides || [];
+    
+    // Look for a location override that matches our location ID
+    const locationOverride = locationOverrides.find(override => override.location_id === locationId);
+    
+    if (locationOverride && locationOverride.sold_out === true) {
+      console.log(`❌ [SOLD OUT CHECK] Item ${item.id} is sold out at location ${locationId}`);
+      return true;
+    }
+  }
+
+  console.log(`✅ [SOLD OUT CHECK] Item ${item.id} is NOT sold out at location ${locationId}`);
+  return false;
+};
+
 // Main MenuCategories component
 const MenuCategories = () => {
   const navigate = useNavigate();
+  const { locationId } = useParams(); // Extract location_id from URL
   const { locationId } = useParams(); // Extract location_id from URL
   const { addItem, getItemCount } = useCart();
   const [catalogData, setCatalogData] = useState(null);
@@ -394,9 +487,13 @@ const MenuCategories = () => {
   useEffect(() => {
     const fetchData = async () => {
       console.log(`🚀 [DEBUG] Starting data fetch process with location_id: ${locationId}`);
+      console.log(`🚀 [DEBUG] Starting data fetch process with location_id: ${locationId}`);
       setLoading(true);
       setError(null);
       
+      // Fetch catalog data with location_id
+      console.log(`📋 [DEBUG] Fetching catalog data for location: ${locationId}`);
+      const catalogResponse = await getCatalogData(locationId);
       // Fetch catalog data with location_id
       console.log(`📋 [DEBUG] Fetching catalog data for location: ${locationId}`);
       const catalogResponse = await getCatalogData(locationId);
@@ -437,8 +534,11 @@ const MenuCategories = () => {
         
         if (itemVariationMap.length > 0) {
           console.log(`📦 [DEBUG] Starting inventory fetch for ${itemVariationMap.length} variations with location_id: ${locationId}`);
+          console.log(`📦 [DEBUG] Starting inventory fetch for ${itemVariationMap.length} variations with location_id: ${locationId}`);
           setInventoryLoading(true);
           
+          // Pass the location_id to the inventory fetch
+          const inventoryResponse = await getInventoryData(itemVariationMap, locationId);
           // Pass the location_id to the inventory fetch
           const inventoryResponse = await getInventoryData(itemVariationMap, locationId);
           console.log(`📦 [DEBUG] Inventory response:`, inventoryResponse);
@@ -484,28 +584,6 @@ const MenuCategories = () => {
     fetchData();
   }, [locationId]); // Add locationId as dependency to refetch when it changes
 
-  const goToCart = () => {
-    navigate('/cart');
-  };
-
-  const handleAddToCart = (item) => {
-    const itemData = item.item_data;
-    const variation = itemData?.variations?.[0];
-    const price = variation?.item_variation_data?.price_money;
-    
-    const cartItem = {
-      id: item.id,
-      name: itemData?.name || 'Unknown Item',
-      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
-      currency: price?.currency || 'USD'
-    };
-    
-    addItem(cartItem);
-    
-    // Show success feedback
-    alert(`${cartItem.name} added to cart!`);
-  };
-
   // Parse and organize catalog data
   const organizedData = React.useMemo(() => {
     if (!catalogData) return { categories: [], items: [] };
@@ -535,7 +613,37 @@ const MenuCategories = () => {
   };
 
   // Filter items by category and location
+  // Filter items by category and location
   const getFilteredItems = () => {
+    let items = organizedData.items;
+    
+    console.log(`🔍 [FILTER DEBUG] Starting with ${items.length} total items`);
+    console.log(`🔍 [FILTER DEBUG] Current locationId from URL: "${locationId}"`);
+    console.log(`🔍 [FILTER DEBUG] Selected category: "${selectedCategory}"`);
+    
+    // Filter by location first if locationId is provided
+    if (locationId) {
+      console.log(`🔍 [LOCATION FILTER] Filtering ${items.length} items for location: ${locationId}`);
+      
+      items.forEach((item, index) => {
+        console.log(`🔍 [ITEM ${index + 1}] ${item.item_data?.name} (${item.id})`);
+        console.log(`  - present_at_all_locations: ${item.present_at_all_locations}`);
+        console.log(`  - present_at_location_ids: ${JSON.stringify(item.present_at_location_ids)}`);
+        const isAvailable = isItemAvailableAtLocation(item, locationId);
+        console.log(`  - isAvailable: ${isAvailable}`);
+      });
+      
+      items = items.filter(item => isItemAvailableAtLocation(item, locationId));
+      console.log(`🔍 [LOCATION FILTER] After location filtering: ${items.length} items remaining`);
+      
+      if (items.length > 0) {
+        console.log(`✅ [LOCATION FILTER] Remaining items:`, items.map(item => `${item.item_data?.name} (${item.id})`));
+      } else {
+        console.log(`❌ [LOCATION FILTER] No items passed location filter!`);
+      }
+    }
+    
+    // Then filter by category
     let items = organizedData.items;
     
     console.log(`🔍 [FILTER DEBUG] Starting with ${items.length} total items`);
@@ -568,11 +676,17 @@ const MenuCategories = () => {
     if (selectedCategory === 'all') {
       console.log(`🔍 [CATEGORY FILTER] Showing all categories, final count: ${items.length}`);
       return items;
+      console.log(`🔍 [CATEGORY FILTER] Showing all categories, final count: ${items.length}`);
+      return items;
     }
     
     const categoryFiltered = items.filter(item => 
+    const categoryFiltered = items.filter(item => 
       item.item_data?.categories?.some(cat => cat.id === selectedCategory)
     );
+    console.log(`🔍 [CATEGORY FILTER] After category "${selectedCategory}" filtering: ${categoryFiltered.length} items`);
+    
+    return categoryFiltered;
     console.log(`🔍 [CATEGORY FILTER] After category "${selectedCategory}" filtering: ${categoryFiltered.length} items`);
     
     return categoryFiltered;
@@ -644,6 +758,8 @@ const MenuCategories = () => {
           const inStock = isItemInStock(item.id);
           const soldOutAtLocation = locationId ? isItemSoldOutAtLocation(item, locationId) : false;
           const isAvailable = inStock && !soldOutAtLocation;
+          const soldOutAtLocation = locationId ? isItemSoldOutAtLocation(item, locationId) : false;
+          const isAvailable = inStock && !soldOutAtLocation;
 
           return (
             <div key={item.id} className="menu-item-card">
@@ -694,6 +810,12 @@ const MenuCategories = () => {
                   </div>
                 )}
                 
+                {soldOutAtLocation && (
+                  <div className="sold-out-badge">
+                    Out of Stock at this Location
+                  </div>
+                )}
+                
                 {itemData?.description && (
                   <p className="item-description">{itemData.description}</p>
                 )}
@@ -724,6 +846,14 @@ const MenuCategories = () => {
                   {itemData?.is_alcoholic && <span className="alcoholic-tag">Contains Alcohol</span>}
                 </div>
               </div>
+              
+              <button 
+                className={`add-to-order-btn ${!isAvailable ? 'sold-out' : ''}`}
+                disabled={!isAvailable}
+                onClick={() => isAvailable && handleAddToCart(item)}
+              >
+                {soldOutAtLocation ? 'Out of Stock at Location' : !inStock ? 'Out of Stock' : 'Add to Order'}
+              </button>
             </div>
           );
         })}
@@ -933,11 +1063,31 @@ const MenuCategories = () => {
         }
 
         .item-name {
-          font-size: 16px;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0;
+          flex: 1;
+          margin-right: 12px;
+        }
+
+        .item-price {
+          font-size: 18px;
+          font-weight: 700;
+          color: #007bff;
+        }
+
+        .sold-out-badge {
+          background: #ff4757;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-size: 12px;
           font-weight: 600;
-          color: #2d3748;
-          margin: 0 0 4px 0;
-          line-height: 1.3;
+          margin-bottom: 8px;
+          display: inline-block;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .item-description {

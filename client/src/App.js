@@ -5,6 +5,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import PaymentPage from "./receiptScreen/PaymentPagee";
 import CompletePage from "./receiptScreen/CompletePage";
 import MenuCategories from "./orderingSequence/menuCategories";
+import SmartMenu from "./orderingSequence/smartMenu";
 import CartPage from "./pages/CartPage";
 import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
@@ -135,8 +136,12 @@ function App() {
                 } 
               />
               <Route 
-                path="/menu" 
+                path="/menuOrderPay" 
                 element={<MenuCategories />} 
+              />
+              <Route 
+                path="/smartMenu" 
+                element={<SmartMenu />} 
               />
               <Route 
                 path="/cart" 

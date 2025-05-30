@@ -1,262 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useCart } from '../contexts/CartContext';
-import { useNavigate } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
 
-// Function to fetch catalog data from the backend API
-const getCatalogData = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/api/pos/catalog/', {
-      method: 'GET',
-    });
+// Import the utility functions from menuCategories
+import { getCatalogData, getInventoryData, processCatalogWithImages } from './menuCategories';
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.success) {
-      console.log('Catalog data fetched successfully:', data);
-      
-      // Process the catalog data to associate images with items
-      const processedData = processCatalogWithImages(data.objects);
-      
-      return {
-        ...data,
-        objects: processedData.objects,
-        imageMap: processedData.imageMap
-      };
-    } else {
-      console.error('Failed to fetch catalog:', data.error);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error calling get_catalog:', error);
-    return null;
-  }
-};
-
-// Helper function to process catalog data and create image mappings
-const processCatalogWithImages = (catalogObjects) => {
-  console.log('🖼️ [DEBUG] Processing catalog objects for images...');
-  
-  // Separate different object types
-  const images = catalogObjects.filter(obj => obj.type === 'IMAGE');
-  const items = catalogObjects.filter(obj => obj.type === 'ITEM');
-  const categories = catalogObjects.filter(obj => obj.type === 'CATEGORY');
-  const otherObjects = catalogObjects.filter(obj => !['IMAGE', 'ITEM', 'CATEGORY'].includes(obj.type));
-  
-  console.log(`🖼️ [DEBUG] Found ${images.length} images, ${items.length} items, ${categories.length} categories`);
-  
-  // Create image map for quick lookup: imageId -> imageUrl
-  const imageMap = {};
-  images.forEach(imageObj => {
-    if (imageObj.image_data && imageObj.image_data.url) {
-      imageMap[imageObj.id] = {
-        url: imageObj.image_data.url,
-        name: imageObj.image_data.name,
-        caption: imageObj.image_data.caption
-      };
-      console.log(`🖼️ [DEBUG] Mapped image ${imageObj.id}: ${imageObj.image_data.url}`);
-    }
-  });
-  
-  // Add image URLs to items
-  const itemsWithImages = items.map(item => {
-    const itemData = { ...item };
-    
-    // Check if item has image_ids
-    if (item.item_data && item.item_data.image_ids && item.item_data.image_ids.length > 0) {
-      console.log(`🖼️ [DEBUG] Item ${item.id} (${item.item_data.name}) has ${item.item_data.image_ids.length} image(s)`);
-      
-      // Get image URLs for this item
-      const itemImages = item.item_data.image_ids
-        .map(imageId => imageMap[imageId])
-        .filter(image => image); // Remove any undefined images
-      
-      if (itemImages.length > 0) {
-        itemData.item_data = {
-          ...item.item_data,
-          images: itemImages,
-          primaryImage: itemImages[0] // First image is primary
-        };
-        console.log(`🖼️ [DEBUG] Added ${itemImages.length} image(s) to item ${item.id}`);
-      } else {
-        console.log(`🖼️ [DEBUG] No valid images found for item ${item.id}`);
-      }
-    } else {
-      console.log(`🖼️ [DEBUG] Item ${item.id} (${item.item_data?.name}) has no image_ids`);
-    }
-    
-    return itemData;
-  });
-  
-  // Return processed objects (excluding raw IMAGE objects since they're now embedded in items)
-  const processedObjects = [...itemsWithImages, ...categories, ...otherObjects];
-  
-  console.log(`🖼️ [DEBUG] Processing complete. ${itemsWithImages.filter(item => item.item_data?.images).length} items have images`);
-  
-  return {
-    objects: processedObjects,
-    imageMap: imageMap
-  };
-};
-
-// Function to fetch inventory data for a single item variation
-const getItemInventory = async (catalogObjectId, locationId = null) => {
-  console.log(`🔍 [DEBUG] Starting inventory fetch for variation: ${catalogObjectId}`);
-  console.log(`🔍 [DEBUG] Location ID: ${locationId}`);
-  
-  try {
-    // Fix the URL construction - remove the extra query parameter
-    const url = new URL('http://localhost:8000/api/orders/inventory/');
-    url.searchParams.append('catalog_object_id', catalogObjectId);
-    if (locationId) {
-      url.searchParams.append('location_ids', locationId);
-    }
-
-    const finalUrl = url.toString();
-    console.log(`🔍 [DEBUG] Final URL: ${finalUrl}`);
-
-    const response = await fetch(finalUrl, {
-      method: 'GET',
-    });
-
-    console.log(`🔍 [DEBUG] Response status: ${response.status}`);
-    console.log(`🔍 [DEBUG] Response ok: ${response.ok}`);
-
-    if (!response.ok) {
-      console.error(`❌ [DEBUG] HTTP error! status: ${response.status}`);
-      const errorText = await response.text();
-      console.error(`❌ [DEBUG] Error response body: ${errorText}`);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log(`🔍 [DEBUG] Response data for ${catalogObjectId}:`, data);
-    console.log(`🔍 [DEBUG] Data has 'success' property: ${data.hasOwnProperty('success')}`);
-    console.log(`🔍 [DEBUG] Data has 'errors' property: ${data.hasOwnProperty('errors')}`);
-    console.log(`🔍 [DEBUG] Data has 'counts' property: ${data.hasOwnProperty('counts')}`);
-    
-    // Check for Square API format (errors + counts) instead of success property
-    if (data.hasOwnProperty('errors') && data.hasOwnProperty('counts')) {
-      console.log(`✅ [DEBUG] Square API format detected`);
-      console.log(`🔍 [DEBUG] Errors array length: ${data.errors ? data.errors.length : 'null'}`);
-      console.log(`🔍 [DEBUG] Counts array length: ${data.counts ? data.counts.length : 'null'}`);
-      
-      if (data.errors && data.errors.length > 0) {
-        console.error(`❌ [DEBUG] API returned errors:`, data.errors);
-        return { success: false, errors: data.errors, counts: [] };
-      } else {
-        console.log(`✅ [DEBUG] API returned success with counts:`, data.counts);
-        return { success: true, errors: [], counts: data.counts };
-      }
-    } else if (data.success) {
-      console.log(`✅ [DEBUG] Legacy success format detected`);
-      return data;
-    } else {
-      console.error(`❌ [DEBUG] Unexpected response format:`, data);
-      return { success: false, errors: [data.error || 'Unknown error'], counts: [] };
-    }
-  } catch (error) {
-    console.error(`❌ [DEBUG] Exception in getItemInventory for ${catalogObjectId}:`, error);
-    return { success: false, errors: [error.message], counts: [] };
-  }
-};
-
-// Function to fetch inventory data for multiple items individually
-const getInventoryData = async (itemVariationMap, locationId = null) => {
-  try {
-    console.log(`📊 [DEBUG] Starting batch inventory fetch for ${itemVariationMap.length} variations`);
-    console.log('📊 [DEBUG] Item variation mapping:', itemVariationMap);
-    console.log(`📊 [DEBUG] Location ID for batch: ${locationId}`);
-    
-    // Fetch inventory for each variation individually
-    const inventoryPromises = itemVariationMap.map((mapping, index) => {
-      console.log(`📊 [DEBUG] Creating promise ${index + 1}/${itemVariationMap.length} for variation: ${mapping.variationId}`);
-      return getItemInventory(mapping.variationId, locationId);
-    });
-    
-    console.log(`📊 [DEBUG] Created ${inventoryPromises.length} inventory promises`);
-    const inventoryResults = await Promise.all(inventoryPromises);
-    console.log(`📊 [DEBUG] All inventory promises resolved. Results:`, inventoryResults);
-    
-    // Process results and create inventory map
-    const counts = [];
-    inventoryResults.forEach((result, index) => {
-      const mapping = itemVariationMap[index];
-      console.log(`📊 [DEBUG] Processing result ${index + 1}: variation ${mapping.variationId}, item ${mapping.itemId}`);
-      console.log(`📊 [DEBUG] Result content:`, result);
-      
-      if (result && result.success && result.counts && result.counts.length > 0) {
-        console.log(`✅ [DEBUG] Valid inventory data found for ${mapping.variationId}`);
-        const inventoryInfo = result.counts[0]; // Take the first (and should be only) result
-        const processedCount = {
-          catalog_object_id: inventoryInfo.catalog_object_id,
-          quantity: inventoryInfo.quantity || '0',
-          state: inventoryInfo.state || 'IN_STOCK',
-          location_id: inventoryInfo.location_id
-        };
-        counts.push(processedCount);
-        console.log(`✅ [DEBUG] Added processed count:`, processedCount);
-      } else {
-        console.log(`⚠️ [DEBUG] No valid inventory data for ${mapping.variationId}, using default`);
-        // Default to in stock if no inventory data available
-        const defaultCount = {
-          catalog_object_id: mapping.variationId,
-          quantity: '1',
-          state: 'IN_STOCK',
-          location_id: locationId
-        };
-        counts.push(defaultCount);
-        console.log(`⚠️ [DEBUG] Added default count:`, defaultCount);
-      }
-    });
-    
-    console.log(`📊 [DEBUG] Final processed counts (${counts.length} items):`, counts);
-    const finalResult = {
-      success: true,
-      counts: counts
-    };
-    console.log(`📊 [DEBUG] Returning final result:`, finalResult);
-    return finalResult;
-  } catch (error) {
-    console.error(`❌ [DEBUG] Exception in getInventoryData:`, error);
-    return { success: false, counts: [] };
-  }
-};
-
-// Helper function to fetch available locations
-const getLocations = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/api/pos/locations/', {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.success) {
-      console.log('Locations fetched successfully:', data);
-      return data.locations;
-    } else {
-      console.error('Failed to fetch locations:', data.error);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error fetching locations:', error);
-    return null;
-  }
-};
-
-// Main MenuCategories component
-const MenuCategories = () => {
-  const navigate = useNavigate();
-  const { addItem, getItemCount } = useCart();
+// Smart Menu component - Menu display only, no cart functionality
+const SmartMenu = () => {
   const [catalogData, setCatalogData] = useState(null);
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -265,34 +13,10 @@ const MenuCategories = () => {
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
 
-  // Handle adding item to cart
-  const handleAddToCart = (item) => {
-    const itemData = item.item_data;
-    const variation = itemData?.variations?.[0];
-    const price = variation?.item_variation_data?.price_money;
-    
-    const cartItem = {
-      id: item.id,
-      name: itemData?.name || 'Unknown Item',
-      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
-      currency: price?.currency || 'USD'
-    };
-    
-    addItem(cartItem);
-    
-    // Show success feedback
-    alert(`${cartItem.name} added to cart!`);
-  };
-
-  // Navigate to cart
-  const goToCart = () => {
-    navigate('/cart');
-  };
-
   // Fetch catalog data on component mount
   useEffect(() => {
     const fetchData = async () => {
-      console.log(`🚀 [DEBUG] Starting data fetch process`);
+      console.log(`🚀 [DEBUG] Starting data fetch process for Smart Menu`);
       setLoading(true);
       setError(null);
       
@@ -376,7 +100,7 @@ const MenuCategories = () => {
         setError('Failed to load menu items');
       }
       
-      console.log(`🏁 [DEBUG] Data fetch process complete`);
+      console.log(`🏁 [DEBUG] Data fetch process complete for Smart Menu`);
       setLoading(false);
     };
 
@@ -425,7 +149,7 @@ const MenuCategories = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="menu-categories">
+      <div className="smart-menu">
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading menu...</p>
@@ -437,7 +161,7 @@ const MenuCategories = () => {
   // Error state
   if (error) {
     return (
-      <div className="menu-categories">
+      <div className="smart-menu">
         <div className="error-container">
           <p className="error-message">{error}</p>
           <button onClick={() => window.location.reload()} className="retry-button">
@@ -449,20 +173,14 @@ const MenuCategories = () => {
   }
 
   return (
-    <div className="menu-categories">
+    <div className="smart-menu">
       {/* Header */}
       <div className="menu-header">
         <div className="header-content">
           <div className="header-text">
-            <h1>Menu</h1>
-            <p>Choose from our delicious selection</p>
+            <h1>Smart Menu</h1>
+            <p>Browse our delicious selection</p>
           </div>
-          <button className="cart-button" onClick={goToCart}>
-            <ShoppingCart size={24} />
-            {getItemCount() > 0 && (
-              <span className="cart-badge">{getItemCount()}</span>
-            )}
-          </button>
         </div>
       </div>
 
@@ -513,15 +231,8 @@ const MenuCategories = () => {
                   </div>
                 )}
                 
-                {/* Add/Out of Stock Button */}
-                {inStock ? (
-                  <button 
-                    className="add-button"
-                    onClick={() => handleAddToCart(item)}
-                  >
-                    +
-                  </button>
-                ) : (
+                {/* Out of Stock Overlay */}
+                {!inStock && (
                   <div className="out-of-stock-overlay">
                     <span>Out of Stock</span>
                   </div>
@@ -578,8 +289,8 @@ const MenuCategories = () => {
         </div>
       )}
 
-  <style jsx>{`
-        .menu-categories {
+      <style jsx>{`
+        .smart-menu {
           max-width: 100%;
           margin: 0;
           padding: 0;
@@ -670,44 +381,6 @@ const MenuCategories = () => {
           margin: 0;
         }
 
-        .cart-button {
-          position: relative;
-          background: #00ccbc;
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 48px;
-          height: 48px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
-        }
-
-        .cart-button:hover {
-          background: #00a693;
-          transform: scale(1.05);
-        }
-
-        .cart-badge {
-          position: absolute;
-          top: -4px;
-          right: -4px;
-          background: #ff6b6b;
-          color: white;
-          border-radius: 50%;
-          min-width: 20px;
-          height: 20px;
-          font-size: 12px;
-          font-weight: bold;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 6px;
-        }
-
         .category-filter {
           display: flex;
           gap: 12px;
@@ -769,7 +442,6 @@ const MenuCategories = () => {
           align-items: center;
           padding: 16px;
           position: relative;
-          cursor: pointer;
         }
 
         .menu-item-card:hover {
@@ -862,31 +534,6 @@ const MenuCategories = () => {
           font-size: 12px;
         }
 
-        .add-button {
-          position: absolute;
-          bottom: 8px;
-          right: 8px;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: #00ccbc;
-          color: white;
-          border: none;
-          font-size: 20px;
-          font-weight: 300;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
-        }
-
-        .add-button:hover {
-          background: #00a693;
-          transform: scale(1.1);
-        }
-
         .out-of-stock-overlay {
           position: absolute;
           top: 0;
@@ -965,7 +612,7 @@ const MenuCategories = () => {
         
         /* Larger screens */
         @media (min-width: 768px) {
-          .menu-categories {
+          .smart-menu {
             max-width: 480px;
             margin: 0 auto;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
@@ -994,6 +641,4 @@ const MenuCategories = () => {
   );
 };
 
-// Export the component and utility functions
-export default MenuCategories;
-export { getCatalogData, getInventoryData, processCatalogWithImages };
+export default SmartMenu;

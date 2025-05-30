@@ -711,12 +711,14 @@ const MenuCategories = () => {
         </div>
       )}
 
-      <style jsx>{`
+  <style jsx>{`
         .menu-categories {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 20px;
-          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          background: #fff;
+          min-height: 100vh;
         }
 
         .loading-container {
@@ -725,13 +727,14 @@ const MenuCategories = () => {
           align-items: center;
           justify-content: center;
           min-height: 300px;
+          padding: 20px;
         }
 
         .loading-spinner {
           width: 40px;
           height: 40px;
           border: 3px solid #f3f3f3;
-          border-top: 3px solid #007bff;
+          border-top: 3px solid #00ccbc;
           border-radius: 50%;
           animation: spin 1s linear infinite;
           margin-bottom: 16px;
@@ -754,7 +757,7 @@ const MenuCategories = () => {
         }
 
         .retry-button {
-          background: #007bff;
+          background: #00ccbc;
           color: white;
           border: none;
           padding: 12px 24px;
@@ -765,145 +768,220 @@ const MenuCategories = () => {
         }
 
         .retry-button:hover {
-          background: #0056b3;
+          background: #00a693;
         }
 
         .menu-header {
-          text-align: center;
-          margin-bottom: 30px;
+          background: #fff;
+          padding: 16px 16px 8px 16px;
+          border-bottom: 1px solid #f0f0f0;
+          position: sticky;
+          top: 0;
+          z-index: 100;
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          max-width: 1200px;
-          margin: 0 auto;
         }
 
         .header-text {
           flex: 1;
-          text-align: left;
         }
 
         .menu-header h1 {
-          font-size: 32px;
-          font-weight: 700;
-          color: #1a1a1a;
-          margin: 0 0 8px 0;
+          font-size: 24px;
+          font-weight: 600;
+          color: #2d3748;
+          margin: 0 0 4px 0;
         }
 
         .menu-header p {
-          color: #666;
-          font-size: 16px;
+          color: #718096;
+          font-size: 14px;
           margin: 0;
         }
 
         .cart-button {
           position: relative;
-          background: #007bff;
+          background: #00ccbc;
           color: white;
           border: none;
-          border-radius: 12px;
-          padding: 12px;
+          border-radius: 50%;
+          width: 48px;
+          height: 48px;
           cursor: pointer;
-          transition: background 0.2s ease;
+          transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
         }
 
         .cart-button:hover {
-          background: #0056b3;
+          background: #00a693;
+          transform: scale(1.05);
         }
 
         .cart-badge {
           position: absolute;
-          top: -8px;
-          right: -8px;
-          background: #e74c3c;
+          top: -4px;
+          right: -4px;
+          background: #ff6b6b;
           color: white;
           border-radius: 50%;
-          width: 20px;
+          min-width: 20px;
           height: 20px;
           font-size: 12px;
           font-weight: bold;
           display: flex;
           align-items: center;
           justify-content: center;
+          padding: 0 6px;
         }
 
         .category-filter {
           display: flex;
-          gap: 8px;
-          margin-bottom: 30px;
+          gap: 12px;
+          padding: 16px;
           overflow-x: auto;
-          padding-bottom: 8px;
+          background: #fff;
+          border-bottom: 1px solid #f0f0f0;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .category-filter::-webkit-scrollbar {
+          display: none;
         }
 
         .category-btn {
-          background: #f8f9fa;
-          border: 2px solid transparent;
-          padding: 10px 16px;
+          background: transparent;
+          border: none;
+          padding: 8px 16px;
           border-radius: 20px;
           cursor: pointer;
           font-size: 14px;
-          font-weight: 600;
+          font-weight: 500;
           white-space: nowrap;
           transition: all 0.2s ease;
-          color: #666;
+          color: #718096;
+          position: relative;
         }
 
         .category-btn:hover {
-          background: #e9ecef;
+          color: #2d3748;
         }
 
         .category-btn.active {
-          background: #007bff;
-          color: white;
-          border-color: #007bff;
+          color: #00ccbc;
+          font-weight: 600;
+        }
+
+        .category-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: -16px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 60%;
+          height: 2px;
+          background: #00ccbc;
         }
 
         .menu-items-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 20px;
-          margin-bottom: 30px;
+          padding: 0;
         }
 
         .menu-item-card {
           background: white;
-          border-radius: 16px;
-          overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          border: 1px solid #e5e5e7;
+          border: none;
+          border-bottom: 1px solid #f0f0f0;
+          transition: background-color 0.2s ease;
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          padding: 16px;
           position: relative;
+          cursor: pointer;
         }
 
         .menu-item-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          background: #f8f9fa;
+        }
+
+        .menu-item-card:last-child {
+          border-bottom: none;
+        }
+
+        .item-content {
+          flex: 1;
+          padding-right: 16px;
+          display: flex;
+          flex-direction: column;
+          order: 1;
+          text-align: left;
+          align-items: flex-start;
+        }
+
+        .item-header {
+          display: block;
+          margin-bottom: 8px;
+        }
+
+        .item-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: #2d3748;
+          margin: 0 0 4px 0;
+          line-height: 1.3;
+        }
+
+        .item-description {
+          color: #718096;
+          font-size: 14px;
+          line-height: 1.4;
+          margin: 0 0 8px 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .item-details {
+          margin-bottom: 8px;
+        }
+
+        .calorie-info {
+          color: #718096;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .item-price {
+          font-size: 16px;
+          font-weight: 600;
+          color: #2d3748;
+          margin-top: auto;
         }
 
         .item-image-container {
-          width: 100%;
-          height: 200px;
+          width: 80px;
+          height: 80px;
+          border-radius: 8px;
           overflow: hidden;
-          background: #f8f9fa;
+          background: #f7fafc;
           display: flex;
           align-items: center;
           justify-content: center;
           position: relative;
+          flex-shrink: 0;
+          order: 2;
         }
 
         .item-image {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transition: transform 0.3s ease;
         }
 
         .no-image-placeholder {
@@ -912,39 +990,34 @@ const MenuCategories = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f8f9fa;
-          color: #999;
-          font-size: 14px;
-        }
-
-        .menu-item-card:hover .item-image {
-          transform: scale(1.05);
+          background: #f7fafc;
+          color: #a0aec0;
+          font-size: 12px;
         }
 
         .add-button {
           position: absolute;
-          top: 12px;
-          right: 12px;
-          width: 40px;
-          height: 40px;
+          bottom: 8px;
+          right: 8px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
-          background: #007bff;
+          background: #00ccbc;
           color: white;
           border: none;
-          font-size: 24px;
+          font-size: 20px;
           font-weight: 300;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
         }
 
         .add-button:hover {
-          background: #0056b3;
+          background: #00a693;
           transform: scale(1.1);
-          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
         }
 
         .out-of-stock-overlay {
@@ -953,162 +1026,103 @@ const MenuCategories = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(0, 0, 0, 0.6);
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          font-weight: 600;
-          font-size: 16px;
-        }
-
-        .item-content {
-          padding: 20px;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .item-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        }
-
-        .item-name {
-          font-size: 18px;
-          font-weight: 700;
-          color: #1a1a1a;
-          margin: 0;
-          flex: 1;
-          margin-right: 12px;
-        }
-
-        .item-price {
-          font-size: 18px;
-          font-weight: 700;
-          color: #007bff;
-        }
-
-        .sold-out-badge {
-          background: #ff4757;
-          color: white;
-          padding: 4px 8px;
+          font-weight: 500;
+          font-size: 12px;
           border-radius: 8px;
-          font-size: 12px;
-          font-weight: 600;
-          margin-bottom: 8px;
-          display: inline-block;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .item-description {
-          color: #666;
-          font-size: 14px;
-          line-height: 1.4;
-          margin: 0 0 12px 0;
-        }
-
-        .item-details {
-          margin-bottom: 12px;
-        }
-
-        .calorie-info {
-          background: #f8f9fa;
-          color: #666;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 600;
-          margin-right: 8px;
-        }
-
-        .ingredients {
-          margin-top: 8px;
-        }
-
-        .ingredients-label {
-          font-size: 12px;
-          color: #666;
-          font-weight: 600;
-        }
-
-        .ingredient-tag {
-          background: #fff3cd;
-          color: #856404;
-          padding: 2px 6px;
-          border-radius: 8px;
-          font-size: 11px;
-          font-weight: 600;
-          margin-left: 4px;
-          text-transform: capitalize;
         }
 
         .item-meta {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
-          margin-bottom: 12px;
+          margin-top: 4px;
         }
 
         .item-type {
-          background: #e3f2fd;
-          color: #1976d2;
-          padding: 4px 8px;
+          background: #e6fffa;
+          color: #00ccbc;
+          padding: 2px 8px;
           border-radius: 12px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
           text-transform: capitalize;
         }
 
         .item-type.food_and_bev {
-          background: #e8f5e8;
-          color: #2e7d32;
+          background: #f0fff4;
+          color: #38a169;
         }
 
         .alcoholic-tag {
-          background: #ffebee;
-          color: #c62828;
-          padding: 4px 8px;
+          background: #fed7d7;
+          color: #e53e3e;
+          padding: 2px 8px;
           border-radius: 12px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
+        }
+
+        .ingredients {
+          margin-top: 4px;
+        }
+
+        .ingredients-label {
+          font-size: 12px;
+          color: #718096;
+          font-weight: 500;
+        }
+
+        .ingredient-tag {
+          background: #fff5b4;
+          color: #744210;
+          padding: 2px 6px;
+          border-radius: 8px;
+          font-size: 10px;
+          font-weight: 500;
+          margin-left: 4px;
+          text-transform: capitalize;
         }
 
         .no-items {
           text-align: center;
           padding: 60px 20px;
-          color: #666;
+          color: #718096;
         }
 
-        /* Mobile responsiveness */
-        @media (max-width: 768px) {
+        /* Mobile-first design - no media queries needed as this is already mobile-optimized */
+        
+        /* Larger screens */
+        @media (min-width: 768px) {
           .menu-categories {
-            padding: 16px;
+            max-width: 480px;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
           }
-
-          .menu-header h1 {
-            font-size: 28px;
+          
+          .menu-header {
+            padding: 20px 20px 12px 20px;
           }
-
-          .menu-items-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
+          
+          .category-filter {
+            padding: 20px;
           }
-
-          .item-header {
-            flex-direction: column;
-            align-items: flex-start;
+          
+          .menu-item-card {
+            padding: 20px;
           }
-
-          .item-name {
-            margin-right: 0;
-            margin-bottom: 8px;
+          
+          .item-image-container {
+            width: 100px;
+            height: 100px;
           }
         }
-      `}</style>
+      `}
+    </style>
     </div>
   );
 };

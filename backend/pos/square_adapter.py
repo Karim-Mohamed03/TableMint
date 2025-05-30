@@ -757,7 +757,7 @@ class SquareAdapter(POSAdapter):
                 "counts": []
             }
             
-                            # Handle SyncPager - iterate through pages to get inventory counts
+            # Handle SyncPager - iterate through pages to get inventory counts
             if hasattr(result, '__iter__'):  # SyncPager is iterable
                 logger.info("Result is iterable (SyncPager), iterating through pages...")
                 

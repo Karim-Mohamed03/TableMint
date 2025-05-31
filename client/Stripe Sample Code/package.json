@@ -10,8 +10,8 @@
     "react-router-dom": "^6.26.1",
     "react-scripts": "^5.0.1"
   },
-  "homepage": "http://localhost:3000/checkout",
-  "proxy": "http://localhost:4242",
+  "homepage": "https://test-app-fawn-phi.vercel.app/checkout",
+  "proxy": "https://test-app-fawn-phi.vercel.app/",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

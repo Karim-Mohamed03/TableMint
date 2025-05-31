@@ -376,6 +376,24 @@ const MenuCategories = () => {
     navigate('/cart');
   };
 
+  const handleAddToCart = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const price = variation?.item_variation_data?.price_money;
+    
+    const cartItem = {
+      id: item.id,
+      name: itemData?.name || 'Unknown Item',
+      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
+      currency: price?.currency || 'USD'
+    };
+    
+    addItem(cartItem);
+    
+    // Show success feedback
+    alert(`${cartItem.name} added to cart!`);
+  };
+
   // Parse and organize catalog data
   const organizedData = React.useMemo(() => {
     if (!catalogData) return { categories: [], items: [] };

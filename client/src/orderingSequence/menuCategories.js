@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
+import CartConfirmationModal from '../components/CartConfirmationModal';
 
 
 // Function to fetch catalog data from the backend API
@@ -358,6 +359,41 @@ const MenuCategories = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Handle adding item to cart
+  const handleAddToCart = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const price = variation?.item_variation_data?.price_money;
+    
+    const cartItem = {
+      id: item.id,
+      name: itemData?.name || 'Unknown Item',
+      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
+      currency: price?.currency || 'USD'
+    };
+    
+    addItem(cartItem);
+    
+    // Show success feedback
+    alert(`${cartItem.name} added to cart!`);
+  };
+
+  // Navigate to cart
+  const goToCart = () => {
+    setIsModalOpen(true);
+  };
+
+  // Modal handlers
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleConfirmOrder = () => {
+    setIsModalOpen(false);
+    navigate('/cart'); // Navigate to full cart page for checkout
+  };
 
   // Fetch catalog data on component mount
   useEffect(() => {
@@ -714,6 +750,13 @@ const MenuCategories = () => {
           </button>
         </div>
       )}
+
+      {/* Cart Confirmation Modal */}
+      <CartConfirmationModal 
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmOrder}
+      />
 
   <style jsx>{`
         .menu-categories {

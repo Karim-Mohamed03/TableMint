@@ -136,7 +136,11 @@ function App() {
                 } 
               />
               <Route 
-                path="/menuOrderPay" 
+                path="/menu/:locationId" 
+                element={<MenuCategories />} 
+              />
+              <Route 
+                path="/menu" 
                 element={<MenuCategories />} 
               />
               <Route 

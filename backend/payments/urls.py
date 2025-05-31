@@ -9,4 +9,5 @@ urlpatterns = [
     path('get-order-base-sum/<str:order_id>', stripe_views.get_order_base_sum, name='get_order_base_sum'),
     path('get-order-base-sum', stripe_views.get_order_base_sum, name='get_order_base_sum_post'),
     path('create-square-payment', views.create_square_payment_from_stripe, name='create_square_payment'),
+    path('send-email-receipt', views.send_email_receipt, name='send_email_receipt'),
 ]

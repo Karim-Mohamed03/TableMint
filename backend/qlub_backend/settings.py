@@ -22,7 +22,8 @@ ALLOWED_HOSTS = [
     '1b4a-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
     '7219-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
     '36d9-2001-630-e4-4220-a113-a478-33bd-909f.ngrok-free.app',
-    'b14b-109-175-156-36.ngrok-free.app'
+    'b14b-109-175-156-36.ngrok-free.app',
+    'tablemint.onrender.com'
 ]
 
 
@@ -200,3 +201,15 @@ LOGGING = {
 
 SQUARE_WEBHOOK_SIGNATURE_KEY = os.environ.get('SQUARE_WEBHOOK_SIGNATURE_KEY', '')
 CLOVER_WEBHOOK_API_KEY = os.environ.get('CLOVER_WEBHOOK_API_KEY', '')
+
+# Email Configuration
+# For production with Gmail SMTP:
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')  # Your Gmail address
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')  # Your Gmail App Password
+
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@marwansphillycheesesteak.com')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL

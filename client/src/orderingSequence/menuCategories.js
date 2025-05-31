@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
+import CartConfirmationModal from '../components/CartConfirmationModal';
 
 // Function to fetch catalog data from the backend API
 const getCatalogData = async () => {
@@ -264,6 +265,7 @@ const MenuCategories = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Handle adding item to cart
   const handleAddToCart = (item) => {
@@ -286,7 +288,17 @@ const MenuCategories = () => {
 
   // Navigate to cart
   const goToCart = () => {
-    navigate('/cart');
+    setIsModalOpen(true);
+  };
+
+  // Modal handlers
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleConfirmOrder = () => {
+    setIsModalOpen(false);
+    navigate('/cart'); // Navigate to full cart page for checkout
   };
 
   // Fetch catalog data on component mount
@@ -581,6 +593,13 @@ const MenuCategories = () => {
           </button>
         </div>
       )}
+
+      {/* Cart Confirmation Modal */}
+      <CartConfirmationModal 
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmOrder}
+      />
 
   <style jsx>{`
         .menu-categories {

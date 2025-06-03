@@ -135,12 +135,16 @@ function App() {
                   />
                 } 
               />
-              <Route 
+              {/* <Route 
                 path="/menu/:locationId" 
                 element={<MenuCategories />} 
               />
               <Route 
                 path="/menu" 
+                element={<MenuCategories />} 
+              /> */}
+              <Route 
+                path="/QROrderPay" 
                 element={<MenuCategories />} 
               />
               <Route 

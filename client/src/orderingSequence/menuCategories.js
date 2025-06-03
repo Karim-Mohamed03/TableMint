@@ -372,7 +372,7 @@ const MenuCategories = () => {
     };
     
     addItem(cartItem);
-    
+
     // Show success feedback
     alert(`${cartItem.name} added to cart!`);
   };
@@ -706,19 +706,6 @@ const MenuCategories = () => {
             )}
           </div>
         </div>
-
-        {/* Add to Order Button */}
-        <button 
-          className={`add-to-order-btn ${!isAvailable ? 'sold-out' : ''}`}
-          disabled={!isAvailable}
-          onClick={() => isAvailable && handleAddToCart(item)}
-        >
-          {soldOutAtLocation
-            ? 'Out of Stock at Location'
-            : !inStock
-            ? 'Out of Stock'
-            : 'Add to Order'}
-        </button>
       </div>
     );
   })}

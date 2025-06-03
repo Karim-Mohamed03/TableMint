@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 
 // Import the utility functions from menuCategories
 import { getCatalogData, getInventoryData, processCatalogWithImages } from './menuCategories';
+// Import the ItemDetailModal component
+import ItemDetailModal from '../components/ItemDetailModal';
 
 // Smart Menu component - Menu display only, no cart functionality
 const SmartMenu = () => {
@@ -12,6 +14,8 @@ const SmartMenu = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showItemModal, setShowItemModal] = useState(false);
 
   // Fetch catalog data on component mount
   useEffect(() => {
@@ -146,6 +150,17 @@ const SmartMenu = () => {
     );
   };
 
+  // Handle item selection
+  const handleItemClick = (item) => {
+    setSelectedItem(item);
+    setShowItemModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowItemModal(false);
+    setSelectedItem(null);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -177,10 +192,9 @@ const SmartMenu = () => {
       {/* Header */}
       <div className="menu-header">
         <div className="header-content">
-          <div className="header-text">
-            <h1>Smart Menu</h1>
-            <p>Browse our delicious selection</p>
-          </div>
+          <button className="menu-toggle">☰</button>
+          <div className="delivery-info">100a Eating Rd • 24 mins</div>
+          <button className="search-button">🔍</button>
         </div>
       </div>
 
@@ -190,7 +204,7 @@ const SmartMenu = () => {
           className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
           onClick={() => setSelectedCategory('all')}
         >
-          All Items
+          All
         </button>
         {organizedData.categories.map(category => (
           <button
@@ -203,8 +217,8 @@ const SmartMenu = () => {
         ))}
       </div>
 
-      {/* Menu Items Grid */}
-      <div className="menu-items-grid">
+      {/* Menu Items */}
+      <div className="menu-items-container">
         {getFilteredItems().map(item => {
           const itemData = item.item_data;
           const variation = itemData?.variations?.[0];
@@ -212,9 +226,18 @@ const SmartMenu = () => {
           const inStock = isItemInStock(item.id);
 
           return (
-            <div key={item.id} className="menu-item-card">
+            <div key={item.id} className="menu-item-card" onClick={() => handleItemClick(item)}>
+              <div className="item-content">
+                <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
+                <div className="item-price-calories">
+                  <span className="item-price">{formatCurrency(price?.amount, price?.currency)}</span>
+                  {itemData?.food_and_beverage_details?.calorie_count && (
+                    <span className="item-calories">{itemData.food_and_beverage_details.calorie_count} Kcal</span>
+                  )}
+                </div>
+              </div>
+              
               <div className="item-image-container">
-                {/* Item Image */}
                 {itemData?.primaryImage ? (
                   <img 
                     src={itemData.primaryImage.url} 
@@ -231,51 +254,11 @@ const SmartMenu = () => {
                   </div>
                 )}
                 
-                {/* Out of Stock Overlay */}
                 {!inStock && (
                   <div className="out-of-stock-overlay">
                     <span>Out of Stock</span>
                   </div>
                 )}
-              </div>
-              
-              <div className="item-content">
-                <div className="item-header">
-                  <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
-                  <div className="item-price">
-                    {formatCurrency(price?.amount, price?.currency)}
-                  </div>
-                </div>
-                
-                {itemData?.description && (
-                  <p className="item-description">{itemData.description}</p>
-                )}
-
-                <div className="item-details">
-                  {itemData?.food_and_beverage_details?.calorie_count && (
-                    <span className="calorie-info">
-                      {itemData.food_and_beverage_details.calorie_count} cal
-                    </span>
-                  )}
-                  
-                  {itemData?.food_and_beverage_details?.ingredients && (
-                    <div className="ingredients">
-                      <span className="ingredients-label">Contains: </span>
-                      {itemData.food_and_beverage_details.ingredients.map((ingredient, idx) => (
-                        <span key={idx} className="ingredient-tag">
-                          {ingredient.standard_name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="item-meta">
-                  <span className={`item-type ${itemData?.product_type?.toLowerCase()}`}>
-                    {itemData?.product_type?.replace('_', ' ') || 'Regular'}
-                  </span>
-                  {itemData?.is_alcoholic && <span className="alcoholic-tag">Contains Alcohol</span>}
-                </div>
               </div>
             </div>
           );
@@ -289,13 +272,24 @@ const SmartMenu = () => {
         </div>
       )}
 
+      {/* Item Detail Modal */}
+      {showItemModal && selectedItem && (
+        <ItemDetailModal
+          item={selectedItem}
+          isOpen={showItemModal}
+          onClose={handleCloseModal}
+          formatCurrency={formatCurrency}
+          isItemInStock={isItemInStock}
+        />
+      )}
+
       <style jsx>{`
         .smart-menu {
           max-width: 100%;
           margin: 0;
           padding: 0;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background: #fff;
+          background: #f8f9fa;
           min-height: 100vh;
         }
 
@@ -306,13 +300,14 @@ const SmartMenu = () => {
           justify-content: center;
           min-height: 300px;
           padding: 20px;
+          background: white;
         }
 
         .loading-spinner {
           width: 40px;
           height: 40px;
           border: 3px solid #f3f3f3;
-          border-top: 3px solid #00ccbc;
+          border-top: 3px solid #2d3748;
           border-radius: 50%;
           animation: spin 1s linear infinite;
           margin-bottom: 16px;
@@ -326,6 +321,7 @@ const SmartMenu = () => {
         .error-container {
           text-align: center;
           padding: 40px 20px;
+          background: white;
         }
 
         .error-message {
@@ -335,7 +331,7 @@ const SmartMenu = () => {
         }
 
         .retry-button {
-          background: #00ccbc;
+          background: #2d3748;
           color: white;
           border: none;
           padding: 12px 24px;
@@ -346,48 +342,52 @@ const SmartMenu = () => {
         }
 
         .retry-button:hover {
-          background: #00a693;
+          background: #1a202c;
         }
 
         .menu-header {
-          background: #fff;
-          padding: 16px 16px 8px 16px;
-          border-bottom: 1px solid #f0f0f0;
+          background: white;
+          padding: 16px;
+          display: flex;
+          align-items: center;
           position: sticky;
           top: 0;
           z-index: 100;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          width: 100%;
         }
 
-        .header-text {
-          flex: 1;
-        }
-
-        .menu-header h1 {
-          font-size: 24px;
-          font-weight: 600;
+        .menu-toggle, .search-button {
+          background: none;
+          border: none;
+          font-size: 18px;
+          cursor: pointer;
           color: #2d3748;
-          margin: 0 0 4px 0;
+          padding: 8px;
         }
 
-        .menu-header p {
-          color: #718096;
+        .delivery-info {
+          background: #2d3748;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
           font-size: 14px;
-          margin: 0;
+          font-weight: 500;
         }
 
         .category-filter {
           display: flex;
-          gap: 12px;
+          gap: 8px;
           padding: 16px;
           overflow-x: auto;
-          background: #fff;
-          border-bottom: 1px solid #f0f0f0;
+          background: white;
+          margin-bottom: 16px;
           -webkit-overflow-scrolling: touch;
         }
 
@@ -406,107 +406,78 @@ const SmartMenu = () => {
           white-space: nowrap;
           transition: all 0.2s ease;
           color: #718096;
-          position: relative;
+          min-width: fit-content;
         }
 
         .category-btn:hover {
-          color: #2d3748;
+          background: #f7fafc;
         }
 
         .category-btn.active {
-          color: #00ccbc;
-          font-weight: 600;
+          background: #2d3748;
+          color: white;
         }
 
-        .category-btn.active::after {
-          content: '';
-          position: absolute;
-          bottom: -16px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 60%;
-          height: 2px;
-          background: #00ccbc;
-        }
-
-        .menu-items-grid {
-          padding: 0;
+        .menu-items-container {
+          padding: 0 16px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
 
         .menu-item-card {
           background: white;
-          border: none;
-          border-bottom: 1px solid #f0f0f0;
-          transition: background-color 0.2s ease;
+          border-radius: 16px;
+          padding: 20px;
           display: flex;
           align-items: center;
-          padding: 16px;
-          position: relative;
+          justify-content: space-between;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .menu-item-card:hover {
-          background: #f8f9fa;
-        }
-
-        .menu-item-card:last-child {
-          border-bottom: none;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
         }
 
         .item-content {
           flex: 1;
-          padding-right: 16px;
           display: flex;
           flex-direction: column;
-          order: 1;
-          text-align: left;
-          align-items: flex-start;
-        }
-
-        .item-header {
-          display: block;
-          margin-bottom: 8px;
+          gap: 8px;
         }
 
         .item-name {
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 600;
           color: #2d3748;
-          margin: 0 0 4px 0;
+          margin: 0;
           line-height: 1.3;
         }
 
-        .item-description {
-          color: #718096;
-          font-size: 14px;
-          line-height: 1.4;
-          margin: 0 0 8px 0;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .item-details {
-          margin-bottom: 8px;
-        }
-
-        .calorie-info {
-          color: #718096;
-          font-size: 12px;
-          font-weight: 500;
+        .item-price-calories {
+          display: flex;
+          align-items: center;
+          gap: 16px;
         }
 
         .item-price {
           font-size: 16px;
-          font-weight: 600;
+          font-weight: 700;
           color: #2d3748;
-          margin-top: auto;
+        }
+
+        .item-calories {
+          color: #718096;
+          font-size: 14px;
         }
 
         .item-image-container {
           width: 80px;
           height: 80px;
-          border-radius: 8px;
+          border-radius: 12px;
           overflow: hidden;
           background: #f7fafc;
           display: flex;
@@ -514,7 +485,7 @@ const SmartMenu = () => {
           justify-content: center;
           position: relative;
           flex-shrink: 0;
-          order: 2;
+          margin-left: 16px;
         }
 
         .item-image {
@@ -547,69 +518,18 @@ const SmartMenu = () => {
           color: white;
           font-weight: 500;
           font-size: 12px;
-          border-radius: 8px;
-        }
-
-        .item-meta {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-top: 4px;
-        }
-
-        .item-type {
-          background: #e6fffa;
-          color: #00ccbc;
-          padding: 2px 8px;
           border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
-          text-transform: capitalize;
-        }
-
-        .item-type.food_and_bev {
-          background: #f0fff4;
-          color: #38a169;
-        }
-
-        .alcoholic-tag {
-          background: #fed7d7;
-          color: #e53e3e;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .ingredients {
-          margin-top: 4px;
-        }
-
-        .ingredients-label {
-          font-size: 12px;
-          color: #718096;
-          font-weight: 500;
-        }
-
-        .ingredient-tag {
-          background: #fff5b4;
-          color: #744210;
-          padding: 2px 6px;
-          border-radius: 8px;
-          font-size: 10px;
-          font-weight: 500;
-          margin-left: 4px;
-          text-transform: capitalize;
         }
 
         .no-items {
           text-align: center;
           padding: 60px 20px;
           color: #718096;
+          background: white;
+          margin: 16px;
+          border-radius: 16px;
         }
 
-        /* Mobile-first design - no media queries needed as this is already mobile-optimized */
-        
         /* Larger screens */
         @media (min-width: 768px) {
           .smart-menu {
@@ -619,15 +539,15 @@ const SmartMenu = () => {
           }
           
           .menu-header {
-            padding: 20px 20px 12px 20px;
+            padding: 20px;
           }
           
           .category-filter {
             padding: 20px;
           }
           
-          .menu-item-card {
-            padding: 20px;
+          .menu-items-container {
+            padding: 0 20px 20px;
           }
           
           .item-image-container {
@@ -635,8 +555,7 @@ const SmartMenu = () => {
             height: 100px;
           }
         }
-      `}
-    </style>
+      `}</style>
     </div>
   );
 };

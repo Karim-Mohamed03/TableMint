@@ -132,11 +132,10 @@ export const CartProvider = ({ children }) => {
   const promoDiscountAmount = subtotal * (state.promoDiscount / 100);
   const discountedSubtotal = subtotal - promoDiscountAmount;
   
-  // Constants
-  const deliveryFee = 3.50;
-  const taxRate = 0.08; // 8% tax
+  // Constants for restaurant (no delivery, 2% tax)
+  const taxRate = 0.02; // 2% tax
   const tax = discountedSubtotal * taxRate;
-  const total = discountedSubtotal + deliveryFee + tax;
+  const total = discountedSubtotal + tax;
   
   // Get cart item count
   const getItemCount = () => {
@@ -172,7 +171,6 @@ export const CartProvider = ({ children }) => {
     subtotal,
     promoDiscountAmount,
     discountedSubtotal,
-    deliveryFee,
     tax,
     total,
     

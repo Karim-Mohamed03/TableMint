@@ -463,7 +463,7 @@ const MenuCategories = () => {
     };
     
     addItem(cartItem);
-    
+
     // Show success feedback
     alert(`${cartItem.name} added to cart!`);
   };
@@ -839,25 +839,20 @@ const MenuCategories = () => {
                   )}
                 </div>
 
-                <div className="item-meta">
-                  <span className={`item-type ${itemData?.product_type?.toLowerCase()}`}>
-                    {itemData?.product_type?.replace('_', ' ') || 'Regular'}
-                  </span>
-                  {itemData?.is_alcoholic && <span className="alcoholic-tag">Contains Alcohol</span>}
-                </div>
-              </div>
-              
-              <button 
-                className={`add-to-order-btn ${!isAvailable ? 'sold-out' : ''}`}
-                disabled={!isAvailable}
-                onClick={() => isAvailable && handleAddToCart(item)}
-              >
-                {soldOutAtLocation ? 'Out of Stock at Location' : !inStock ? 'Out of Stock' : 'Add to Order'}
-              </button>
-            </div>
-          );
-        })}
+          <div className="item-meta">
+            <span className={`item-type ${itemData?.product_type?.toLowerCase()}`}>
+              {itemData?.product_type?.replace('_', ' ') || 'Regular'}
+            </span>
+            {itemData?.is_alcoholic && (
+              <span className="alcoholic-tag">Contains Alcohol</span>
+            )}
+          </div>
+        </div>
       </div>
+    );
+  })}
+</div>
+
 
       {/* No items message */}
       {getFilteredItems().length === 0 && (

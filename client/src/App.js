@@ -153,7 +153,17 @@ function App() {
               />
               <Route 
                 path="/cart" 
-                element={<CartPage />} 
+                element={
+                  <CartPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
               />
               <Route 
                 path="/complete" 

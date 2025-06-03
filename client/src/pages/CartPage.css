@@ -206,43 +206,77 @@
   margin: 1rem 0;
 }
 
-/* Totals Section */
-.cart-totals {
-  border-top: 2px solid #f1f5f9;
+/* Payment Section Styles */
+.cart-payment-section {
   margin-top: 2rem;
   padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
 }
 
-.cart-totals-list {
-  margin-bottom: 1rem;
+.pay-full-amount-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  letter-spacing: -0.025em;
 }
 
-.cart-total-row {
+.pay-full-amount-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.25);
+}
+
+.pay-full-amount-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(148, 163, 184, 0.1);
+}
+
+/* Checkout Overlay Styles */
+.checkout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  font-weight: 500;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
-.cart-total-row.subtotal,
-.cart-total-row.tax {
-  color: #64748b;
-  font-size: 0.95rem;
+.checkout-container {
+  background-color: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease-out;
 }
 
-.cart-total-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%);
-  margin: 1rem 0;
-}
-
-.cart-final-total {
-  display: flex;
-  justify-content: space-between;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #1e293b;
-  padding: 0.5rem 0;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive Design */
@@ -262,6 +296,12 @@
   .cart-items-container {
     padding: 1.5rem;
     border-radius: 1rem;
+  }
+  
+  .checkout-container {
+    width: 95%;
+    padding: 1.5rem;
+    margin: 1rem;
   }
 }
 

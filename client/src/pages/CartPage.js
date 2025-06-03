@@ -1,10 +1,73 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShoppingCart } from 'lucide-react';
+import { Elements } from "@stripe/react-stripe-js";
 import { useCart } from '../contexts/CartContext';
+import TipModal from '../receiptScreen/components/TipModal';
+import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import './CartPage.css';
 
-const CartPage = () => {
+const CartPage = ({
+  stripePromise, 
+  clientSecret, 
+  updatePaymentAmount, 
+  createPaymentIntent, 
+  isCreatingPaymentIntent,
+  restaurantBranding,
+  isBrandingLoaded
+}) => {
   const { items: cartItems, subtotal, tax, total } = useCart();
+  
+  // Payment state management (copied from PaymentPage)
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [userPaymentAmount, setUserPaymentAmount] = useState(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [tipInCents, setTipInCents] = useState(0);
+  const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+
+  // Calculate total in cents for payment
+  const calculateCartTotalInCents = () => {
+    return Math.round(total * 100);
+  };
+
+  // Update payment amount whenever userPaymentAmount changes
+  useEffect(() => {
+    const totalInCents = userPaymentAmount || calculateCartTotalInCents();
+    if (updatePaymentAmount) {
+      updatePaymentAmount(totalInCents);
+    }
+  }, [userPaymentAmount, total, updatePaymentAmount]);
+
+  // Payment handler functions (copied from PaymentPage)
+  const handleTipConfirm = async (tipAmount) => {
+    try {
+      const baseAmount = userPaymentAmount || calculateCartTotalInCents();
+      const tipInCents = tipAmount * 100;
+      const finalAmount = baseAmount + tipInCents;
+      
+      setTipInCents(tipInCents);
+      setBaseAmountInCents(baseAmount);
+      setUserPaymentAmount(finalAmount);
+      
+      setPaymentProcessing(true);
+      await createPaymentIntent(finalAmount);
+      setShowCheckout(true);
+      setShowTipModal(false);
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+
+  const handlePayFullAmount = () => {
+    setUserPaymentAmount(null);
+    setShowTipModal(true);
+  };
+
+  const toggleTipModal = () => {
+    setShowTipModal(!showTipModal);
+  };
 
   if (cartItems.length === 0) {
     return (
@@ -101,7 +164,63 @@ const CartPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Payment Section */}
+          <div className="cart-payment-section">
+            <button 
+              className="pay-full-amount-btn"
+              onClick={handlePayFullAmount}
+              disabled={paymentProcessing || isCreatingPaymentIntent}
+            >
+              {paymentProcessing ? 'Processing...' : 'Pay the full amount'}
+            </button>
+          </div>
         </div>
+
+        {/* Tip Modal */}
+        {showTipModal && (
+          <TipModal
+            isOpen={showTipModal}
+            onClose={toggleTipModal}
+            onConfirm={handleTipConfirm}
+            baseAmount={calculateCartTotalInCents() / 100}
+            currency="GBP"
+          />
+        )}
+
+        {/* Stripe Checkout */}
+        {showCheckout && clientSecret && stripePromise && (
+          <div className="checkout-overlay">
+            <div className="checkout-container">
+              <Elements 
+                stripe={stripePromise} 
+                options={{ 
+                  clientSecret,
+                  appearance: {
+                    theme: 'stripe',
+                    variables: {
+                      colorPrimary: '#1a73e8',
+                      colorBackground: '#ffffff',
+                      colorText: '#30313d',
+                      colorDanger: '#df1b41',
+                      fontFamily: 'Ideal Sans, system-ui, sans-serif',
+                      spacingUnit: '2px',
+                      borderRadius: '4px',
+                    }
+                  }
+                }}
+              >
+                <CheckoutForm 
+                  baseAmountInCents={baseAmountInCents}
+                  tipInCents={tipInCents}
+                  currency="GBP"
+                  restaurantBranding={restaurantBranding}
+                  isBrandingLoaded={isBrandingLoaded}
+                />
+              </Elements>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

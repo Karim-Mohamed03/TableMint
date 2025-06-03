@@ -122,7 +122,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
           <div className="payment-summary">
             <div className="summary-row">
               <span>You are paying</span>
-              <span className="total-amount">${((baseAmount / 100) + selectedTip).toFixed(2)}</span>
+              <span className="total-amount">${(baseAmount + selectedTip).toFixed(2)}</span>
             </div>
           </div>
         </div>

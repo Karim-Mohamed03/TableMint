@@ -22,8 +22,14 @@ def create(request):
         # Parse the request body
         data = json.loads(request.body)
         
+        # Log the received data for debugging
+        logger.info(f"Received order data: {json.dumps(data, indent=2)}")
+
+        logger.info("TESTTTTT")
+        
         # Validate required fields
         if 'line_items' not in data or not data['line_items']:
+            logger.error(f"Validation failed - line_items missing or empty. Data keys: {list(data.keys())}")
             return JsonResponse({
                 'success': False,
                 'error': 'At least one line item is required'
@@ -32,8 +38,14 @@ def create(request):
         # Initialize the POS service
         pos_service = POSService()
         
+        # Log before calling create
+        logger.info(f"About to call pos_service.create with data: {json.dumps(data, indent=2)}")
+        
         # Create the order using the create method
         result = pos_service.create(data)
+        
+        # Log the result
+        logger.info(f"POS service returned: {json.dumps(result, indent=2)}")
         
         if result.get('success', False):
             return JsonResponse({

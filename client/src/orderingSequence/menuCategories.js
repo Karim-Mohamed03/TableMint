@@ -451,21 +451,30 @@ const MenuCategories = () => {
 
   // Handle adding item to cart
   const handleAddToCart = (item) => {
+    console.group(`🛒 Adding item to cart: ${item.item_data?.name}`);
+    console.log('Full item data:', item);
+    
     const itemData = item.item_data;
     const variation = itemData?.variations?.[0];
     const price = variation?.item_variation_data?.price_money;
     
     const cartItem = {
-      id: item.id,
+      id: variation?.id || item.id, // Use variation ID for Square API compatibility
       name: itemData?.name || 'Unknown Item',
       price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
       currency: price?.currency || 'USD'
     };
     
+    console.log('Cart item being added:', cartItem);
+    
     addItem(cartItem);
-
+    
     // Show success feedback
-    alert(`${cartItem.name} added to cart!`);
+    setTimeout(() => {
+      console.log(`✅ Successfully added ${cartItem.name} to cart`);
+      console.log(`📊 Total items in cart: ${getItemCount()}`);
+      console.groupEnd();
+    }, 100);
   };
 
   // Navigate to cart
@@ -478,10 +487,81 @@ const MenuCategories = () => {
     setIsModalOpen(false);
   };
 
-  const handleConfirmOrder = () => {
-    setIsModalOpen(false);
-    navigate('/cart'); // Navigate to full cart page for checkout
+  const handleConfirmOrder = async () => {
+    try {
+      // Step 1: Retrieve cart from sessionStorage using the correct key
+      const cartData = sessionStorage.getItem("tablemint_cart");
+      
+      // Step 2: Check if cart exists and is not empty
+      if (!cartData) {
+        alert("Your cart is empty. Please add items before confirming your order.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 3: Parse the cart data
+      let parsedCart;
+      try {
+        parsedCart = JSON.parse(cartData);
+      } catch (parseError) {
+        console.error("Error parsing cart data:", parseError);
+        alert("There was an error reading your cart. Please try again.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 4: Check if parsed cart has items
+      if (!parsedCart || !parsedCart.items || parsedCart.items.length === 0) {
+        alert("Your cart is empty. Please add items before confirming your order.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 5: Store cart data for Square order creation after payment
+      // We'll store the formatted cart data in sessionStorage to use after payment success
+      const lineItems = parsedCart.items.map(item => ({
+        catalog_object_id: item.id, // Square expects catalog_object_id, not item_id
+        quantity: item.quantity.toString(), // Convert to string as required by Square API
+        base_price_money: { // Square expects base_price_money object
+          amount: Math.round(item.price * 100), // Convert to cents
+          currency: item.currency || 'GBP'
+        }
+      }));
+
+      // Validate that all items have valid catalog_object_ids
+      const invalidItems = lineItems.filter(item => 
+        !item.catalog_object_id || 
+        item.catalog_object_id.length < 10 || // Square IDs are typically much longer
+        item.catalog_object_id.includes('test') // Filter out test items
+      );
+
+      if (invalidItems.length > 0) {
+        console.error("Invalid catalog items found:", invalidItems);
+        alert("Some items in your cart are invalid or from test data. Please add items from the menu instead.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Store order data for creation after payment
+      const orderData = {
+        line_items: lineItems
+      };
+      
+      sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
+      
+      console.log("Cart validated successfully, redirecting to payment...");
+      
+      // Close modal and redirect to cart payment page
+      setIsModalOpen(false);
+      navigate('/cart');
+
+    } catch (error) {
+      console.error("Error processing cart:", error);
+      alert("There was an error processing your cart. Please try again.");
+    }
   };
+
+
 
   // Fetch catalog data on component mount
   useEffect(() => {
@@ -727,6 +807,16 @@ const MenuCategories = () => {
             <h1>Menu</h1>
             <p>Choose from our delicious selection</p>
           </div>
+          <div className="header-actions">
+            {getItemCount() > 0 && (
+              <div className="cart-summary">
+                <button className="cart-summary-button" onClick={goToCart}>
+                  <ShoppingCart size={18} />
+                  <span className="cart-count">{getItemCount()}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -761,64 +851,58 @@ const MenuCategories = () => {
           const soldOutAtLocation = locationId ? isItemSoldOutAtLocation(item, locationId) : false;
           const isAvailable = inStock && !soldOutAtLocation;
 
-          return (
-            <div key={item.id} className="menu-item-card">
-              <div className="item-image-container">
-                {/* Item Image */}
-                {itemData?.primaryImage ? (
-                  <img 
-                    src={itemData.primaryImage.url} 
-                    alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
-                    className="item-image"
-                    onError={(e) => {
-                      console.log(`🖼️ [DEBUG] Image failed to load for item ${item.id}: ${itemData.primaryImage.url}`);
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="no-image-placeholder">
-                    <span>No Image</span>
-                  </div>
-                )}
-                
-                {/* Add/Out of Stock Button */}
-                {inStock ? (
-                  <button 
-                    className="add-button"
-                    onClick={() => handleAddToCart(item)}
-                  >
-                    +
-                  </button>
-                ) : (
-                  <div className="out-of-stock-overlay">
-                    <span>Out of Stock</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="item-content">
-                <div className="item-header">
-                  <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
-                  <div className="item-price">
-                    {formatCurrency(price?.amount, price?.currency)}
-                  </div>
-                </div>
-                
-                {soldOutAtLocation && (
-                  <div className="sold-out-badge">
-                    Out of Stock at this Location
-                  </div>
-                )}
-                
-                {soldOutAtLocation && (
-                  <div className="sold-out-badge">
-                    Out of Stock at this Location
-                  </div>
-                )}
-                
-                {itemData?.description && (
-                  <p className="item-description">{itemData.description}</p>
-                )}
+    return (
+      <div key={item.id} className="menu-item-card">
+        <div className="item-image-container">
+          {/* Item Image */}
+          {itemData?.primaryImage ? (
+            <img 
+              src={itemData.primaryImage.url} 
+              alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
+              className="item-image"
+              onError={(e) => {
+                console.log(`🖼️ [DEBUG] Image failed to load for item ${item.id}: ${itemData.primaryImage.url}`);
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="no-image-placeholder">
+              <span>No Image</span>
+            </div>
+          )}
+
+          {/* Add to Cart Button */}
+          {isAvailable ? (
+            <button 
+              className="add-button"
+              onClick={() => handleAddToCart(item)}
+            >
+              +
+            </button>
+          ) : (
+            <div className="out-of-stock-overlay">
+              <span>Out of Stock</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="item-content">
+          <div className="item-header">
+            <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
+            <div className="item-price">
+              {formatCurrency(price?.amount, price?.currency)}
+            </div>
+          </div>
+
+          {soldOutAtLocation && (
+            <div className="sold-out-badge">
+              Out of Stock at this Location
+            </div>
+          )}
+
+          {itemData?.description && (
+            <p className="item-description">{itemData.description}</p>
+          )}
 
                 <div className="item-details">
                   {itemData?.food_and_beverage_details?.calorie_count && (
@@ -968,6 +1052,40 @@ const MenuCategories = () => {
           color: #718096;
           font-size: 14px;
           margin: 0;
+        }
+
+        .cart-summary {
+          display: flex;
+          align-items: center;
+        }
+
+        .cart-summary-button {
+          background: #00ccbc;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          padding: 8px 16px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
+        }
+
+        .cart-summary-button:hover {
+          background: #00a693;
+          transform: scale(1.05);
+        }
+
+        .cart-count {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          padding: 2px 6px;
+          min-width: 20px;
+          text-align: center;
         }
 
         .category-filter {

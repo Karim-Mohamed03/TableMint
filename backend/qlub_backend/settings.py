@@ -202,6 +202,10 @@ LOGGING = {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
         },
+        'orders': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+        },
     },
 }
 

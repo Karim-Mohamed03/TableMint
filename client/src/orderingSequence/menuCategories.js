@@ -348,7 +348,7 @@ const isItemSoldOutAtLocation = (item, locationId) => {
 const MenuCategories = () => {
   const navigate = useNavigate();
   const { locationId } = useParams(); // Extract location_id from URL
-  const { addItem, getItemCount } = useCart();
+  const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem } = useCart();
   const [catalogData, setCatalogData] = useState(null);
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -384,6 +384,36 @@ const MenuCategories = () => {
       console.log(`📊 Total items in cart: ${getItemCount()}`);
       console.groupEnd();
     }, 100);
+  };
+
+  // Handle incrementing item quantity
+  const handleIncrement = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const itemId = variation?.id || item.id;
+    
+    const currentQuantity = getItemQuantity(itemId);
+    if (currentQuantity === 0) {
+      // Item not in cart, add it
+      handleAddToCart(item);
+    } else {
+      // Item already in cart, increment quantity
+      updateQuantity(itemId, currentQuantity + 1);
+    }
+  };
+
+  // Handle decrementing item quantity
+  const handleDecrement = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const itemId = variation?.id || item.id;
+    
+    const currentQuantity = getItemQuantity(itemId);
+    if (currentQuantity > 1) {
+      updateQuantity(itemId, currentQuantity - 1);
+    } else if (currentQuantity === 1) {
+      removeItem(itemId);
+    }
   };
 
   // Navigate to cart
@@ -714,6 +744,10 @@ const MenuCategories = () => {
     const inStock = isItemInStock(item.id);
     const soldOutAtLocation = locationId ? isItemSoldOutAtLocation(item, locationId) : false;
     const isAvailable = inStock && !soldOutAtLocation;
+    
+    // Use consistent ID (variation ID if available, otherwise item ID)
+    const cartItemId = variation?.id || item.id;
+    const currentQuantity = getItemQuantity(cartItemId);
 
     return (
       <div key={item.id} className="menu-item-card">
@@ -735,14 +769,36 @@ const MenuCategories = () => {
             </div>
           )}
 
-          {/* Add to Cart Button */}
+          {/* Add to Cart Button / Quantity Selector */}
           {isAvailable ? (
-            <button 
-              className="add-button"
-              onClick={() => handleAddToCart(item)}
-            >
-              +
-            </button>
+            currentQuantity > 0 ? (
+              // Quantity Selector
+              <div className="quantity-selector">
+                <button 
+                  className="quantity-btn decrement"
+                  onClick={() => handleDecrement(item)}
+                >
+                  −
+                </button>
+                <span className="quantity-display">
+                  {currentQuantity}
+                </span>
+                <button 
+                  className="quantity-btn increment"
+                  onClick={() => handleIncrement(item)}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              // Simple Add Button
+              <button 
+                className="add-button"
+                onClick={() => handleIncrement(item)}
+              >
+                +
+              </button>
+            )
           ) : (
             <div className="out-of-stock-overlay">
               <span>Out of Stock</span>
@@ -1142,6 +1198,57 @@ const MenuCategories = () => {
         .add-button:hover {
           background: #00a693;
           transform: scale(1.1);
+        }
+
+        .quantity-selector {
+          position: absolute;
+          bottom: 6px;
+          right: 6px;
+          display: flex;
+          align-items: center;
+          background: #ffffff;
+          border-radius: 18px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          padding: 2px;
+          gap: 2px;
+        }
+
+        .quantity-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: none;
+          background: #00ccbc;
+          color: white;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .quantity-btn:hover {
+          background: #00a693;
+          transform: scale(1.05);
+        }
+
+        .quantity-btn.decrement {
+          background: #ff4757;
+        }
+
+        .quantity-btn.decrement:hover {
+          background: #ff3838;
+        }
+
+        .quantity-display {
+          min-width: 24px;
+          text-align: center;
+          font-size: 14px;
+          font-weight: 600;
+          color: #2d3748;
+          padding: 0 4px;
         }
 
         .out-of-stock-overlay {

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, ShoppingCart } from 'lucide-react';
 import { Elements } from "@stripe/react-stripe-js";
 import { useCart } from '../contexts/CartContext';
 import TipModal from '../receiptScreen/components/TipModal';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
+import CartSplitBillModal from './components/CartSplitBillModal';
+import CartItemSelectionModal from './components/CartItemSelectionModal';
 import './CartPage.css';
 
 const CartPage = ({
@@ -25,10 +27,14 @@ const CartPage = ({
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
 
+  // Split bill state management
+  const [showSplitBillModal, setShowSplitBillModal] = useState(false);
+  const [showItemSelectionModal, setShowItemSelectionModal] = useState(false);
+
   // Calculate total in cents for payment
-  const calculateCartTotalInCents = () => {
+  const calculateCartTotalInCents = useCallback(() => {
     return Math.round(total * 100);
-  };
+  }, [total]);
 
   // Update payment amount whenever userPaymentAmount changes
   useEffect(() => {
@@ -36,7 +42,7 @@ const CartPage = ({
     if (updatePaymentAmount) {
       updatePaymentAmount(totalInCents);
     }
-  }, [userPaymentAmount, total, updatePaymentAmount]);
+  }, [userPaymentAmount, total, updatePaymentAmount, calculateCartTotalInCents]);
 
   // Payment handler functions (copied from PaymentPage)
   const handleTipConfirm = async (tipAmount) => {
@@ -67,6 +73,36 @@ const CartPage = ({
 
   const toggleTipModal = () => {
     setShowTipModal(!showTipModal);
+  };
+
+  // Split bill handler functions
+  const handleSplitBill = () => {
+    setShowSplitBillModal(true);
+  };
+
+  const handleSplitBillConfirm = (splitData) => {
+    setUserPaymentAmount(splitData.amountToPay);
+    setShowSplitBillModal(false);
+    setShowTipModal(true);
+  };
+
+  const handleSplitBillClose = () => {
+    setShowSplitBillModal(false);
+  };
+
+  const handleItemSelection = () => {
+    setShowItemSelectionModal(true);
+  };
+
+  const handleItemSelectionConfirm = (itemData) => {
+    // For now, we'll just proceed with the selected items amount
+    setUserPaymentAmount(itemData.totalAmount);
+    setShowItemSelectionModal(false);
+    setShowTipModal(true);
+  };
+
+  const handleItemSelectionClose = () => {
+    setShowItemSelectionModal(false);
   };
 
   if (cartItems.length === 0) {
@@ -174,6 +210,24 @@ const CartPage = ({
             >
               {paymentProcessing ? 'Processing...' : 'Pay the full amount'}
             </button>
+            
+            <div className="split-payment-options">
+              <button 
+                className="split-bill-btn"
+                onClick={handleSplitBill}
+                disabled={paymentProcessing || isCreatingPaymentIntent}
+              >
+                Split the bill
+              </button>
+              
+              <button 
+                className="split-items-btn"
+                onClick={handleItemSelection}
+                disabled={paymentProcessing || isCreatingPaymentIntent}
+              >
+                Pay for specific items
+              </button>
+            </div>
           </div>
         </div>
 
@@ -183,7 +237,7 @@ const CartPage = ({
             isOpen={showTipModal}
             onClose={toggleTipModal}
             onConfirm={handleTipConfirm}
-            baseAmount={calculateCartTotalInCents() / 100}
+            baseAmount={(userPaymentAmount || calculateCartTotalInCents()) / 100}
             currency="GBP"
           />
         )}
@@ -220,6 +274,26 @@ const CartPage = ({
               </Elements>
             </div>
           </div>
+        )}
+
+        {/* Split Bill Modal */}
+        {showSplitBillModal && (
+          <CartSplitBillModal
+            isOpen={showSplitBillModal}
+            onClose={handleSplitBillClose}
+            totalAmount={calculateCartTotalInCents()}
+            onConfirm={handleSplitBillConfirm}
+          />
+        )}
+
+        {/* Item Selection Modal */}
+        {showItemSelectionModal && (
+          <CartItemSelectionModal
+            isOpen={showItemSelectionModal}
+            onClose={handleItemSelectionClose}
+            items={cartItems}
+            onConfirm={handleItemSelectionConfirm}
+          />
         )}
       </div>
     </div>

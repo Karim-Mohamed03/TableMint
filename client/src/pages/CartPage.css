@@ -241,6 +241,46 @@
   box-shadow: 0 2px 4px rgba(148, 163, 184, 0.1);
 }
 
+/* Split Payment Options */
+.split-payment-options {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.split-bill-btn,
+.split-items-btn {
+  flex: 1;
+  background: white;
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: -0.025em;
+}
+
+.split-bill-btn:hover,
+.split-items-btn:hover {
+  background: #3b82f6;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.split-bill-btn:disabled,
+.split-items-btn:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Checkout Overlay Styles */
 .checkout-overlay {
   position: fixed;

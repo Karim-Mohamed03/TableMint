@@ -68,15 +68,26 @@ class SquareAdapter(POSAdapter):
             return False
             
     def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
-
+        logger.info(f"SquareAdapter.create called with order_data: {json.dumps(order_data, indent=2)}")
         try:
             # Ensure we have at least one line item
             line_items = order_data.get("line_items")
-            if not line_items:
+            
+            if not line_items or len(line_items) == 0:
+                logger.error("No line_items provided or empty line_items array")
                 return {
                     "success": False,
                     "error": "At least one line item is required."
                 }
+            
+            # Validate line items format
+            for i, item in enumerate(line_items):
+                if not item.get("catalog_object_id"):
+                    logger.error(f"Line item {i} missing catalog_object_id: {item}")
+                    return {
+                        "success": False,
+                        "error": f"Line item {i+1} is missing catalog_object_id"
+                    }
 
             # Build idempotency_key
             idempotency_key = order_data.get("idempotency_key", str(uuid.uuid4()))
@@ -100,9 +111,16 @@ class SquareAdapter(POSAdapter):
 
             # Check if the result has errors attribute and it contains errors
             if hasattr(result, 'errors') and result.errors:
+                logger.error(f"Square API returned errors: {result.errors}")
+                error_details = []
+                for e in result.errors:
+                    if hasattr(e, 'detail'):
+                        error_details.append(e.detail)
+                    else:
+                        error_details.append(str(e))
                 return {
                     "success": False,
-                    "error": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors]
+                    "error": f"status_code: {getattr(result, 'status_code', 'unknown')}, body: {{'errors': {result.errors}}}"
                 }
 
             # Check the response structure and extract the order data

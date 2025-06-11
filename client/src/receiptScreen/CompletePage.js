@@ -149,9 +149,61 @@ const CompletePageContent = () => {
     });
   }, [stripe]);
   
+  // Function to create Square order after successful payment
+  const createSquareOrderAfterPayment = async () => {
+    try {
+      // Get the pending order data from sessionStorage
+      const pendingOrderData = sessionStorage.getItem("pending_square_order");
+      
+      if (!pendingOrderData) {
+        console.log("No pending Square order data found");
+        return { success: false, error: "No pending order data" };
+      }
+
+      const orderData = JSON.parse(pendingOrderData);
+      console.log("Creating Square order with data:", orderData);
+
+      // Send cart data to backend to create Square order
+      const response = await fetch('http://localhost:8000/api/orders/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const responseData = await response.json();
+      console.log("Square order creation response:", responseData);
+
+      if (response.ok && responseData.success) {
+        console.log("Square order created successfully:", responseData.order);
+        // Clear the pending order data
+        sessionStorage.removeItem("pending_square_order");
+        return { success: true, order: responseData.order };
+      } else {
+        console.error("Square order creation failed:", responseData);
+        return { success: false, error: responseData.error || "Unknown error" };
+      }
+
+    } catch (error) {
+      console.error("Error creating Square order:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // Function to record successful payment to the backend
   const recordPaymentToPhillyCheesesteak = async (paymentId, amount, orderId, baseAmt, tipAmt) => {
     try {
+      // First, create the Square order
+      const squareOrderResult = await createSquareOrderAfterPayment();
+      
+      if (squareOrderResult.success) {
+        console.log("Square order created successfully before recording payment");
+      } else {
+        console.warn("Failed to create Square order:", squareOrderResult.error);
+        // Continue with payment recording even if Square order creation fails
+      }
+
       const response = await axios.post('http://localhost:8000/api/payments/record-philly-payment', {
         payment_id: paymentId,
         amount: amount,

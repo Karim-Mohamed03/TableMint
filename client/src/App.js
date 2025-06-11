@@ -7,6 +7,7 @@ import CompletePage from "./receiptScreen/CompletePage";
 import MenuCategories from "./orderingSequence/menuCategories";
 import SmartMenu from "./orderingSequence/smartMenu";
 import CartPage from "./pages/CartPage";
+import SharedCartPage from "./pages/SharedCartPage";
 import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
 
@@ -135,12 +136,16 @@ function App() {
                   />
                 } 
               />
-              <Route 
+              {/* <Route 
                 path="/menu/:locationId" 
                 element={<MenuCategories />} 
               />
               <Route 
                 path="/menu" 
+                element={<MenuCategories />} 
+              /> */}
+              <Route 
+                path="/QROrderPay" 
                 element={<MenuCategories />} 
               />
               <Route 
@@ -149,7 +154,31 @@ function App() {
               />
               <Route 
                 path="/cart" 
-                element={<CartPage />} 
+                element={
+                  <CartPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
+              />
+              <Route 
+                path="/shared-cart" 
+                element={
+                  <SharedCartPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
               />
               <Route 
                 path="/complete" 

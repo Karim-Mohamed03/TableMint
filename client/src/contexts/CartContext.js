@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
 // Cart action types
 const CART_ACTIONS = {
@@ -7,11 +7,59 @@ const CART_ACTIONS = {
   UPDATE_QUANTITY: 'UPDATE_QUANTITY',
   CLEAR_CART: 'CLEAR_CART',
   APPLY_PROMO: 'APPLY_PROMO',
-  REMOVE_PROMO: 'REMOVE_PROMO'
+  REMOVE_PROMO: 'REMOVE_PROMO',
+  LOAD_FROM_STORAGE: 'LOAD_FROM_STORAGE'
+};
+
+// sessionStorage key
+const CART_STORAGE_KEY = 'tablemint_cart';
+
+// Helper functions for sessionStorage
+const saveToStorage = (state) => {
+  try {
+    console.group('💾 Saving cart to sessionStorage');
+    console.log('Cart state being saved:', state);
+    console.log('Total items:', state.items.length);
+    console.log('Item count:', state.items.reduce((count, item) => count + item.quantity, 0));
+    sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+    console.log('✅ Successfully saved to sessionStorage');
+    console.groupEnd();
+  } catch (error) {
+    console.warn('❌ Failed to save cart to sessionStorage:', error);
+  }
+};
+
+const loadFromStorage = () => {
+  try {
+    console.group('📥 Loading cart from sessionStorage');
+    const stored = sessionStorage.getItem(CART_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      console.log('✅ Found saved cart:', parsed);
+      console.log('Items loaded:', parsed.items.length);
+      console.log('Total quantity:', parsed.items.reduce((count, item) => count + item.quantity, 0));
+      console.groupEnd();
+      return parsed;
+    } else {
+      console.log('📭 No saved cart found in sessionStorage');
+      console.groupEnd();
+      return null;
+    }
+  } catch (error) {
+    console.warn('❌ Failed to load cart from sessionStorage:', error);
+    console.groupEnd();
+    return null;
+  }
 };
 
 // Cart reducer
 const cartReducer = (state, action) => {
+  console.group(`🔄 Cart Action: ${action.type}`);
+  console.log('Previous state:', state);
+  console.log('Action payload:', action.payload);
+  
+  let newState;
+  
   switch (action.type) {
     case CART_ACTIONS.ADD_ITEM: {
       const { item } = action.payload;
@@ -24,68 +72,98 @@ const cartReducer = (state, action) => {
           ...updatedItems[existingItemIndex],
           quantity: updatedItems[existingItemIndex].quantity + 1
         };
-        return { ...state, items: updatedItems };
+        newState = { ...state, items: updatedItems };
+        console.log(`➕ Increased quantity for "${item.name}" to ${updatedItems[existingItemIndex].quantity}`);
       } else {
         // New item, add to cart
-        return {
+        newState = {
           ...state,
           items: [...state.items, { ...item, quantity: 1 }]
         };
+        console.log(`🆕 Added new item "${item.name}" to cart`);
       }
+      break;
     }
     
     case CART_ACTIONS.REMOVE_ITEM: {
       const { id } = action.payload;
-      return {
+      const removedItem = state.items.find(item => item.id === id);
+      newState = {
         ...state,
         items: state.items.filter(item => item.id !== id)
       };
+      console.log(`🗑️ Removed item "${removedItem?.name || id}" from cart`);
+      break;
     }
     
     case CART_ACTIONS.UPDATE_QUANTITY: {
       const { id, quantity } = action.payload;
+      const item = state.items.find(item => item.id === id);
+      
       if (quantity <= 0) {
-        return {
+        newState = {
           ...state,
           items: state.items.filter(item => item.id !== id)
         };
+        console.log(`🗑️ Removed item "${item?.name || id}" (quantity set to 0)`);
+      } else {
+        const updatedItems = state.items.map(item =>
+          item.id === id ? { ...item, quantity } : item
+        );
+        newState = { ...state, items: updatedItems };
+        console.log(`🔢 Updated quantity for "${item?.name || id}" to ${quantity}`);
       }
-      
-      const updatedItems = state.items.map(item =>
-        item.id === id ? { ...item, quantity } : item
-      );
-      return { ...state, items: updatedItems };
+      break;
     }
     
     case CART_ACTIONS.CLEAR_CART: {
-      return {
+      newState = {
         ...state,
         items: [],
         promoCode: null,
         promoDiscount: 0
       };
+      console.log('🧹 Cleared entire cart');
+      break;
     }
     
     case CART_ACTIONS.APPLY_PROMO: {
       const { code, discount } = action.payload;
-      return {
+      newState = {
         ...state,
         promoCode: code,
         promoDiscount: discount
       };
+      console.log(`🎟️ Applied promo code "${code}" with ${discount}% discount`);
+      break;
     }
     
     case CART_ACTIONS.REMOVE_PROMO: {
-      return {
+      newState = {
         ...state,
         promoCode: null,
         promoDiscount: 0
       };
+      console.log('🚫 Removed promo code');
+      break;
+    }
+    
+    case CART_ACTIONS.LOAD_FROM_STORAGE: {
+      newState = action.payload || state;
+      console.log('📥 Loaded cart from sessionStorage');
+      break;
     }
     
     default:
-      return state;
+      console.log('❓ Unknown action type');
+      newState = state;
   }
+  
+  console.log('New state:', newState);
+  console.log(`Total items: ${newState.items.reduce((count, item) => count + item.quantity, 0)}`);
+  console.groupEnd();
+  
+  return newState;
 };
 
 // Initial cart state
@@ -101,6 +179,25 @@ const CartContext = createContext();
 // Cart provider component
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  
+  // Load cart from sessionStorage on mount
+  useEffect(() => {
+    console.log('🚀 CartProvider mounted, checking for saved cart...');
+    const savedCart = loadFromStorage();
+    if (savedCart) {
+      dispatch({ type: CART_ACTIONS.LOAD_FROM_STORAGE, payload: savedCart });
+    } else {
+      console.log('📭 Starting with empty cart');
+    }
+  }, []);
+  
+  // Save to sessionStorage whenever cart state changes
+  useEffect(() => {
+    // Skip saving on initial load to avoid overwriting with empty cart
+    if (state.items.length > 0 || state.promoCode) {
+      saveToStorage(state);
+    }
+  }, [state]);
   
   // Helper functions
   const addItem = (item) => {
@@ -132,11 +229,10 @@ export const CartProvider = ({ children }) => {
   const promoDiscountAmount = subtotal * (state.promoDiscount / 100);
   const discountedSubtotal = subtotal - promoDiscountAmount;
   
-  // Constants
-  const deliveryFee = 3.50;
-  const taxRate = 0.08; // 8% tax
+  // Constants for restaurant (no delivery, 2% tax)
+  const taxRate = 0.02; // 2% tax
   const tax = discountedSubtotal * taxRate;
-  const total = discountedSubtotal + deliveryFee + tax;
+  const total = discountedSubtotal + tax;
   
   // Get cart item count
   const getItemCount = () => {
@@ -172,7 +268,6 @@ export const CartProvider = ({ children }) => {
     subtotal,
     promoDiscountAmount,
     discountedSubtotal,
-    deliveryFee,
     tax,
     total,
     

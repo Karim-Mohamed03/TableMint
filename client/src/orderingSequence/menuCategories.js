@@ -348,7 +348,7 @@ const isItemSoldOutAtLocation = (item, locationId) => {
 const MenuCategories = () => {
   const navigate = useNavigate();
   const { locationId } = useParams(); // Extract location_id from URL
-  const { addItem, getItemCount } = useCart();
+  const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem } = useCart();
   const [catalogData, setCatalogData] = useState(null);
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -360,21 +360,60 @@ const MenuCategories = () => {
 
   // Handle adding item to cart
   const handleAddToCart = (item) => {
+    console.group(`🛒 Adding item to cart: ${item.item_data?.name}`);
+    console.log('Full item data:', item);
+    
     const itemData = item.item_data;
     const variation = itemData?.variations?.[0];
     const price = variation?.item_variation_data?.price_money;
     
     const cartItem = {
-      id: item.id,
+      id: variation?.id || item.id, // Use variation ID for Square API compatibility
       name: itemData?.name || 'Unknown Item',
       price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
       currency: price?.currency || 'USD'
     };
     
+    console.log('Cart item being added:', cartItem);
+    
     addItem(cartItem);
     
     // Show success feedback
-    alert(`${cartItem.name} added to cart!`);
+    setTimeout(() => {
+      console.log(`✅ Successfully added ${cartItem.name} to cart`);
+      console.log(`📊 Total items in cart: ${getItemCount()}`);
+      console.groupEnd();
+    }, 100);
+  };
+
+  // Handle incrementing item quantity
+  const handleIncrement = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const itemId = variation?.id || item.id;
+    
+    const currentQuantity = getItemQuantity(itemId);
+    if (currentQuantity === 0) {
+      // Item not in cart, add it
+      handleAddToCart(item);
+    } else {
+      // Item already in cart, increment quantity
+      updateQuantity(itemId, currentQuantity + 1);
+    }
+  };
+
+  // Handle decrementing item quantity
+  const handleDecrement = (item) => {
+    const itemData = item.item_data;
+    const variation = itemData?.variations?.[0];
+    const itemId = variation?.id || item.id;
+    
+    const currentQuantity = getItemQuantity(itemId);
+    if (currentQuantity > 1) {
+      updateQuantity(itemId, currentQuantity - 1);
+    } else if (currentQuantity === 1) {
+      removeItem(itemId);
+    }
   };
 
   // Navigate to cart
@@ -387,10 +426,81 @@ const MenuCategories = () => {
     setIsModalOpen(false);
   };
 
-  const handleConfirmOrder = () => {
-    setIsModalOpen(false);
-    navigate('/cart'); // Navigate to full cart page for checkout
+  const handleConfirmOrder = async () => {
+    try {
+      // Step 1: Retrieve cart from sessionStorage using the correct key
+      const cartData = sessionStorage.getItem("tablemint_cart");
+      
+      // Step 2: Check if cart exists and is not empty
+      if (!cartData) {
+        alert("Your cart is empty. Please add items before confirming your order.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 3: Parse the cart data
+      let parsedCart;
+      try {
+        parsedCart = JSON.parse(cartData);
+      } catch (parseError) {
+        console.error("Error parsing cart data:", parseError);
+        alert("There was an error reading your cart. Please try again.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 4: Check if parsed cart has items
+      if (!parsedCart || !parsedCart.items || parsedCart.items.length === 0) {
+        alert("Your cart is empty. Please add items before confirming your order.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 5: Store cart data for Square order creation after payment
+      // We'll store the formatted cart data in sessionStorage to use after payment success
+      const lineItems = parsedCart.items.map(item => ({
+        catalog_object_id: item.id, // Square expects catalog_object_id, not item_id
+        quantity: item.quantity.toString(), // Convert to string as required by Square API
+        base_price_money: { // Square expects base_price_money object
+          amount: Math.round(item.price * 100), // Convert to cents
+          currency: item.currency || 'GBP'
+        }
+      }));
+
+      // Validate that all items have valid catalog_object_ids
+      const invalidItems = lineItems.filter(item => 
+        !item.catalog_object_id || 
+        item.catalog_object_id.length < 10 || // Square IDs are typically much longer
+        item.catalog_object_id.includes('test') // Filter out test items
+      );
+
+      if (invalidItems.length > 0) {
+        console.error("Invalid catalog items found:", invalidItems);
+        alert("Some items in your cart are invalid or from test data. Please add items from the menu instead.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Store order data for creation after payment
+      const orderData = {
+        line_items: lineItems
+      };
+      
+      sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
+      
+      console.log("Cart validated successfully, redirecting to payment...");
+      
+      // Close modal and redirect to cart payment page
+      setIsModalOpen(false);
+      navigate('/cart');
+
+    } catch (error) {
+      console.error("Error processing cart:", error);
+      alert("There was an error processing your cart. Please try again.");
+    }
   };
+
+
 
   // Fetch catalog data on component mount
   useEffect(() => {
@@ -593,6 +703,16 @@ const MenuCategories = () => {
             <h1>Menu</h1>
             <p>Choose from our delicious selection</p>
           </div>
+          <div className="header-actions">
+            {getItemCount() > 0 && (
+              <div className="cart-summary">
+                <button className="cart-summary-button" onClick={goToCart}>
+                  <ShoppingCart size={18} />
+                  <span className="cart-count">{getItemCount()}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -624,6 +744,10 @@ const MenuCategories = () => {
     const inStock = isItemInStock(item.id);
     const soldOutAtLocation = locationId ? isItemSoldOutAtLocation(item, locationId) : false;
     const isAvailable = inStock && !soldOutAtLocation;
+    
+    // Use consistent ID (variation ID if available, otherwise item ID)
+    const cartItemId = variation?.id || item.id;
+    const currentQuantity = getItemQuantity(cartItemId);
 
     return (
       <div key={item.id} className="menu-item-card">
@@ -645,14 +769,36 @@ const MenuCategories = () => {
             </div>
           )}
 
-          {/* Quick Add Button */}
-          {inStock ? (
-            <button 
-              className="add-button"
-              onClick={() => handleAddToCart(item)}
-            >
-              +
-            </button>
+          {/* Add to Cart Button / Quantity Selector */}
+          {isAvailable ? (
+            currentQuantity > 0 ? (
+              // Quantity Selector
+              <div className="quantity-selector">
+                <button 
+                  className="quantity-btn decrement"
+                  onClick={() => handleDecrement(item)}
+                >
+                  −
+                </button>
+                <span className="quantity-display">
+                  {currentQuantity}
+                </span>
+                <button 
+                  className="quantity-btn increment"
+                  onClick={() => handleIncrement(item)}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              // Simple Add Button
+              <button 
+                className="add-button"
+                onClick={() => handleIncrement(item)}
+              >
+                +
+              </button>
+            )
           ) : (
             <div className="out-of-stock-overlay">
               <span>Out of Stock</span>
@@ -706,19 +852,6 @@ const MenuCategories = () => {
             )}
           </div>
         </div>
-
-        {/* Add to Order Button */}
-        <button 
-          className={`add-to-order-btn ${!isAvailable ? 'sold-out' : ''}`}
-          disabled={!isAvailable}
-          onClick={() => isAvailable && handleAddToCart(item)}
-        >
-          {soldOutAtLocation
-            ? 'Out of Stock at Location'
-            : !inStock
-            ? 'Out of Stock'
-            : 'Add to Order'}
-        </button>
       </div>
     );
   })}
@@ -839,6 +972,40 @@ const MenuCategories = () => {
           color: #718096;
           font-size: 14px;
           margin: 0;
+        }
+
+        .cart-summary {
+          display: flex;
+          align-items: center;
+        }
+
+        .cart-summary-button {
+          background: #00ccbc;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          padding: 8px 16px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 204, 188, 0.3);
+        }
+
+        .cart-summary-button:hover {
+          background: #00a693;
+          transform: scale(1.05);
+        }
+
+        .cart-count {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          padding: 2px 6px;
+          min-width: 20px;
+          text-align: center;
         }
 
         .category-filter {
@@ -1031,6 +1198,57 @@ const MenuCategories = () => {
         .add-button:hover {
           background: #00a693;
           transform: scale(1.1);
+        }
+
+        .quantity-selector {
+          position: absolute;
+          bottom: 6px;
+          right: 6px;
+          display: flex;
+          align-items: center;
+          background: #ffffff;
+          border-radius: 18px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          padding: 2px;
+          gap: 2px;
+        }
+
+        .quantity-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: none;
+          background: #00ccbc;
+          color: white;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .quantity-btn:hover {
+          background: #00a693;
+          transform: scale(1.05);
+        }
+
+        .quantity-btn.decrement {
+          background: #ff4757;
+        }
+
+        .quantity-btn.decrement:hover {
+          background: #ff3838;
+        }
+
+        .quantity-display {
+          min-width: 24px;
+          text-align: center;
+          font-size: 14px;
+          font-weight: 600;
+          color: #2d3748;
+          padding: 0 4px;
         }
 
         .out-of-stock-overlay {

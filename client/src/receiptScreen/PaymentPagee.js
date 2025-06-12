@@ -35,8 +35,23 @@ export default function PaymentPage({
   // React Router navigation hook
   const navigate = useNavigate();
   
-  // Hardcoded order ID for testing
-  const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
+  // Generate or retrieve a consistent temporary order ID
+  const generateTempOrderId = () => {
+    // Check if we already have a temporary ID stored for this payment session
+    const storedTempId = sessionStorage.getItem("temp_order_id");
+    if (storedTempId) {
+      return storedTempId;
+    }
+    
+    // Generate a new random temporary ID with "temp" prefix
+    const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+    // Store it for future use in this session
+    sessionStorage.setItem("temp_order_id", randomId);
+    return randomId;
+  };
+  
+  // Get temporary order ID instead of hardcoded test ID
+  const tempOrderId = generateTempOrderId();
   
   // Calculate total from order details
   const calculateOrderTotal = () => {
@@ -75,8 +90,11 @@ export default function PaymentPage({
   
   // Fetch order details on page load
   useEffect(() => {
-    fetchOrderDetails(testOrderId);
-  }, []);
+    // Use URL order ID if available, otherwise use temp ID
+    const orderIdFromUrl = new URLSearchParams(window.location.search).get("order_id");
+    const orderIdToUse = orderIdFromUrl || tempOrderId;
+    fetchOrderDetails(orderIdToUse);
+  }, [tempOrderId]);
   
   // Function to fetch order details from backend
   const fetchOrderDetails = async (orderId) => {
@@ -324,7 +342,7 @@ export default function PaymentPage({
                 <CheckoutForm 
                   baseAmount={baseAmountInCents} 
                   tipAmount={tipInCents}
-                  orderId={orderDetails?.id || testOrderId}
+                  orderId={orderDetails?.id || tempOrderId}
                 />
               </Elements>
             ) : (

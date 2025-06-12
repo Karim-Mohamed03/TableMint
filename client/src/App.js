@@ -8,6 +8,7 @@ import MenuCategories from "./orderingSequence/menuCategories";
 import SmartMenu from "./orderingSequence/smartMenu";
 import CartPage from "./pages/CartPage";
 import SharedCartPage from "./pages/SharedCartPage";
+import SplitPaymentPage from "./pages/SplitPaymentPage";
 import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
 
@@ -185,6 +186,20 @@ function App() {
                 element={
                   <CompletePage 
                     restaurantBranding={restaurantBranding}
+                  />
+                } 
+              />
+              <Route 
+                path="/split-payment/:paymentId" 
+                element={
+                  <SplitPaymentPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
                   />
                 } 
               />

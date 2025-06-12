@@ -24,9 +24,24 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
       }))
     };
     
-    // Encode the data and create the URL
-    const encodedData = encodeURIComponent(JSON.stringify(remainingItemsData));
-    return `${window.location.origin}/shared-cart?data=${encodedData}`;
+    // Calculate total amount of remaining items
+    const totalRemainingAmount = remainingItems.reduce(
+      (sum, item) => sum + (item.price * item.quantity), 
+      0
+    ) * 100; // Convert to cents
+    
+    // Determine which URL format to use
+    // For simple amounts with few items, use the new split-payment page
+    if (remainingItems.length <= 2) {
+      const paymentId = Math.random().toString(36).substring(2, 10);
+      return `${window.location.origin}/split-payment/${paymentId}?amount=${Math.round(totalRemainingAmount)}&total=${Math.round(totalRemainingAmount)}`;
+    } 
+    // For more complex item selections, use the shared-cart experience
+    else {
+      // Encode the data and create the URL for the shared-cart experience
+      const encodedData = encodeURIComponent(JSON.stringify(remainingItemsData));
+      return `${window.location.origin}/shared-cart?data=${encodedData}`;
+    }
   };
 
   const paymentLink = generateShareableLink();

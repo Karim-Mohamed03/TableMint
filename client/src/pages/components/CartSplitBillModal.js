@@ -79,14 +79,16 @@ const BillSplitWheel = ({ numberOfPeople, perPersonAmount, totalAmount, splitMet
 const SharePaymentLink = ({ remainingAmount, totalAmount, onClose, onPayMyPart }) => {
   const [linkCopied, setLinkCopied] = useState(false);
   
-  // Generate a payment link (this would be a real URL in production)
+  // Generate a payment link
   const generatePaymentLink = () => {
     const baseUrl = window.location.origin;
     const amount = remainingAmount;
     const total = totalAmount;
     
-    // In a real implementation, you'd create a unique payment session
-    const paymentId = Math.random().toString(36).substr(2, 9);
+    // Create a unique payment session ID
+    const paymentId = Math.random().toString(36).substring(2, 10);
+    
+    // Create payment link with all necessary parameters
     return `${baseUrl}/split-payment/${paymentId}?amount=${amount}&total=${total}`;
   };
 

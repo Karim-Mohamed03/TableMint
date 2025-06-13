@@ -78,40 +78,83 @@ const BillSplitWheel = ({ numberOfPeople, perPersonAmount, totalAmount, splitMet
 // Share Payment Link Component
 const SharePaymentLink = ({ remainingAmount, totalAmount, onClose, onPayMyPart }) => {
   const [linkCopied, setLinkCopied] = useState(false);
-  
-  // Generate or retrieve a temporary order ID that's consistent for the same order
-  const generateTempOrderId = () => {
-    // Check if we already have a temporary ID stored for this payment session
-    const storedTempId = sessionStorage.getItem("temp_order_id");
-    if (storedTempId) {
-      return storedTempId;
+  const [isGeneratingLink, setIsGeneratingLink] = useState(true);
+  const [paymentLink, setPaymentLink] = useState('');
+  const [error, setError] = useState(null);
+
+  // Generate secure payment link using backend API
+  const generateSecurePaymentLink = async () => {
+    try {
+      setIsGeneratingLink(true);
+      setError(null);
+
+      // Get the consistent temporary order ID
+      const generateTempOrderId = () => {
+        const storedTempId = sessionStorage.getItem("temp_order_id");
+        if (storedTempId) {
+          return storedTempId;
+        }
+        
+        const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+        sessionStorage.setItem("temp_order_id", randomId);
+        return randomId;
+      };
+
+      const tempOrderId = generateTempOrderId();
+
+      // Prepare the data for secure sharing (simplified for bill split)
+      const shareData = {
+        remaining_items: [{
+          id: 'split-payment',
+          name: 'Remaining Payment Amount',
+          price: remainingAmount / 100,
+          quantity: 1,
+          options: '',
+          description: `Split payment for remaining £${(remainingAmount / 100).toFixed(2)}`
+        }],
+        order_id: tempOrderId,
+        type: 'bill_split',
+        metadata: {
+          remaining_amount: remainingAmount,
+          total_amount: totalAmount,
+          share_created_at: new Date().toISOString()
+        }
+      };
+
+      // Call the secure backend API to create share session
+      const response = await fetch('http://localhost:8000/api/orders/share/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(shareData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create secure share session');
+      }
+
+      // Generate the secure share URL using the token
+      const shareToken = result.share_token;
+      const secureLink = `${window.location.origin}/split-payment/${shareToken}`;
+      
+      setPaymentLink(secureLink);
+
+    } catch (err) {
+      console.error('Error generating secure payment link:', err);
+      setError(err.message || 'Failed to generate secure link');
+    } finally {
+      setIsGeneratingLink(false);
     }
-    
-    // Generate a new random temporary ID with "temp" prefix
-    const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
-    // Store it for future use in this session
-    sessionStorage.setItem("temp_order_id", randomId);
-    return randomId;
   };
 
-  // Generate a payment link
-  const generatePaymentLink = () => {
-    const baseUrl = window.location.origin;
-    const amount = remainingAmount;
-    const total = totalAmount;
-    
-    // Get the consistent temporary order ID
-    const tempOrderId = generateTempOrderId();
-    
-    // Create a unique payment session ID
-    const paymentId = Math.random().toString(36).substring(2, 10);
-    
-    // Create payment link with all necessary parameters including the temp order ID
-    return `${baseUrl}/split-payment/${paymentId}?amount=${amount}&total=${total}&order_id=${tempOrderId}`;
-  };
+  // Generate the link when component mounts
+  useEffect(() => {
+    generateSecurePaymentLink();
+  }, []);
 
-  const paymentLink = generatePaymentLink();
-  
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(paymentLink);
@@ -123,14 +166,14 @@ const SharePaymentLink = ({ remainingAmount, totalAmount, onClose, onPayMyPart }
   };
 
   const shareViaWhatsApp = () => {
-    const message = `Hi! I've started a bill split for our order. The remaining amount is £${(remainingAmount / 100).toFixed(2)}. Please use this link to pay your share: ${paymentLink}`;
+    const message = `Hi! I've started a bill split for our order. The remaining amount is £${(remainingAmount / 100).toFixed(2)}. Please use this secure link to pay your share: ${paymentLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
   const shareViaEmail = () => {
     const subject = 'Split Bill Payment Request';
-    const body = `Hi!\n\nI've started a bill split for our order. The remaining amount is £${(remainingAmount / 100).toFixed(2)}.\n\nPlease use this link to pay your share:\n${paymentLink}\n\nThanks!`;
+    const body = `Hi!\n\nI've started a bill split for our order. The remaining amount is £${(remainingAmount / 100).toFixed(2)}.\n\nPlease use this secure link to pay your share:\n${paymentLink}\n\nThis link is secure and will expire in 24 hours.\n\nThanks!`;
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
   };
@@ -149,45 +192,63 @@ const SharePaymentLink = ({ remainingAmount, totalAmount, onClose, onPayMyPart }
     <div className="share-payment-container">
       <div className="share-header">
         <h3>Share Payment Link</h3>
-        <p>Send this link to others so they can pay the remaining £{(remainingAmount / 100).toFixed(2)}</p>
+        <p>Send this secure link to others so they can pay the remaining £{(remainingAmount / 100).toFixed(2)}</p>
       </div>
       
-      <div className="payment-link-container">
-        <div className="payment-link-display">
-          <input 
-            type="text" 
-            value={paymentLink} 
-            readOnly 
-            className="payment-link-input"
-          />
-          <button 
-            onClick={copyToClipboard}
-            className={`copy-link-btn ${linkCopied ? 'copied' : ''}`}
-          >
-            <Copy size={16} />
-            {linkCopied ? 'Copied!' : 'Copy'}
+      {error && (
+        <div className="error-message">
+          <p>Error: {error}</p>
+          <button onClick={generateSecurePaymentLink} className="retry-button">
+            Try Again
           </button>
         </div>
-      </div>
+      )}
 
-      <div className="share-options">
-        <button onClick={shareViaWhatsApp} className="share-option whatsapp">
-          <MessageCircle size={20} />
-          <span>WhatsApp</span>
-        </button>
-        
-        <button onClick={shareViaEmail} className="share-option email">
-          <Mail size={20} />
-          <span>Email</span>
-        </button>
-        
-        {navigator.share && (
-          <button onClick={shareViaGeneric} className="share-option generic">
-            <Share2 size={20} />
-            <span>Share</span>
-          </button>
-        )}
-      </div>
+      {isGeneratingLink ? (
+        <div className="generating-link">
+          <div className="loading-spinner"></div>
+          <p>Generating secure link...</p>
+        </div>
+      ) : paymentLink && (
+        <>
+          <div className="payment-link-container">
+            <div className="payment-link-display">
+              <input 
+                type="text" 
+                value={paymentLink} 
+                readOnly 
+                className="payment-link-input"
+              />
+              <button 
+                onClick={copyToClipboard}
+                className={`copy-link-btn ${linkCopied ? 'copied' : ''}`}
+              >
+                <Copy size={16} />
+                {linkCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+
+          <div className="share-options">
+            <button onClick={shareViaWhatsApp} className="share-option whatsapp">
+              <MessageCircle size={20} />
+              <span>WhatsApp</span>
+            </button>
+            
+            <button onClick={shareViaEmail} className="share-option email">
+              <Mail size={20} />
+              <span>Email</span>
+            </button>
+            
+            {navigator.share && (
+              <button onClick={shareViaGeneric} className="share-option generic">
+                <Share2 size={20} />
+                <span>Share</span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="share-footer">
         <button onClick={onPayMyPart || onClose} className="continue-payment-btn">

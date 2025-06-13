@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { Elements } from "@stripe/react-stripe-js";
 import { useCart } from '../contexts/CartContext';
@@ -17,7 +17,7 @@ const SharedCartPage = ({
   isBrandingLoaded
 }) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { shareToken } = useParams(); // Get the share token from URL params
   const { addToCart, subtotal, tax, total } = useCart();
   
   // Shared cart state
@@ -35,96 +35,118 @@ const SharedCartPage = ({
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   const [sharedOrderId, setSharedOrderId] = useState(null);
 
-  // Parse shared cart data from URL
+  // Parse shared cart data from secure token
   useEffect(() => {
-    const parseSharedData = () => {
+    const fetchSecureShareData = async () => {
       try {
         setLoading(true);
-        const encodedData = searchParams.get('data');
-        const orderIdFromUrl = searchParams.get('order_id');
+        setError(null);
         
-        if (!encodedData) {
-          setError('No shared cart data found');
+        if (!shareToken) {
+          setError('Invalid share link - no token provided');
           return;
         }
 
-        // If we have a shared order ID from the URL, use it and store it
-        if (orderIdFromUrl) {
-          setSharedOrderId(orderIdFromUrl);
-          // Store it in session storage so it persists across page refreshes
-          sessionStorage.setItem("temp_order_id", orderIdFromUrl);
-        }
-
-        // Decode the shared data
-        const decodedData = JSON.parse(decodeURIComponent(encodedData));
+        // Call the secure backend API to get share session data
+        const response = await fetch(`http://localhost:8000/api/orders/share/${shareToken}/`);
+        const result = await response.json();
         
-        if (!decodedData.remainingItems || decodedData.remainingItems.length === 0) {
-          setError('No items found in shared cart');
+        if (!response.ok || !result.success) {
+          if (response.status === 404) {
+            setError('Share link not found or has been removed');
+          } else if (response.status === 410) {
+            setError('Share link has expired');
+          } else {
+            setError(result.error || 'Failed to load shared cart');
+          }
           return;
         }
 
-        setSharedItems(decodedData.remainingItems);
+        const shareData = result.data;
         
-        // Initialize selected items state
-        const initialSelection = {};
-        decodedData.remainingItems.forEach(item => {
-          initialSelection[item.id] = {
-            selected: false,
-            quantity: 0,
-            maxQuantity: item.quantity
-          };
-        });
-        setSelectedItems(initialSelection);
+        // Set the shared order ID if available
+        if (result.order_id) {
+          setSharedOrderId(result.order_id);
+          sessionStorage.setItem("temp_order_id", result.order_id);
+        }
+
+        // Handle different share types
+        if (shareData.type === 'cart_split' && shareData.remaining_items) {
+          setSharedItems(shareData.remaining_items);
+          
+          // Initialize selected items state
+          const initialSelection = {};
+          shareData.remaining_items.forEach(item => {
+            initialSelection[item.id] = {
+              selected: false,
+              quantity: 0,
+              maxQuantity: item.quantity
+            };
+          });
+          setSelectedItems(initialSelection);
+        } else if (shareData.type === 'bill_split' && shareData.remaining_items) {
+          // Handle simple bill split - redirect to split payment page
+          const splitItem = shareData.remaining_items[0];
+          if (splitItem && shareData.metadata) {
+            navigate(`/split-payment?amount=${Math.round(splitItem.price * 100)}&total=${shareData.metadata.total_amount}&order_id=${result.order_id}`);
+            return;
+          }
+        } else {
+          setError('Invalid share data format');
+          return;
+        }
         
       } catch (err) {
-        console.error('Error parsing shared cart data:', err);
-        setError('Invalid shared cart link');
+        console.error('Error fetching secure share data:', err);
+        setError('Failed to load shared cart - please check your connection');
       } finally {
         setLoading(false);
       }
     };
 
-    parseSharedData();
-  }, [searchParams]);
+    fetchSecureShareData();
+  }, [shareToken, navigate]);
 
   // Calculate selected items total
   const calculateSelectedTotal = useCallback(() => {
-    let total = 0;
-    Object.entries(selectedItems).forEach(([itemId, selection]) => {
+    return Object.entries(selectedItems).reduce((total, [itemId, selection]) => {
       if (selection.selected && selection.quantity > 0) {
         const item = sharedItems.find(item => item.id === itemId);
         if (item) {
-          total += item.price * selection.quantity;
+          return total + (item.price * selection.quantity);
         }
       }
-    });
-    return total;
+      return total;
+    }, 0);
   }, [selectedItems, sharedItems]);
 
   // Handle item selection
-  const handleItemSelect = (itemId, selected) => {
-    setSelectedItems(prev => ({
-      ...prev,
+  const handleItemSelect = (itemId, isSelected) => {
+    setSelectedItems(current => ({
+      ...current,
       [itemId]: {
-        ...prev[itemId],
-        selected,
-        quantity: selected ? Math.min(1, prev[itemId].maxQuantity) : 0
+        ...current[itemId],
+        selected: isSelected,
+        quantity: isSelected ? 1 : 0
       }
     }));
   };
 
   // Handle quantity change
-  const handleQuantityChange = (itemId, change) => {
-    setSelectedItems(prev => {
-      const current = prev[itemId];
-      const newQuantity = Math.max(0, Math.min(current.maxQuantity, current.quantity + change));
+  const handleQuantityChange = (itemId, newQuantity) => {
+    setSelectedItems(current => {
+      const currentSelection = current[itemId];
+      const maxQuantity = currentSelection?.maxQuantity || 1;
+      
+      // Ensure quantity is within bounds
+      const clampedQuantity = Math.max(0, Math.min(newQuantity, maxQuantity));
       
       return {
-        ...prev,
+        ...current,
         [itemId]: {
-          ...current,
-          quantity: newQuantity,
-          selected: newQuantity > 0
+          ...current[itemId],
+          quantity: clampedQuantity,
+          selected: clampedQuantity > 0
         }
       };
     });
@@ -195,41 +217,66 @@ const SharedCartPage = ({
 
   // Update payment amount whenever selection changes
   useEffect(() => {
-    const totalInCents = Math.round(calculateSelectedTotal() * 100);
-    if (updatePaymentAmount) {
-      updatePaymentAmount(totalInCents);
+    const total = calculateSelectedTotal();
+    if (total > 0) {
+      const totalInCents = Math.round(total * 100);
+      updatePaymentAmount && updatePaymentAmount(totalInCents);
     }
-  }, [selectedItems, updatePaymentAmount, calculateSelectedTotal]);
+  }, [selectedItems, calculateSelectedTotal, updatePaymentAmount]);
 
+  const selectedTotal = calculateSelectedTotal();
+
+  // Loading state
   if (loading) {
     return (
       <div className="shared-cart-page">
+        <div className="shared-cart-header">
+          <div className="header-content">
+            <button className="back-button" onClick={handleBack}>
+              <ArrowLeft size={24} />
+            </button>
+            <div className="header-text">
+              <h1>Loading Shared Cart</h1>
+            </div>
+            <div className="w-6"></div>
+          </div>
+        </div>
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading shared cart...</p>
+          <p>Loading shared items...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="shared-cart-page">
-        <div className="error-container">
-          <div className="error-icon">
-            <ShoppingCart size={48} />
+        <div className="shared-cart-header">
+          <div className="header-content">
+            <button className="back-button" onClick={handleBack}>
+              <ArrowLeft size={24} />
+            </button>
+            <div className="header-text">
+              <h1>Shared Cart</h1>
+            </div>
+            <div className="w-6"></div>
           </div>
-          <h2 className="error-title">Oops!</h2>
-          <p className="error-message">{error}</p>
-          <button className="error-button" onClick={handleBack}>
-            Back to Menu
-          </button>
+        </div>
+        <div className="error-container">
+          <div className="error-message">
+            <h3>Unable to Load Shared Cart</h3>
+            <p>{error}</p>
+            <button onClick={() => navigate('/QROrderPay')} className="back-to-menu-btn">
+              Back to Menu
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const selectedTotal = calculateSelectedTotal();
   const hasSelectedItems = Object.values(selectedItems).some(item => item.selected && item.quantity > 0);
 
   return (
@@ -293,41 +340,32 @@ const SharedCartPage = ({
                         <div className="quantity-controls">
                           <button
                             className="quantity-btn"
-                            onClick={() => handleQuantityChange(item.id, -1)}
-                            disabled={selection.quantity <= 0}
+                            onClick={() => handleQuantityChange(item.id, selection.quantity - 1)}
+                            disabled={selection.quantity <= 1}
                           >
                             <Minus size={16} />
                           </button>
                           <span className="quantity-display">{selection.quantity}</span>
                           <button
                             className="quantity-btn"
-                            onClick={() => handleQuantityChange(item.id, 1)}
+                            onClick={() => handleQuantityChange(item.id, selection.quantity + 1)}
                             disabled={selection.quantity >= selection.maxQuantity}
                           >
                             <Plus size={16} />
                           </button>
                         </div>
                       )}
-                      
-                      <div className="shared-item-total">
-                        {selection.selected && selection.quantity > 0 && (
-                          <p className="item-total-price">
-                            £{(item.price * selection.quantity).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
                     </div>
                   </div>
-                  {index < sharedItems.length - 1 && <div className="shared-item-divider"></div>}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Selected Items Summary */}
+        {/* Selection Summary */}
         {hasSelectedItems && (
-          <div className="selected-summary">
+          <div className="selection-summary">
             <div className="selected-summary-header">
               <h3>Selected Items</h3>
               <p className="selected-total">Total: £{selectedTotal.toFixed(2)}</p>

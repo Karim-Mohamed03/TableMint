@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     create, search, get, create_ncr_order, create_ncr_order_advanced, 
     create_restaurant_example, create_ncr_order_table,
-    get_inventory, batch_get_inventory, get_inventory_by_location, batch_create_changes
+    get_inventory, batch_get_inventory, get_inventory_by_location, batch_create_changes,
+    create_share_session, get_share_session, invalidate_share_session, cleanup_expired_sessions
 )
 
 urlpatterns = [
@@ -23,6 +24,12 @@ urlpatterns = [
     path('inventory/batch/', batch_get_inventory, name='batch_get_inventory'),
     path('inventory/location/<str:location_id>/', get_inventory_by_location, name='get_inventory_by_location'),
     path('inventory/batch-create-changes/', batch_create_changes, name='batch_create_changes'),
+    
+    # Secure sharing endpoints
+    path('share/create/', create_share_session, name='create_share_session'),
+    path('share/<uuid:share_token>/', get_share_session, name='get_share_session'),
+    path('share/<uuid:share_token>/invalidate/', invalidate_share_session, name='invalidate_share_session'),
+    path('share/cleanup/', cleanup_expired_sessions, name='cleanup_expired_sessions'),
     
     # Generic order ID pattern - MUST BE LAST to avoid conflicts
     path('<str:order_id>/', get, name='get_order'),  # GET /orders/{order_id}/

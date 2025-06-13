@@ -6,6 +6,237 @@ import "./CompletePage.css";
 
 const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
 
+// Star Rating Modal Component
+const StarRatingModal = ({ isOpen, onClose }) => {
+  const [rating, setRating] = useState(0);
+  const [hoveredStar, setHoveredStar] = useState(0);
+
+  const handleStarClick = (starNumber) => {
+    setRating(starNumber);
+    // Redirect to Google when any star is clicked
+    window.location.href = 'https://google.com';
+  };
+
+  const handleStarHover = (starNumber) => {
+    setHoveredStar(starNumber);
+  };
+
+  const handleStarLeave = () => {
+    setHoveredStar(0);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="star-rating-modal">
+      <div className="star-rating-content">
+        <div className="modal-header">
+          <button className="close-button" onClick={onClose}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div className="rating-content">
+          <h2>How was your experience?</h2>
+          <p>We'd love to hear your feedback</p>
+          
+          <div className="stars-container">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                className={`star ${(hoveredStar >= star || rating >= star) ? 'filled' : 'hollow'}`}
+                onClick={() => handleStarClick(star)}
+                onMouseEnter={() => handleStarHover(star)}
+                onMouseLeave={handleStarLeave}
+              >
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path 
+                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
+                    stroke="#FFD700" 
+                    strokeWidth="2" 
+                    strokeLinejoin="round"
+                    fill={(hoveredStar >= star || rating >= star) ? "#FFD700" : "transparent"}
+                  />
+                </svg>
+              </button>
+            ))}
+          </div>
+          
+          <div className="rating-labels">
+            <span>Poor</span>
+            <span>Excellent</span>
+          </div>
+        </div>
+      </div>
+      
+      <style jsx>{`
+        .star-rating-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.8);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          z-index: 10000;
+          animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        .star-rating-content {
+          background: white;
+          width: 100%;
+          height: 100vh;
+          border-radius: 0;
+          display: flex;
+          flex-direction: column;
+          animation: slideUp 0.3s ease-out;
+          position: relative;
+        }
+        
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+        
+        .modal-header {
+          padding: 20px 24px;
+          display: flex;
+          justify-content: flex-end;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .close-button {
+          background: none;
+          border: none;
+          padding: 8px;
+          cursor: pointer;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #666;
+          transition: all 0.2s ease;
+        }
+        
+        .close-button:hover {
+          background-color: #f5f5f5;
+          color: #333;
+        }
+        
+        .rating-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 24px;
+          text-align: center;
+        }
+        
+        .rating-content h2 {
+          font-size: 28px;
+          font-weight: 700;
+          margin: 0 0 12px 0;
+          color: #1d1d1f;
+        }
+        
+        .rating-content p {
+          font-size: 16px;
+          color: #86868b;
+          margin: 0 0 48px 0;
+        }
+        
+        .stars-container {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        
+        .star {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .star:hover {
+          transform: scale(1.1);
+        }
+        
+        .star:active {
+          transform: scale(0.95);
+        }
+        
+        .rating-labels {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          max-width: 300px;
+          font-size: 14px;
+          color: #86868b;
+          font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+          .rating-content h2 {
+            font-size: 24px;
+          }
+          
+          .stars-container {
+            gap: 12px;
+          }
+          
+          .star svg {
+            width: 40px;
+            height: 40px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .rating-content {
+            padding: 32px 20px;
+          }
+          
+          .rating-content h2 {
+            font-size: 22px;
+          }
+          
+          .stars-container {
+            gap: 8px;
+          }
+          
+          .star svg {
+            width: 36px;
+            height: 36px;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 // Status icons
 const SuccessIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -75,6 +306,7 @@ const CompletePageContent = () => {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState(null);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   
   useEffect(() => {
     if (!stripe) {
@@ -232,6 +464,8 @@ const CompletePageContent = () => {
       
       if (response.data.success) {
         setPaymentRecorded(true);
+        // Show star rating modal when payment is successfully recorded
+        setIsRatingModalOpen(true);
       } else {
         setRecordError("Failed to record payment details");
       }
@@ -375,6 +609,7 @@ const CompletePageContent = () => {
           </div>
         )}
       </div>
+      <StarRatingModal isOpen={isRatingModalOpen} onClose={() => setIsRatingModalOpen(false)} />
     </div>
   );
 };

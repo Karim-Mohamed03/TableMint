@@ -79,15 +79,35 @@ const BillSplitWheel = ({ numberOfPeople, perPersonAmount, totalAmount, splitMet
 const SharePaymentLink = ({ remainingAmount, totalAmount, onClose, onPayMyPart }) => {
   const [linkCopied, setLinkCopied] = useState(false);
   
-  // Generate a payment link (this would be a real URL in production)
+  // Generate or retrieve a temporary order ID that's consistent for the same order
+  const generateTempOrderId = () => {
+    // Check if we already have a temporary ID stored for this payment session
+    const storedTempId = sessionStorage.getItem("temp_order_id");
+    if (storedTempId) {
+      return storedTempId;
+    }
+    
+    // Generate a new random temporary ID with "temp" prefix
+    const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+    // Store it for future use in this session
+    sessionStorage.setItem("temp_order_id", randomId);
+    return randomId;
+  };
+
+  // Generate a payment link
   const generatePaymentLink = () => {
     const baseUrl = window.location.origin;
     const amount = remainingAmount;
     const total = totalAmount;
     
-    // In a real implementation, you'd create a unique payment session
-    const paymentId = Math.random().toString(36).substr(2, 9);
-    return `${baseUrl}/split-payment/${paymentId}?amount=${amount}&total=${total}`;
+    // Get the consistent temporary order ID
+    const tempOrderId = generateTempOrderId();
+    
+    // Create a unique payment session ID
+    const paymentId = Math.random().toString(36).substring(2, 10);
+    
+    // Create payment link with all necessary parameters including the temp order ID
+    return `${baseUrl}/split-payment/${paymentId}?amount=${amount}&total=${total}&order_id=${tempOrderId}`;
   };
 
   const paymentLink = generatePaymentLink();

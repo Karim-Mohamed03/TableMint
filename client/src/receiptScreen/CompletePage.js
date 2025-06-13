@@ -89,9 +89,27 @@ const CompletePageContent = () => {
       return;
     }
     
-    // Set order ID from URL or use a default value
+    // Set order ID from URL or use a temporary ID
     const orderIdFromUrl = new URLSearchParams(window.location.search).get("order_id");
-    setOrderId(orderIdFromUrl || "default-order-id");
+    
+    // Generate or retrieve a temporary order ID that's consistent for the same order
+    const generateTempOrderId = () => {
+      // Check if we already have a temporary ID stored for this payment session
+      const storedTempId = sessionStorage.getItem("temp_order_id");
+      if (storedTempId) {
+        return storedTempId;
+      }
+      
+      // Generate a new random temporary ID with "temp" prefix
+      const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+      // Store it for future use in this session
+      sessionStorage.setItem("temp_order_id", randomId);
+      return randomId;
+    };
+    
+    // Use URL order ID if available, otherwise use/generate temp ID
+    const orderIdToUse = orderIdFromUrl || generateTempOrderId();
+    setOrderId(orderIdToUse);
     
     // Directly get base and tip amounts from URL if available
     const baseAmountFromUrl = new URLSearchParams(window.location.search).get("base_amount");
@@ -141,7 +159,7 @@ const CompletePageContent = () => {
         recordPaymentToPhillyCheesesteak(
           paymentIntent.id, 
           total, 
-          orderIdFromUrl || "default-order-id",
+          orderIdToUse,
           base,
           tip
         );

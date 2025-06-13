@@ -34,6 +34,7 @@ const SplitPaymentPage = ({
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+  const [sharedOrderId, setSharedOrderId] = useState(null);
 
   // Parse the payment information from URL
   useEffect(() => {
@@ -41,6 +42,7 @@ const SplitPaymentPage = ({
       try {
         const amount = searchParams.get('amount');
         const total = searchParams.get('total');
+        const orderIdFromUrl = searchParams.get('order_id');
         
         if (!amount) {
           setError('Invalid payment amount');
@@ -52,6 +54,13 @@ const SplitPaymentPage = ({
 
         // Set the payment amount
         setUserPaymentAmount(parseInt(amount, 10));
+        
+        // If we have a shared order ID from the URL, use it and store it
+        if (orderIdFromUrl) {
+          setSharedOrderId(orderIdFromUrl);
+          // Store it in session storage so it persists across page refreshes
+          sessionStorage.setItem("temp_order_id", orderIdFromUrl);
+        }
         
         // Add a small delay to simulate fetching data
         setTimeout(() => setLoading(false), 300);
@@ -248,6 +257,7 @@ const SplitPaymentPage = ({
                   baseAmountInCents={baseAmountInCents}
                   tipInCents={tipInCents}
                   currency="GBP"
+                  orderId={sharedOrderId}
                   restaurantBranding={restaurantBranding}
                   isBrandingLoaded={isBrandingLoaded}
                 />

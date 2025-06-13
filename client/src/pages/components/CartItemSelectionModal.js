@@ -10,6 +10,23 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
     // Create a unique identifier for this share session
     const shareId = Math.random().toString(36).substring(2, 15);
     
+    // Get the consistent temporary order ID
+    const generateTempOrderId = () => {
+      // Check if we already have a temporary ID stored for this payment session
+      const storedTempId = sessionStorage.getItem("temp_order_id");
+      if (storedTempId) {
+        return storedTempId;
+      }
+      
+      // Generate a new random temporary ID with "temp" prefix
+      const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+      // Store it for future use in this session
+      sessionStorage.setItem("temp_order_id", randomId);
+      return randomId;
+    };
+    
+    const tempOrderId = generateTempOrderId();
+    
     // In a real implementation, you'd send this data to your backend
     // For now, we'll create a URL with query parameters
     const remainingItemsData = {
@@ -34,13 +51,13 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
     // For simple amounts with few items, use the new split-payment page
     if (remainingItems.length <= 2) {
       const paymentId = Math.random().toString(36).substring(2, 10);
-      return `${window.location.origin}/split-payment/${paymentId}?amount=${Math.round(totalRemainingAmount)}&total=${Math.round(totalRemainingAmount)}`;
+      return `${window.location.origin}/split-payment/${paymentId}?amount=${Math.round(totalRemainingAmount)}&total=${Math.round(totalRemainingAmount)}&order_id=${tempOrderId}`;
     } 
     // For more complex item selections, use the shared-cart experience
     else {
       // Encode the data and create the URL for the shared-cart experience
       const encodedData = encodeURIComponent(JSON.stringify(remainingItemsData));
-      return `${window.location.origin}/shared-cart?data=${encodedData}`;
+      return `${window.location.origin}/shared-cart?data=${encodedData}&order_id=${tempOrderId}`;
     }
   };
 

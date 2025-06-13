@@ -31,6 +31,24 @@ const CartPage = ({
   const [showSplitBillModal, setShowSplitBillModal] = useState(false);
   const [showItemSelectionModal, setShowItemSelectionModal] = useState(false);
 
+  // Generate or retrieve a consistent temporary order ID
+  const generateTempOrderId = () => {
+    // Check if we already have a temporary ID stored for this payment session
+    const storedTempId = sessionStorage.getItem("temp_order_id");
+    if (storedTempId) {
+      return storedTempId;
+    }
+    
+    // Generate a new random temporary ID with "temp" prefix
+    const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+    // Store it for future use in this session
+    sessionStorage.setItem("temp_order_id", randomId);
+    return randomId;
+  };
+
+  // Get temporary order ID
+  const tempOrderId = generateTempOrderId();
+
   // Calculate total in cents for payment
   const calculateCartTotalInCents = useCallback(() => {
     return Math.round(total * 100);
@@ -268,6 +286,7 @@ const CartPage = ({
                   baseAmountInCents={baseAmountInCents}
                   tipInCents={tipInCents}
                   currency="GBP"
+                  orderId={tempOrderId}
                   restaurantBranding={restaurantBranding}
                   isBrandingLoaded={isBrandingLoaded}
                 />

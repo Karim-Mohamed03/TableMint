@@ -33,6 +33,7 @@ const SharedCartPage = ({
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+  const [sharedOrderId, setSharedOrderId] = useState(null);
 
   // Parse shared cart data from URL
   useEffect(() => {
@@ -40,10 +41,18 @@ const SharedCartPage = ({
       try {
         setLoading(true);
         const encodedData = searchParams.get('data');
+        const orderIdFromUrl = searchParams.get('order_id');
         
         if (!encodedData) {
           setError('No shared cart data found');
           return;
+        }
+
+        // If we have a shared order ID from the URL, use it and store it
+        if (orderIdFromUrl) {
+          setSharedOrderId(orderIdFromUrl);
+          // Store it in session storage so it persists across page refreshes
+          sessionStorage.setItem("temp_order_id", orderIdFromUrl);
         }
 
         // Decode the shared data
@@ -378,6 +387,7 @@ const SharedCartPage = ({
                   baseAmountInCents={baseAmountInCents}
                   tipInCents={tipInCents}
                   currency="GBP"
+                  orderId={sharedOrderId}
                   restaurantBranding={restaurantBranding}
                   isBrandingLoaded={isBrandingLoaded}
                 />

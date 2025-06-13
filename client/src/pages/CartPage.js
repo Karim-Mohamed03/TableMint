@@ -283,8 +283,8 @@ const CartPage = ({
                 }}
               >
                 <CheckoutForm 
-                  baseAmountInCents={baseAmountInCents}
-                  tipInCents={tipInCents}
+                  baseAmount={baseAmountInCents}
+                  tipAmount={tipInCents}
                   currency="GBP"
                   orderId={tempOrderId}
                   restaurantBranding={restaurantBranding}

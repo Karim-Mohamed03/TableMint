@@ -181,6 +181,21 @@ function App() {
                   />
                 } 
               />
+              {/* New secure token-based routes */}
+              <Route 
+                path="/shared-cart/:shareToken" 
+                element={
+                  <SharedCartPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
+              />
               <Route 
                 path="/complete" 
                 element={
@@ -189,6 +204,21 @@ function App() {
                   />
                 } 
               />
+              <Route 
+                path="/split-payment/:shareToken" 
+                element={
+                  <SplitPaymentPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
+              />
+              {/* Legacy route for backward compatibility */}
               <Route 
                 path="/split-payment/:paymentId" 
                 element={

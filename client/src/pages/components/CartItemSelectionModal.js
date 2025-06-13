@@ -4,64 +4,81 @@ import { Share2, Copy, MessageCircle, Mail } from 'lucide-react';
 // Share Remaining Items Component
 const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(true);
+  const [paymentLink, setPaymentLink] = useState('');
+  const [error, setError] = useState(null);
   
-  // Generate a shareable link with remaining items
-  const generateShareableLink = () => {
-    // Create a unique identifier for this share session
-    const shareId = Math.random().toString(36).substring(2, 15);
-    
-    // Get the consistent temporary order ID
-    const generateTempOrderId = () => {
-      // Check if we already have a temporary ID stored for this payment session
-      const storedTempId = sessionStorage.getItem("temp_order_id");
-      if (storedTempId) {
-        return storedTempId;
+  // Generate a secure shareable link with remaining items
+  const generateSecureShareableLink = async () => {
+    try {
+      setIsGeneratingLink(true);
+      setError(null);
+      
+      // Get the consistent temporary order ID
+      const generateTempOrderId = () => {
+        const storedTempId = sessionStorage.getItem("temp_order_id");
+        if (storedTempId) {
+          return storedTempId;
+        }
+        
+        const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+        sessionStorage.setItem("temp_order_id", randomId);
+        return randomId;
+      };
+      
+      const tempOrderId = generateTempOrderId();
+      
+      // Prepare the data for secure sharing
+      const shareData = {
+        remaining_items: remainingItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          options: item.options,
+          description: item.description
+        })),
+        order_id: tempOrderId,
+        type: 'cart_split',
+        metadata: {
+          original_item_count: originalItems?.length || remainingItems.length,
+          share_created_at: new Date().toISOString()
+        }
+      };
+      
+      // Call the secure backend API to create share session
+      const response = await fetch('http://localhost:8000/api/orders/share/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(shareData)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create secure share session');
       }
       
-      // Generate a new random temporary ID with "temp" prefix
-      const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
-      // Store it for future use in this session
-      sessionStorage.setItem("temp_order_id", randomId);
-      return randomId;
-    };
-    
-    const tempOrderId = generateTempOrderId();
-    
-    // In a real implementation, you'd send this data to your backend
-    // For now, we'll create a URL with query parameters
-    const remainingItemsData = {
-      shareId,
-      remainingItems: remainingItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        options: item.options,
-        description: item.description
-      }))
-    };
-    
-    // Calculate total amount of remaining items
-    const totalRemainingAmount = remainingItems.reduce(
-      (sum, item) => sum + (item.price * item.quantity), 
-      0
-    ) * 100; // Convert to cents
-    
-    // Determine which URL format to use
-    // For simple amounts with few items, use the new split-payment page
-    if (remainingItems.length <= 2) {
-      const paymentId = Math.random().toString(36).substring(2, 10);
-      return `${window.location.origin}/split-payment/${paymentId}?amount=${Math.round(totalRemainingAmount)}&total=${Math.round(totalRemainingAmount)}&order_id=${tempOrderId}`;
-    } 
-    // For more complex item selections, use the shared-cart experience
-    else {
-      // Encode the data and create the URL for the shared-cart experience
-      const encodedData = encodeURIComponent(JSON.stringify(remainingItemsData));
-      return `${window.location.origin}/shared-cart?data=${encodedData}&order_id=${tempOrderId}`;
+      // Generate the secure share URL using the token
+      const shareToken = result.share_token;
+      const secureLink = `${window.location.origin}/shared-cart/${shareToken}`;
+      
+      setPaymentLink(secureLink);
+      
+    } catch (err) {
+      console.error('Error generating secure share link:', err);
+      setError(err.message || 'Failed to generate secure link');
+    } finally {
+      setIsGeneratingLink(false);
     }
   };
 
-  const paymentLink = generateShareableLink();
+  // Generate the link when component mounts
+  useEffect(() => {
+    generateSecureShareableLink();
+  }, []);
 
   const copyToClipboard = async () => {
     try {
@@ -75,7 +92,7 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
 
   const shareViaWhatsApp = () => {
     const totalRemainingAmount = remainingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const message = `Hi! I've paid for some items from our order. There are still items remaining worth £${totalRemainingAmount.toFixed(2)}. Please use this link to see what's left and pay for what you want: ${paymentLink}`;
+    const message = `Hi! I've paid for some items from our order. There are still items remaining worth £${totalRemainingAmount.toFixed(2)}. Please use this secure link to see what's left and pay for what you want: ${paymentLink}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -83,7 +100,7 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
   const shareViaEmail = () => {
     const totalRemainingAmount = remainingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const subject = 'Remaining Items to Pay For';
-    const body = `Hi!\n\nI've paid for some items from our order. There are still items remaining worth £${totalRemainingAmount.toFixed(2)}.\n\nPlease use this link to see what's left and pay for what you want:\n${paymentLink}\n\nThanks!`;
+    const body = `Hi!\n\nI've paid for some items from our order. There are still items remaining worth £${totalRemainingAmount.toFixed(2)}.\n\nPlease use this secure link to see what's left and pay for what you want:\n${paymentLink}\n\nThis link is secure and will expire in 24 hours.\n\nThanks!`;
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
   };
@@ -105,7 +122,7 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
     <div className="share-remaining-container">
       <div className="share-header">
         <h3>Share Remaining Items</h3>
-        <p>Send this link so others can pay for the remaining £{totalRemainingAmount.toFixed(2)} worth of items</p>
+        <p>Send this secure link so others can pay for the remaining £{totalRemainingAmount.toFixed(2)} worth of items</p>
       </div>
       
       <div className="remaining-items-summary">
@@ -120,46 +137,64 @@ const ShareRemainingItems = ({ remainingItems, originalItems, onClose }) => {
         </div>
       </div>
       
-      <div className="payment-link-container">
-        <div className="payment-link-display">
-          <input 
-            type="text" 
-            value={paymentLink} 
-            readOnly 
-            className="payment-link-input"
-          />
-          <button 
-            onClick={copyToClipboard}
-            className={`copy-link-btn ${linkCopied ? 'copied' : ''}`}
-          >
-            <Copy size={16} />
-            {linkCopied ? 'Copied!' : 'Copy'}
+      {error && (
+        <div className="error-message">
+          <p>Error: {error}</p>
+          <button onClick={generateSecureShareableLink} className="retry-button">
+            Try Again
           </button>
         </div>
-      </div>
+      )}
+      
+      {isGeneratingLink ? (
+        <div className="generating-link">
+          <div className="loading-spinner"></div>
+          <p>Generating secure link...</p>
+        </div>
+      ) : paymentLink && (
+        <>
+          <div className="payment-link-container">
+            <div className="payment-link-display">
+              <input 
+                type="text" 
+                value={paymentLink} 
+                readOnly 
+                className="payment-link-input"
+              />
+              <button 
+                onClick={copyToClipboard}
+                className={`copy-link-btn ${linkCopied ? 'copied' : ''}`}
+              >
+                <Copy size={16} />
+                {linkCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
 
-      <div className="share-options">
-        <button onClick={shareViaWhatsApp} className="share-option whatsapp">
-          <MessageCircle size={20} />
-          <span>WhatsApp</span>
-        </button>
-        
-        <button onClick={shareViaEmail} className="share-option email">
-          <Mail size={20} />
-          <span>Email</span>
-        </button>
-        
-        {navigator.share && (
-          <button onClick={shareViaGeneric} className="share-option generic">
-            <Share2 size={20} />
-            <span>Share</span>
-          </button>
-        )}
-      </div>
+          <div className="share-options">
+            <button onClick={shareViaWhatsApp} className="share-option whatsapp">
+              <MessageCircle size={20} />
+              <span>WhatsApp</span>
+            </button>
+            
+            <button onClick={shareViaEmail} className="share-option email">
+              <Mail size={20} />
+              <span>Email</span>
+            </button>
+            
+            {navigator.share && (
+              <button onClick={shareViaGeneric} className="share-option generic">
+                <Share2 size={20} />
+                <span>Share</span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="share-footer">
         <button onClick={onClose} className="continue-payment-btn">
-          Continue with My Payment
+          Continue with Payment
         </button>
       </div>
     </div>

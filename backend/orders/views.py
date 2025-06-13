@@ -3,15 +3,17 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from datetime import timedelta
 import json
+import logging
+from .models import ShareSession
 from pos.pos_service import POSService
 from pos.ncr_adapter import NCRAdapter
 from pos.square_adapter import SquareAdapter
 import datetime
 import uuid
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
@@ -955,4 +957,166 @@ def batch_create_changes(request):
         return JsonResponse({
             'errors': [str(e)],
             'counts': []
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_share_session(request):
+    """Create a secure encrypted share session for cart splitting"""
+    try:
+        data = json.loads(request.body)
+        
+        # Extract the sharing data
+        remaining_items = data.get('remaining_items', [])
+        original_order_id = data.get('order_id')
+        session_type = data.get('type', 'cart_split')  # cart_split, bill_split, etc.
+        
+        # Validate required data
+        if not remaining_items:
+            return JsonResponse({
+                'success': False,
+                'error': 'No items to share'
+            }, status=400)
+        
+        # Prepare the data to be encrypted
+        share_data = {
+            'type': session_type,
+            'remaining_items': remaining_items,
+            'created_at': timezone.now().isoformat(),
+            'metadata': data.get('metadata', {})
+        }
+        
+        # Create share session with 24-hour expiry
+        expires_at = timezone.now() + timedelta(hours=24)
+        
+        share_session = ShareSession(
+            original_order_id=original_order_id,
+            expires_at=expires_at
+        )
+        
+        # Encrypt and store the data
+        share_session.encrypt_data(share_data)
+        share_session.save()
+        
+        logger.info(f"Created secure share session {share_session.share_token}")
+        
+        return JsonResponse({
+            'success': True,
+            'share_token': str(share_session.share_token),
+            'expires_at': expires_at.isoformat()
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error creating share session: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_share_session(request, share_token):
+    """Retrieve and decrypt a share session"""
+    try:
+        # Find the share session
+        try:
+            share_session = ShareSession.objects.get(share_token=share_token)
+        except ShareSession.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Share session not found'
+            }, status=404)
+        
+        # Check if session is valid
+        if not share_session.is_valid():
+            return JsonResponse({
+                'success': False,
+                'error': 'Share session has expired or is inactive'
+            }, status=410)  # Gone
+        
+        # Record access and decrypt data
+        share_session.record_access()
+        
+        try:
+            decrypted_data = share_session.decrypt_data()
+        except ValueError as e:
+            logger.error(f"Failed to decrypt share session {share_token}: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid or corrupted share session'
+            }, status=400)
+        
+        logger.info(f"Share session {share_token} accessed (total: {share_session.access_count})")
+        
+        return JsonResponse({
+            'success': True,
+            'data': decrypted_data,
+            'order_id': share_session.original_order_id,
+            'created_at': share_session.created_at.isoformat(),
+            'expires_at': share_session.expires_at.isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error retrieving share session: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def invalidate_share_session(request, share_token):
+    """Invalidate a share session (optional endpoint for security)"""
+    try:
+        try:
+            share_session = ShareSession.objects.get(share_token=share_token)
+        except ShareSession.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Share session not found'
+            }, status=404)
+        
+        share_session.is_active = False
+        share_session.save()
+        
+        logger.info(f"Share session {share_token} invalidated")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Share session invalidated'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error invalidating share session: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def cleanup_expired_sessions(request):
+    """Admin endpoint to cleanup expired share sessions"""
+    try:
+        expired_count = ShareSession.objects.filter(
+            expires_at__lt=timezone.now()
+        ).delete()[0]
+        
+        logger.info(f"Cleaned up {expired_count} expired share sessions")
+        
+        return JsonResponse({
+            'success': True,
+            'cleaned_up': expired_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error cleaning up expired sessions: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         }, status=500)

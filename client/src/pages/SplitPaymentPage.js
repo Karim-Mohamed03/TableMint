@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, DollarSign } from 'lucide-react';
+import { ArrowLeft, DollarSign } from 'lucide-react';
 import { Elements } from "@stripe/react-stripe-js";
-import { useCart } from '../contexts/CartContext';
 import TipModal from '../receiptScreen/components/TipModal';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import './SplitPaymentPage.css';
@@ -17,15 +16,14 @@ const SplitPaymentPage = ({
   isBrandingLoaded
 }) => {
   const navigate = useNavigate();
-  const { paymentId } = useParams();
+  const { shareToken } = useParams(); // Get share token from URL params
   const [searchParams] = useSearchParams();
-  const { addToCart } = useCart();
   
-  // Split payment state
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Payment state
   const [remainingAmount, setRemainingAmount] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // Payment state management
   const [showTipModal, setShowTipModal] = useState(false);
@@ -36,60 +34,103 @@ const SplitPaymentPage = ({
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   const [sharedOrderId, setSharedOrderId] = useState(null);
 
-  // Parse the payment information from URL
+  // Parse the payment information from either secure token or URL params (fallback)
   useEffect(() => {
-    const parsePaymentInfo = () => {
+    const parsePaymentInfo = async () => {
       try {
-        const amount = searchParams.get('amount');
-        const total = searchParams.get('total');
-        const orderIdFromUrl = searchParams.get('order_id');
-        
-        if (!amount) {
-          setError('Invalid payment amount');
-          return;
-        }
+        setLoading(true);
+        setError(null);
 
-        setRemainingAmount(parseInt(amount, 10));
-        setTotalAmount(parseInt(total, 10) || parseInt(amount, 10));
+        // First try to use secure token if available
+        if (shareToken) {
+          // Call the secure backend API to get share session data
+          const response = await fetch(`http://localhost:8000/api/orders/share/${shareToken}/`);
+          const result = await response.json();
+          
+          if (!response.ok || !result.success) {
+            if (response.status === 404) {
+              setError('Payment link not found or has been removed');
+            } else if (response.status === 410) {
+              setError('Payment link has expired');
+            } else {
+              setError(result.error || 'Failed to load payment information');
+            }
+            return;
+          }
 
-        // Set the payment amount
-        setUserPaymentAmount(parseInt(amount, 10));
-        
-        // If we have a shared order ID from the URL, use it and store it
-        if (orderIdFromUrl) {
-          setSharedOrderId(orderIdFromUrl);
-          // Store it in session storage so it persists across page refreshes
-          sessionStorage.setItem("temp_order_id", orderIdFromUrl);
+          const shareData = result.data;
+          
+          // Set the shared order ID if available
+          if (result.order_id) {
+            setSharedOrderId(result.order_id);
+            sessionStorage.setItem("temp_order_id", result.order_id);
+          }
+
+          // Handle bill split type
+          if (shareData.type === 'bill_split' && shareData.metadata) {
+            setRemainingAmount(shareData.metadata.remaining_amount);
+            setTotalAmount(shareData.metadata.total_amount);
+          } else if (shareData.type === 'cart_split' && shareData.remaining_items) {
+            // Redirect to shared cart page for item-level sharing
+            navigate(`/shared-cart/${shareToken}`);
+            return;
+          } else {
+            setError('Invalid payment link format');
+            return;
+          }
+        } else {
+          // Fallback to URL parameters for backward compatibility
+          const amount = searchParams.get('amount');
+          const total = searchParams.get('total');
+          const orderIdFromUrl = searchParams.get('order_id');
+          
+          if (!amount) {
+            setError('Invalid payment amount');
+            return;
+          }
+
+          setRemainingAmount(parseInt(amount, 10));
+          
+          if (total) {
+            setTotalAmount(parseInt(total, 10));
+          } else {
+            setTotalAmount(parseInt(amount, 10));
+          }
+
+          if (orderIdFromUrl) {
+            setSharedOrderId(orderIdFromUrl);
+            sessionStorage.setItem("temp_order_id", orderIdFromUrl);
+          }
         }
         
-        // Add a small delay to simulate fetching data
-        setTimeout(() => setLoading(false), 300);
       } catch (err) {
-        console.error('Error parsing payment data:', err);
-        setError('Invalid payment link');
+        console.error('Error parsing payment info:', err);
+        setError('Failed to load payment information - please check your connection');
+      } finally {
         setLoading(false);
       }
     };
 
     parsePaymentInfo();
-  }, [searchParams]);
+  }, [shareToken, searchParams, navigate]);
 
-  // Format currency display
-  const formatCurrency = (amountInCents) => {
-    return `£${(amountInCents / 100).toFixed(2)}`;
+  // Handle back navigation
+  const handleBack = () => {
+    navigate('/QROrderPay');
   };
-  
-  // Update payment amount when it changes
-  useEffect(() => {
-    if (updatePaymentAmount && userPaymentAmount) {
-      updatePaymentAmount(userPaymentAmount);
-    }
-  }, [userPaymentAmount, updatePaymentAmount]);
+
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+    }).format(amount / 100);
+  };
 
   // Payment handler functions
   const handleTipConfirm = async (tipAmount) => {
     try {
-      const baseAmount = userPaymentAmount || remainingAmount;
+      const baseAmount = remainingAmount;
       const tipInCents = tipAmount * 100;
       const finalAmount = baseAmount + tipInCents;
       
@@ -112,35 +153,52 @@ const SplitPaymentPage = ({
     setShowTipModal(true);
   };
 
-  const handleBack = () => {
-    navigate('/');
-  };
-
-  // Show loading spinner
+  // Loading state
   if (loading) {
     return (
       <div className="split-payment-page">
+        <div className="split-payment-header">
+          <div className="header-content">
+            <button className="back-button" onClick={handleBack}>
+              <ArrowLeft size={24} />
+            </button>
+            <div className="header-text">
+              <h1>Loading Payment</h1>
+            </div>
+            <div className="w-6"></div>
+          </div>
+        </div>
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading payment details...</p>
+          <p>Loading payment information...</p>
         </div>
       </div>
     );
   }
 
-  // Show error message
+  // Error state
   if (error) {
     return (
       <div className="split-payment-page">
-        <div className="error-container">
-          <div className="error-icon">
-            <ShoppingCart size={48} />
+        <div className="split-payment-header">
+          <div className="header-content">
+            <button className="back-button" onClick={handleBack}>
+              <ArrowLeft size={24} />
+            </button>
+            <div className="header-text">
+              <h1>Split Payment</h1>
+            </div>
+            <div className="w-6"></div>
           </div>
-          <h2 className="error-title">Oops!</h2>
-          <p className="error-message">{error}</p>
-          <button className="error-button" onClick={handleBack}>
-            Back to Home
-          </button>
+        </div>
+        <div className="error-container">
+          <div className="error-message">
+            <h3>Unable to Load Payment</h3>
+            <p>{error}</p>
+            <button onClick={() => navigate('/QROrderPay')} className="back-to-menu-btn">
+              Back to Menu
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -148,31 +206,21 @@ const SplitPaymentPage = ({
 
   return (
     <div className="split-payment-page">
-      {/* Hero Section with Background Image */}
-      <div 
-        className="hero-section"
-        style={{
-          backgroundImage: restaurantBranding?.background_image_url && restaurantBranding?.show_background_image 
-            ? `url(${restaurantBranding.background_image_url})` 
-            : 'none'
-        }}
-      >
-        {/* Restaurant Branding */}
-        <div className="restaurant-branding">
-          {isBrandingLoaded && restaurantBranding?.logo_url && restaurantBranding?.show_logo_on_receipt ? (
-            <div className="logo-container">
-              <img 
-                src={restaurantBranding.logo_url} 
-                alt={`${restaurantBranding.name} logo`}
-                className="restaurant-logo"
-              />
-            </div>
-          ) : isBrandingLoaded && restaurantBranding?.name ? (
-            <div className="restaurant-name">
-              <h1>{restaurantBranding.name}</h1>
-            </div>
-          ) : null}
-        </div>
+      {/* Restaurant Branding */}
+      <div className="restaurant-branding">
+        {isBrandingLoaded && restaurantBranding?.logo_url && restaurantBranding?.show_logo_on_receipt ? (
+          <div className="logo-container">
+            <img 
+              src={restaurantBranding.logo_url} 
+              alt={`${restaurantBranding.name} logo`}
+              className="restaurant-logo"
+            />
+          </div>
+        ) : isBrandingLoaded && restaurantBranding?.name ? (
+          <div className="restaurant-name">
+            <h1>{restaurantBranding.name}</h1>
+          </div>
+        ) : null}
       </div>
 
       {/* Header */}
@@ -206,6 +254,7 @@ const SplitPaymentPage = ({
 
           <div className="payment-message">
             <p>Someone has shared their bill with you. Pay the remaining amount to complete the transaction.</p>
+            <p className="secure-notice">🔒 This is a secure payment link that expires in 24 hours.</p>
           </div>
         </div>
 

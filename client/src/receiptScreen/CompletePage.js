@@ -13,8 +13,8 @@ const StarRatingModal = ({ isOpen, onClose }) => {
 
   const handleStarClick = (starNumber) => {
     setRating(starNumber);
-    // Redirect to Google when any star is clicked
-    window.location.href = 'https://google.com';
+    // Redirect to Google review page with the specific place_id
+    window.location.href = 'https://search.google.com/local/writereview?placeid=ChIJxZXYx7cEdkgRdgAOZ6OHOJw';
   };
 
   const handleStarHover = (starNumber) => {

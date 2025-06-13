@@ -384,8 +384,8 @@ const SharedCartPage = ({
                 }}
               >
                 <CheckoutForm 
-                  baseAmountInCents={baseAmountInCents}
-                  tipInCents={tipInCents}
+                  baseAmount={baseAmountInCents}
+                  tipAmount={tipInCents}
                   currency="GBP"
                   orderId={sharedOrderId}
                   restaurantBranding={restaurantBranding}

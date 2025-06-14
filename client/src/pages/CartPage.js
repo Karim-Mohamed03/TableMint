@@ -4,8 +4,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { useCart } from '../contexts/CartContext';
 import TipModal from '../receiptScreen/components/TipModal';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
-import CartSplitBillModal from './components/CartSplitBillModal';
-import CartItemSelectionModal from './components/CartItemSelectionModal';
+
 import './CartPage.css';
 
 const CartPage = ({
@@ -27,9 +26,7 @@ const CartPage = ({
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
 
-  // Split bill state management
-  const [showSplitBillModal, setShowSplitBillModal] = useState(false);
-  const [showItemSelectionModal, setShowItemSelectionModal] = useState(false);
+
 
   // Generate or retrieve a consistent temporary order ID
   const generateTempOrderId = () => {
@@ -93,35 +90,7 @@ const CartPage = ({
     setShowTipModal(!showTipModal);
   };
 
-  // Split bill handler functions
-  const handleSplitBill = () => {
-    setShowSplitBillModal(true);
-  };
 
-  const handleSplitBillConfirm = (splitData) => {
-    setUserPaymentAmount(splitData.amountToPay);
-    setShowSplitBillModal(false);
-    setShowTipModal(true);
-  };
-
-  const handleSplitBillClose = () => {
-    setShowSplitBillModal(false);
-  };
-
-  const handleItemSelection = () => {
-    setShowItemSelectionModal(true);
-  };
-
-  const handleItemSelectionConfirm = (itemData) => {
-    // For now, we'll just proceed with the selected items amount
-    setUserPaymentAmount(itemData.totalAmount);
-    setShowItemSelectionModal(false);
-    setShowTipModal(true);
-  };
-
-  const handleItemSelectionClose = () => {
-    setShowItemSelectionModal(false);
-  };
 
   if (cartItems.length === 0) {
     return (
@@ -228,24 +197,6 @@ const CartPage = ({
             >
               {paymentProcessing ? 'Processing...' : 'Pay the full amount'}
             </button>
-            
-            <div className="split-payment-options">
-              <button 
-                className="split-bill-btn"
-                onClick={handleSplitBill}
-                disabled={paymentProcessing || isCreatingPaymentIntent}
-              >
-                Split the bill
-              </button>
-              
-              <button 
-                className="split-items-btn"
-                onClick={handleItemSelection}
-                disabled={paymentProcessing || isCreatingPaymentIntent}
-              >
-                Pay for specific items
-              </button>
-            </div>
           </div>
         </div>
 
@@ -295,25 +246,7 @@ const CartPage = ({
           </div>
         )}
 
-        {/* Split Bill Modal */}
-        {showSplitBillModal && (
-          <CartSplitBillModal
-            isOpen={showSplitBillModal}
-            onClose={handleSplitBillClose}
-            totalAmount={calculateCartTotalInCents()}
-            onConfirm={handleSplitBillConfirm}
-          />
-        )}
 
-        {/* Item Selection Modal */}
-        {showItemSelectionModal && (
-          <CartItemSelectionModal
-            isOpen={showItemSelectionModal}
-            onClose={handleItemSelectionClose}
-            items={cartItems}
-            onConfirm={handleItemSelectionConfirm}
-          />
-        )}
       </div>
     </div>
   );

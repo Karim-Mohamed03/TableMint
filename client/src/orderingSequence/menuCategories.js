@@ -439,11 +439,15 @@ const MenuCategories = () => {
   const navigate = useNavigate();
   const { locationId } = useParams(); // Extract location_id from URL
 <<<<<<< HEAD
+<<<<<<< HEAD
   const { locationId } = useParams(); // Extract location_id from URL
   const { addItem, getItemCount } = useCart();
 =======
   const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem } = useCart();
 >>>>>>> 07f6241 (feat: add quantity management for cart items in MenuCategories component)
+=======
+  const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem, clearCart } = useCart();
+>>>>>>> 87d98d4 (feat: Enhance order ID management by retrieving from URL or sessionStorage in CartPage)
   const [catalogData, setCatalogData] = useState(null);
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -551,10 +555,9 @@ const MenuCategories = () => {
         return;
       }
 
-      // Step 5: Store cart data for Square order creation after payment
-      // We'll store the formatted cart data in sessionStorage to use after payment success
+      // Step 5: Create line items for the order
       const lineItems = parsedCart.items.map(item => ({
-        catalog_object_id: item.id, // Square expects catalog_object_id, not item_id
+        catalog_object_id: item.id, // Square expects catalog_object_id
         quantity: item.quantity.toString(), // Convert to string as required by Square API
         base_price_money: { // Square expects base_price_money object
           amount: Math.round(item.price * 100), // Convert to cents
@@ -576,22 +579,62 @@ const MenuCategories = () => {
         return;
       }
 
-      // Store order data for creation after payment
+      // Step 6: Prepare order data for creation
       const orderData = {
-        line_items: lineItems
+        line_items: lineItems,
+        idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}` // Unique key to prevent duplicates
       };
       
-      sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
+      console.log("Creating order with data:", orderData);
       
-      console.log("Cart validated successfully, redirecting to payment...");
-      
-      // Close modal and redirect to cart payment page
-      setIsModalOpen(false);
-      navigate('/cart');
+      // Step 7: Create the order via API call
+      const response = await fetch('http://localhost:8000/api/orders/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const responseData = await response.json();
+      console.log("Order creation response:", responseData);
+
+      if (response.ok && responseData.success) {
+        console.log("Order created successfully:", responseData.order);
+        
+        // Store the created order ID for later use in payment
+        const orderId = responseData.order?.id;
+        if (orderId) {
+          sessionStorage.setItem("current_order_id", orderId);
+          console.log("Stored order ID:", orderId);
+        }
+
+        // Also store order data for potential external payment creation later
+        sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
+        
+        // Clear the cart since order has been created
+        clearCart(); // This will clear both React context and sessionStorage
+        
+        // Close modal and redirect to payment with order ID
+        setIsModalOpen(false);
+        
+        // Navigate to payment page with the order ID
+        if (orderId) {
+          navigate(`/?order_id=${orderId}`);
+        } else {
+          navigate('/');
+        }
+
+      } else {
+        console.error("Order creation failed:", responseData);
+        alert(`Failed to create order: ${responseData.error || 'Unknown error'}`);
+        setIsModalOpen(false);
+      }
 
     } catch (error) {
-      console.error("Error processing cart:", error);
-      alert("There was an error processing your cart. Please try again.");
+      console.error("Error creating order:", error);
+      alert("There was an error creating your order. Please try again.");
+      setIsModalOpen(false);
     }
   };
 

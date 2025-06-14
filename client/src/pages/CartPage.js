@@ -43,8 +43,28 @@ const CartPage = ({
     return randomId;
   };
 
-  // Get temporary order ID
-  const tempOrderId = generateTempOrderId();
+  // Get order ID from URL params or use stored order ID or temp ID
+  const getOrderId = () => {
+    // Check URL parameters first
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderIdFromUrl = urlParams.get('order_id');
+    
+    if (orderIdFromUrl) {
+      return orderIdFromUrl;
+    }
+    
+    // Check sessionStorage for current order ID
+    const storedOrderId = sessionStorage.getItem("current_order_id");
+    if (storedOrderId) {
+      return storedOrderId;
+    }
+    
+    // Fall back to temp ID
+    return generateTempOrderId();
+  };
+
+  // Get the order ID to use for payment
+  const orderId = getOrderId();
 
   // Calculate total in cents for payment
   const calculateCartTotalInCents = useCallback(() => {
@@ -237,7 +257,7 @@ const CartPage = ({
                   baseAmount={baseAmountInCents}
                   tipAmount={tipInCents}
                   currency="GBP"
-                  orderId={tempOrderId}
+                  orderId={orderId}
                   restaurantBranding={restaurantBranding}
                   isBrandingLoaded={isBrandingLoaded}
                 />

@@ -24,22 +24,25 @@ load_dotenv(env_file)
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
-def calculate_order_amount(items):
-    # Extract amount from the first item or use a default value
-    if items and isinstance(items, list) and len(items) > 0:
-        if isinstance(items[0], dict) and 'amount' in items[0]:
-            return items[0]['amount']
-    # Default fallback
-    return 1400
 
 @csrf_exempt
 def create_payment_intent(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
+            
+            # Calculate order amount - this may raise ValueError
+            try:
+                amount = calculate_order_amount(data.get('items', []))
+            except ValueError as calc_error:
+                logger.error(f"Failed to calculate order amount: {str(calc_error)}")
+                return JsonResponse({
+                    'error': f'Unable to calculate order amount: {str(calc_error)}'
+                }, status=400)
+            
             # Create a PaymentIntent with the order amount and currency
             intent = stripe.PaymentIntent.create(
-                amount=calculate_order_amount(data.get('items', [])),
+                amount=amount,
                 currency='gbp',
                 # In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional
                 automatic_payment_methods={
@@ -50,8 +53,173 @@ def create_payment_intent(request):
                 'clientSecret': intent['client_secret']
             })
         except Exception as e:
+            logger.error(f"Error creating payment intent: {str(e)}")
             return JsonResponse({'error': str(e)}, status=403)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+
+def calculate_order_amount(items):
+
+    try:
+        # Method 1: Try to extract cart data from the request items
+        # The frontend might pass the cart data in the items array
+        if items and isinstance(items, list) and len(items) > 0:
+            first_item = items[0]
+            
+            # Check if this is a cart object with total calculated
+            if isinstance(first_item, dict):
+                # Check for pre-calculated total amount in cents
+                if 'total_amount_cents' in first_item:
+                    logger.info(f"Using pre-calculated total: {first_item['total_amount_cents']} cents")
+                    return first_item['total_amount_cents']
+                
+                # Check for cart structure with items array and tax
+                if 'cart_items' in first_item and isinstance(first_item['cart_items'], list):
+                    cart_items = first_item['cart_items']
+                    subtotal = 0
+                    
+                    # Calculate subtotal from cart items
+                    for item in cart_items:
+                        if isinstance(item, dict) and 'price' in item and 'quantity' in item:
+                            item_price = float(item['price'])  # Price in pounds
+                            item_quantity = int(item['quantity'])
+                            subtotal += item_price * item_quantity
+                    
+                    # Apply promo discount if present
+                    promo_discount = first_item.get('promo_discount', 0)  # Percentage
+                    if promo_discount > 0:
+                        subtotal = subtotal * (1 - promo_discount / 100)
+                    
+                    # Get the actual tax amount from the cart data
+                    tax_amount = first_item.get('tax', 0)  # Tax in pounds
+                    if tax_amount is None:
+                        logger.error("Tax amount not found in cart data")
+                        raise ValueError("Tax amount not provided in cart data")
+                    
+                    total = subtotal + float(tax_amount)
+                    
+                    # Convert to cents and return
+                    total_cents = int(round(total * 100))
+                    logger.info(f"Calculated total: subtotal=£{subtotal:.2f}, tax=£{tax_amount:.2f}, total=£{total:.2f} ({total_cents} cents)")
+                    return total_cents
+                
+                # Check for complete cart data with subtotal, tax, and total
+                if 'subtotal' in first_item and 'tax' in first_item and 'total' in first_item:
+                    total = float(first_item['total'])  # Total in pounds
+                    total_cents = int(round(total * 100))
+                    logger.info(f"Using cart total: £{total:.2f} ({total_cents} cents)")
+                    return total_cents
+                
+                # Check for simple amount field (legacy support)
+                if 'amount' in first_item:
+                    amount = first_item['amount']
+                    # If amount is already in cents, return as is
+                    if isinstance(amount, (int, float)) and amount >= 100:
+                        logger.info(f"Using legacy amount (cents): {int(amount)}")
+                        return int(amount)
+                    # If amount is in pounds, convert to cents
+                    elif isinstance(amount, (int, float)) and amount > 0:
+                        amount_cents = int(amount * 100)
+                        logger.info(f"Using legacy amount (pounds): £{amount:.2f} ({amount_cents} cents)")
+                        return amount_cents
+        
+        # Method 2: Fallback - try to parse as individual items with total_money
+        if items and isinstance(items, list):
+            total_amount = 0
+            for item in items:
+                if isinstance(item, dict):
+                    # Handle Square-style line items
+                    if 'base_price_money' in item and 'quantity' in item:
+                        price_money = item['base_price_money']
+                        if isinstance(price_money, dict) and 'amount' in price_money:
+                            item_total = price_money['amount'] * int(item.get('quantity', 1))
+                            total_amount += item_total
+                    # Handle simple price/quantity items
+                    elif 'price' in item and 'quantity' in item:
+                        price = float(item['price'])  # Assume price in pounds
+                        quantity = int(item['quantity'])
+                        item_total = price * quantity * 100  # Convert to cents
+                        total_amount += item_total
+            
+            if total_amount > 0:
+                logger.info(f"Calculated from individual items: {total_amount} cents (£{total_amount/100:.2f})")
+                return total_amount
+        
+        # No valid data found
+        logger.error(f"Could not calculate order amount from items: {items}")
+        raise ValueError("Unable to calculate order amount from provided data")
+        
+    except Exception as e:
+        logger.error(f"Error calculating order amount: {str(e)}")
+        raise ValueError(f"Failed to calculate order amount: {str(e)}")
+
+def create_order_when_fully_paid(order_id, order_base_sum, order_total_amount):
+
+    logger.info(f"Checking if order {order_id} is fully paid: base_sum={order_base_sum}, order_total={order_total_amount}")
+    
+    # Check if the sum of base amounts matches the order total
+    if order_base_sum != order_total_amount:
+        logger.info(f"Order {order_id} not fully paid yet: ${order_base_sum/100:.2f} of ${order_total_amount/100:.2f}")
+        return {
+            'success': False,
+            'error': 'Order not fully paid yet',
+            'order_id': order_id,
+            'base_sum': order_base_sum,
+            'order_total': order_total_amount,
+            'paid_percentage': (order_base_sum / order_total_amount * 100) if order_total_amount > 0 else 0
+        }
+    
+    # If fully paid, create the order
+    logger.info(f"Order {order_id} is fully paid! Creating order via /create endpoint")
+    
+    try:
+        # Call the order creation endpoint
+        order_response = requests.post(
+            "http://localhost:8000/api/orders/create/",
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'order_id': order_id,
+                'amount': order_total_amount,
+                'currency': 'GBP'
+            }
+        )
+        
+        if order_response.status_code == 200:
+            order_data = order_response.json()
+            if order_data.get('success'):
+                logger.info(f"Successfully created order {order_id} in Square")
+                return {
+                    'success': True,
+                    'order_id': order_id,
+                    'square_order': order_data.get('order'),
+                    'message': 'Order created successfully - payment complete'
+                }
+            else:
+                logger.error(f"Failed to create order: {order_data.get('error', 'Unknown error')}")
+                return {
+                    'success': False,
+                    'error': f"Order creation failed: {order_data.get('error', 'Unknown error')}",
+                    'order_id': order_id
+                }
+        else:
+            logger.error(f"Order creation API returned status {order_response.status_code}")
+            return {
+                'success': False,
+                'error': f"Order creation API error: {order_response.status_code}",
+                'order_id': order_id
+            }
+            
+    except Exception as e:
+        logger.exception(f"Exception occurred while creating order: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'order_id': order_id
+        }
 
 def create_square_external_payment(order_id, base_sum):
     """
@@ -240,15 +408,15 @@ def record_philly_payment(request):
             
             logger.info(f"Current sum of base_amounts for order_id {order_id}: {order_base_sum} cents (${order_base_sum/100:.2f})")
             
-            # Attempt to create an external payment in Square if base amounts match order total
-            logger.info(f"Attempting to create Square external payment for order_id: {order_id}")
-            square_payment_result = create_square_external_payment(order_id, order_base_sum)
+            # Check if order is fully paid and create order if so
+            logger.info(f"Checking if order {order_id} is fully paid")
+            order_creation_result = create_order_when_fully_paid(order_id, order_base_sum, order_total_money)
             
-            # Log the result of the Square payment attempt
-            if square_payment_result.get('success'):
-                logger.info(f"Square payment created successfully for order_id: {order_id}")
+            # Log the result of the order creation attempt
+            if order_creation_result.get('success'):
+                logger.info(f"Order {order_id} created successfully - payment complete!")
             else:
-                logger.info(f"Square payment not created: {square_payment_result.get('error', 'Unknown reason')}")
+                logger.info(f"Order {order_id} not created: {order_creation_result.get('error', 'Unknown reason')}")
             
             # Prepare the response
             response_data = {
@@ -264,7 +432,7 @@ def record_philly_payment(request):
                 'order_total_formatted': f"${order_total_money/100:.2f}" if order_total_money else None,
                 'order_base_sum': order_base_sum,
                 'order_base_sum_formatted': f"${order_base_sum/100:.2f}",
-                'square_payment_attempt': square_payment_result
+                'order_creation_attempt': order_creation_result
             }
             
             return JsonResponse(response_data)

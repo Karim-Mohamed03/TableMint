@@ -3,8 +3,8 @@ import { Elements } from "@stripe/react-stripe-js";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import CheckoutForm from "./components/CheckoutForm";
-import SplitBillModal from "./components/SplitBillModal";
 import TipModal from "./components/TipModal";
+import SplitBillModal from "./components/SplitBillModal";
 import ItemSelectionModal from "./components/ItemSelectionModal";
 import "./PaymentPage.css";
 
@@ -18,18 +18,20 @@ export default function PaymentPage({
   restaurantBranding,
   isBrandingLoaded
 }) {
-  const [showSplitModal, setShowSplitModal] = useState(false);
   const [showTipModal, setShowTipModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [showItemsModal, setShowItemsModal] = useState(false);
   const [userPaymentAmount, setUserPaymentAmount] = useState(null);
-  const [splitDetails, setSplitDetails] = useState(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState(null);
   const [tipInCents, setTipInCents] = useState(0);
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+  
+  // Split bill and item selection state
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [showItemsModal, setShowItemsModal] = useState(false);
+  const [splitDetails, setSplitDetails] = useState(null);
   const [selectedItemsDetails, setSelectedItemsDetails] = useState(null);
   
   // React Router navigation hook
@@ -133,31 +135,8 @@ export default function PaymentPage({
     }
   };
   
-  const toggleSplitModal = () => {
-    setShowSplitModal(!showSplitModal);
-  };
-  
   const toggleTipModal = () => {
     setShowTipModal(!showTipModal);
-  };
-  
-  const toggleItemsModal = () => {
-    setShowItemsModal(!showItemsModal);
-  };
-  
-  const handleSplitConfirm = (splitInfo) => {
-    setUserPaymentAmount(splitInfo.amountToPay);
-    setSplitDetails(splitInfo);
-    setShowSplitModal(false);
-    setShowTipModal(true);
-  };
-  
-  const handleItemSelectionConfirm = (selection) => {
-    setSelectedItemsDetails(selection);
-    setUserPaymentAmount(selection.totalAmount);
-    setBaseAmountInCents(selection.totalAmount);
-    setShowItemsModal(false);
-    setShowTipModal(true);
   };
   
   const handleTipConfirm = async (tipAmount) => {
@@ -183,23 +162,43 @@ export default function PaymentPage({
   
   const handlePayFullAmount = () => {
     setUserPaymentAmount(null);
-    setSplitDetails(null);
-    setSelectedItemsDetails(null);
     setShowTipModal(true);
-  };
-  
-  const handlePaySpecificAmount = async () => {
-    setSelectedItemsDetails(null);
-    toggleSplitModal();
-  };
-  
-  const handlePayForMyItems = async () => {
-    setSplitDetails(null);
-    toggleItemsModal();
   };
 
   const handleViewMenu = () => {
     navigate('/menu');
+  };
+
+  // Split bill handler functions
+  const toggleSplitModal = () => {
+    setShowSplitModal(!showSplitModal);
+  };
+
+  const handleSplitConfirm = (splitData) => {
+    setSplitDetails(splitData);
+    setUserPaymentAmount(splitData.amountToPay);
+    setShowSplitModal(false);
+    setShowTipModal(true);
+  };
+
+  // Item selection handler functions  
+  const toggleItemsModal = () => {
+    setShowItemsModal(!showItemsModal);
+  };
+
+  const handleItemSelectionConfirm = (itemData) => {
+    setSelectedItemsDetails(itemData);
+    setUserPaymentAmount(itemData.totalAmount);
+    setShowItemsModal(false);
+    setShowTipModal(true);
+  };
+
+  const handlePaySpecificAmount = () => {
+    setShowSplitModal(true);
+  };
+
+  const handlePayForMyItems = () => {
+    setShowItemsModal(true);
   };
   
   const options = clientSecret ? { clientSecret } : {};
@@ -316,15 +315,15 @@ export default function PaymentPage({
             
             <button className="payment-option" onClick={handlePaySpecificAmount}>
               <div className="option-content">
-                <span className="option-title">Let's Split the Bill!</span>
-                <span className="option-subtitle">Split the bill with others at your table</span>
+                <span className="option-title">Split the bill</span>
+                <span className="option-subtitle">Pay only your share</span>
               </div>
             </button>
-            
+
             <button className="payment-option" onClick={handlePayForMyItems}>
               <div className="option-content">
-                <span className="option-title">Pay for your items</span>
-                <span className="option-subtitle">Only pay for what you ordered</span>
+                <span className="option-title">Select items</span>
+                <span className="option-subtitle">Choose what you're paying for</span>
               </div>
             </button>
             
@@ -356,15 +355,6 @@ export default function PaymentPage({
       </div>
       
       {/* Modals */}
-      <SplitBillModal 
-        isOpen={showSplitModal} 
-        onClose={toggleSplitModal} 
-        baseAmount={orderTotal} 
-        tip={0} 
-        totalAmount={orderTotal}
-        onConfirm={handleSplitConfirm}
-      />
-      
       <TipModal
         isOpen={showTipModal}
         onClose={toggleTipModal}
@@ -372,21 +362,22 @@ export default function PaymentPage({
         baseAmount={userPaymentAmount || orderTotal}
         onConfirm={handleTipConfirm}
       />
-      
-      <div className={`items-modal-overlay ${showItemsModal ? 'active' : ''}`} onClick={toggleItemsModal}>
-        <div className="items-modal" onClick={e => e.stopPropagation()}>
-          <div className="modal-header">
-            <div className="modal-drag-handle"></div>
-          </div>
-          
-          <ItemSelectionModal
-            isOpen={showItemsModal}
-            onClose={toggleItemsModal}
-            items={orderDetails?.line_items}
-            onConfirm={handleItemSelectionConfirm}
-          />
-        </div>
-      </div>
+
+      {/* Split Bill Modal */}
+      <SplitBillModal
+        isOpen={showSplitModal}
+        onClose={toggleSplitModal}
+        totalAmount={orderTotal}
+        onConfirm={handleSplitConfirm}
+      />
+
+      {/* Item Selection Modal */}
+      <ItemSelectionModal
+        isOpen={showItemsModal}
+        onClose={toggleItemsModal}
+        items={orderDetails?.line_items || []}
+        onConfirm={handleItemSelectionConfirm}
+      />
       
       <style jsx>{`
         @import url('https://fonts.googleapis.com/css2?family=Satoshi:wght@300;400;500;600;700;800;900&display=swap');

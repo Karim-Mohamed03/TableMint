@@ -654,13 +654,6 @@ class SquareAdapter(POSAdapter):
     
     
     
-    
-    
-    
-    
-    
-    
-    
     def create_external_payment(self, order_id: str, amount: int, tip_amount: int, source: str = "stripe") -> Dict[str, Any]:
         """
         Create a payment record in Square for a payment that was processed externally (e.g., with Stripe).

@@ -321,27 +321,17 @@ const CompletePageContent = () => {
       return;
     }
     
-    // Set order ID from URL or use a temporary ID
+    // Get order ID from URL parameters - this should be the real Square order ID
     const orderIdFromUrl = new URLSearchParams(window.location.search).get("order_id");
     
-    // Generate or retrieve a temporary order ID that's consistent for the same order
-    const generateTempOrderId = () => {
-      // Check if we already have a temporary ID stored for this payment session
-      const storedTempId = sessionStorage.getItem("temp_order_id");
-      if (storedTempId) {
-        return storedTempId;
-      }
-      
-      // Generate a new random temporary ID with "temp" prefix
-      const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
-      // Store it for future use in this session
-      sessionStorage.setItem("temp_order_id", randomId);
-      return randomId;
-    };
+    if (!orderIdFromUrl) {
+      console.error("No order_id found in URL parameters");
+      setStatus("error");
+      return;
+    }
     
-    // Use URL order ID if available, otherwise use/generate temp ID
-    const orderIdToUse = orderIdFromUrl || generateTempOrderId();
-    setOrderId(orderIdToUse);
+    setOrderId(orderIdFromUrl);
+    console.log("Using Square order ID from URL:", orderIdFromUrl);
     
     // Directly get base and tip amounts from URL if available
     const baseAmountFromUrl = new URLSearchParams(window.location.search).get("base_amount");
@@ -391,7 +381,7 @@ const CompletePageContent = () => {
         recordPaymentToPhillyCheesesteak(
           paymentIntent.id, 
           total, 
-          orderIdToUse,
+          orderIdFromUrl,
           base,
           tip
         );
@@ -399,61 +389,15 @@ const CompletePageContent = () => {
     });
   }, [stripe]);
   
-  // Function to create Square order after successful payment
-  const createSquareOrderAfterPayment = async () => {
-    try {
-      // Get the pending order data from sessionStorage
-      const pendingOrderData = sessionStorage.getItem("pending_square_order");
-      
-      if (!pendingOrderData) {
-        console.log("No pending Square order data found");
-        return { success: false, error: "No pending order data" };
-      }
+  // Orders are now created only in the confirm modal, not after payment
 
-      const orderData = JSON.parse(pendingOrderData);
-      console.log("Creating Square order with data:", orderData);
-
-      // Send cart data to backend to create Square order
-      const response = await fetch('http://localhost:8000/api/orders/create/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      });
-
-      const responseData = await response.json();
-      console.log("Square order creation response:", responseData);
-
-      if (response.ok && responseData.success) {
-        console.log("Square order created successfully:", responseData.order);
-        // Clear the pending order data
-        sessionStorage.removeItem("pending_square_order");
-        return { success: true, order: responseData.order };
-      } else {
-        console.error("Square order creation failed:", responseData);
-        return { success: false, error: responseData.error || "Unknown error" };
-      }
-
-    } catch (error) {
-      console.error("Error creating Square order:", error);
-      return { success: false, error: error.message };
-    }
-  };
-
-  // Function to record successful payment to the backend
+  // Function to record successful payment to the backend and create Square external payment
   const recordPaymentToPhillyCheesesteak = async (paymentId, amount, orderId, baseAmt, tipAmt) => {
     try {
-      // First, create the Square order
-      const squareOrderResult = await createSquareOrderAfterPayment();
-      
-      if (squareOrderResult.success) {
-        console.log("Square order created successfully before recording payment");
-      } else {
-        console.warn("Failed to create Square order:", squareOrderResult.error);
-        // Continue with payment recording even if Square order creation fails
-      }
+      // Orders are now created only in confirm modal, so we just record the payment
+      console.log("Recording payment for existing order:", orderId);
 
+      // Record the payment in our database
       const response = await axios.post('http://localhost:8000/api/payments/record-philly-payment', {
         payment_id: paymentId,
         amount: amount,
@@ -466,6 +410,17 @@ const CompletePageContent = () => {
         setPaymentRecorded(true);
         // Show star rating modal when payment is successfully recorded
         setIsRatingModalOpen(true);
+        console.log("Payment recorded successfully in database");
+        
+        // Check if Square external payment was created
+        const squareResult = response.data.square_external_payment;
+        if (squareResult && squareResult.success) {
+          console.log("External payment recorded successfully in Square:", squareResult);
+        } else {
+          console.warn("Failed to record external payment in Square:", squareResult?.error);
+          // Don't set error state as the main payment was still recorded
+        }
+        
       } else {
         setRecordError("Failed to record payment details");
       }

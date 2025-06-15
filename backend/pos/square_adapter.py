@@ -330,15 +330,28 @@ class SquareAdapter(POSAdapter):
                 body=update_body
             )
             
-            if result.is_success():
+            # Check for errors first
+            if hasattr(result, 'errors') and result.errors:
+                return {
+                    "success": False,
+                    "errors": result.errors
+                }
+            
+            # If no errors, extract order data
+            if hasattr(result, 'order'):
                 return {
                     "success": True,
-                    "order": result.body.get('order')
+                    "order": result.order
+                }
+            elif hasattr(result, 'body') and result.body and 'order' in result.body:
+                return {
+                    "success": True,
+                    "order": result.body['order']
                 }
             else:
                 return {
                     "success": False,
-                    "errors": result.errors
+                    "errors": "Unexpected response format"
                 }
                 
         except Exception as e:
@@ -432,15 +445,28 @@ class SquareAdapter(POSAdapter):
             # Get orders using the orders API
             result = self.client.orders.get()
             
-            if result.is_success():
+            # Check for errors first
+            if hasattr(result, 'errors') and result.errors:
+                return {
+                    "success": False,
+                    "errors": result.errors
+                }
+            
+            # If no errors, extract orders data
+            if hasattr(result, 'orders'):
                 return {
                     "success": True,
-                    "orders": result.body.get("orders", [])
+                    "orders": result.orders
+                }
+            elif hasattr(result, 'body') and result.body and 'orders' in result.body:
+                return {
+                    "success": True,
+                    "orders": result.body['orders']
                 }
             else:
                 return {
                     "success": False,
-                    "errors": result.errors
+                    "errors": "Unexpected response format"
                 }
         except Exception as e:
             return {
@@ -458,15 +484,28 @@ class SquareAdapter(POSAdapter):
         try:
             result = self.client.locations.list_locations()
             
-            if result.is_success():
+            # Check for errors first
+            if hasattr(result, 'errors') and result.errors:
+                return {
+                    "success": False,
+                    "errors": result.errors
+                }
+            
+            # If no errors, extract locations data
+            if hasattr(result, 'locations'):
                 return {
                     "success": True,
-                    "locations": result.body.get('locations', [])
+                    "locations": result.locations
+                }
+            elif hasattr(result, 'body') and result.body and 'locations' in result.body:
+                return {
+                    "success": True,
+                    "locations": result.body['locations']
                 }
             else:
                 return {
                     "success": False,
-                    "errors": result.errors
+                    "errors": "Unexpected response format"
                 }
         except Exception as e:
             return {
@@ -474,6 +513,7 @@ class SquareAdapter(POSAdapter):
                 "errors": str(e)
             }
     
+
     def create_payment(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a payment using Square.
@@ -491,7 +531,6 @@ class SquareAdapter(POSAdapter):
                 - note: Optional note about the payment
                 - tip_money: Optional tip amount
                 - app_fee_money: Optional app fee amount
-                - delay_capture: Whether to delay payment capture (default: False)
                 - autocomplete: Whether to autocomplete the payment (default: True)
                 - verification_token: Optional verification token for SCA
                 
@@ -511,7 +550,8 @@ class SquareAdapter(POSAdapter):
                 
             # Optional fields with defaults
             currency = payment_data.get('currency', 'GBP')
-            idempotency_key = payment_data.get('idempotency_key', str(uuid.uuid4()))
+            # Always generate a fresh UUID for idempotency - don't accept from client
+            idempotency_key = str(uuid.uuid4())
             order_id = payment_data.get('order_id')
             customer_id = payment_data.get('customer_id')
             location_id = payment_data.get('location_id', self.location_id)
@@ -519,89 +559,108 @@ class SquareAdapter(POSAdapter):
             note = payment_data.get('note')
             tip_money = payment_data.get('tip_money')
             app_fee_amount = payment_data.get('app_fee_amount')
-            delay_capture = payment_data.get('delay_capture', False)
             autocomplete = payment_data.get('autocomplete', True)
             verification_token = payment_data.get('verification_token')
             
-            # Build the payload for payment creation
-            payment_body = {
+            # Build the payment request arguments (more explicit approach)
+            payment_request = {
                 "idempotency_key": idempotency_key,
-                "amount_money": {"amount": amount, "currency": currency},
+                "amount_money": {
+                    "amount": amount, 
+                    "currency": currency
+                },
                 "source_id": source_id,
-                "delay_capture": delay_capture,
                 "autocomplete": autocomplete
             }
             
+            # If source_id is EXTERNAL, add required external_details
+            if source_id == "EXTERNAL":
+                payment_request["external_details"] = {
+                    "type": "OTHER",
+                    "source": "stripe"
+                }
+            
             # Add optional fields if provided
             if customer_id:
-                payment_body["customer_id"] = customer_id
+                payment_request["customer_id"] = customer_id
             if location_id:
-                payment_body["location_id"] = location_id
+                payment_request["location_id"] = location_id
             if order_id:
-                payment_body["order_id"] = order_id
+                payment_request["order_id"] = order_id
             if reference_id:
-                payment_body["reference_id"] = reference_id
+                payment_request["reference_id"] = reference_id
             if note:
-                payment_body["note"] = note
+                payment_request["note"] = note
             if verification_token:
-                payment_body["verification_token"] = verification_token
+                payment_request["verification_token"] = verification_token
             if tip_money:
-                payment_body["tip_money"] = {"amount": tip_money, "currency": currency}
+                payment_request["tip_money"] = {
+                    "amount": tip_money, 
+                    "currency": currency
+                }
             if app_fee_amount is not None:
-                payment_body["app_fee_money"] = {"amount": app_fee_amount, "currency": currency}
+                payment_request["app_fee_money"] = {
+                    "amount": app_fee_amount, 
+                    "currency": currency
+                }
                 
-            # Call the Square Payments API to create the payment
-            result = self.client.payments.create(**payment_body)
+            # Call the Square Payments API - using explicit keyword arguments
+            result = self.client.payments.create(**payment_request)
             
-            # Check if the result has errors attribute and it contains errors
+            # Handle the response based on Square SDK structure
+            # Check for errors first
             if hasattr(result, 'errors') and result.errors:
                 return {
                     "success": False,
-                    "error": [e.detail if hasattr(e, 'detail') else str(e) for e in result.errors]
+                    "errors": result.errors
                 }
             
-            # Extract payment information from the response
-            payment = None
+            # If no errors, check for payment data
             if hasattr(result, 'payment'):
-                payment = result.payment
-            elif hasattr(result, 'body') and hasattr(result.body, 'payment'):
-                payment = result.body.payment
-                
-            # Convert payment object to dictionary if possible
-            if payment:
-                if hasattr(payment, 'dict'):
-                    payment_dict = payment.dict()
-                elif isinstance(payment, dict):
-                    payment_dict = payment
-                else:
-                    try:
-                        payment_dict = vars(payment)
-                    except:
-                        payment_dict = payment
-                        
+                payment_data = result.payment
+                # Convert to dict if needed
+                if hasattr(payment_data, 'dict'):
+                    payment_data = payment_data.dict()
                 return {
                     "success": True,
-                    "payment": payment_dict
+                    "payment": payment_data
+                }
+            elif hasattr(result, 'body') and result.body and 'payment' in result.body:
+                return {
+                    "success": True,
+                    "payment": result.body['payment']
                 }
             else:
-                # Return the raw result if we can't extract the payment
+                # Fallback for unexpected response structure
                 return {
                     "success": True,
-                    "result": result
+                    "result": result.body if hasattr(result, 'body') else result
                 }
-                
+                    
         except ApiError as e:
             return {
                 "success": False,
                 "error": str(e),
-                "code": e.status_code if hasattr(e, 'status_code') else 'unknown'
+                "code": getattr(e, 'status_code', 'unknown')
             }
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e)
             }
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     def create_external_payment(self, order_id: str, amount: int, tip_amount: int, source: str = "stripe") -> Dict[str, Any]:
         """
         Create a payment record in Square for a payment that was processed externally (e.g., with Stripe).

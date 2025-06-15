@@ -516,14 +516,14 @@ const MenuCategories = () => {
         // Clear the cart since order has been created
         clearCart(); // This will clear both React context and sessionStorage
         
-        // Close modal and redirect to payment with order ID
+        // Close modal and redirect to cart page with order ID
         setIsModalOpen(false);
         
-        // Navigate to payment page with the order ID
+        // Navigate to cart page with the order ID
         if (orderId) {
-          navigate(`/?order_id=${orderId}`);
+          navigate(`/cart?order_id=${orderId}`);
         } else {
-          navigate('/');
+          navigate('/cart');
         }
 
       } else {

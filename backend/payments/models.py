@@ -29,6 +29,7 @@ class Payment(models.Model):
     # Payment metadata
     idempotency_key = models.UUIDField(unique=True)
     source_id = models.CharField(max_length=255)
+    order_id = models.CharField(max_length=255, null=True, blank=True)
     customer_id = models.CharField(max_length=255, null=True, blank=True)
     reference_id = models.CharField(max_length=255, null=True, blank=True)
     note = models.TextField(null=True, blank=True)

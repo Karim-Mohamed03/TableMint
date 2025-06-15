@@ -9,14 +9,14 @@ from django.db.models import Sum, Max
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from .models import PhillyCheesesteakPayment
+from ..models import PhillyCheesesteakPayment
 from pos.square_adapter import SquareAdapter
 
 # Set up logger - use the 'payments' logger configured in settings.py
 logger = logging.getLogger('payments')
 
 # Get the base directory (backend folder)
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Always load environment variables from .env.example
 env_file = os.path.join(BASE_DIR, '.env.example')
@@ -58,9 +58,7 @@ def create_payment_intent(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
-
 def calculate_order_amount(items):
-
     try:
         # Method 1: Try to extract cart data from the request items
         # The frontend might pass the cart data in the items array
@@ -154,172 +152,13 @@ def calculate_order_amount(items):
         logger.error(f"Error calculating order amount: {str(e)}")
         raise ValueError(f"Failed to calculate order amount: {str(e)}")
 
-def create_order_when_fully_paid(order_id, order_base_sum, order_total_amount):
-
-    logger.info(f"Checking if order {order_id} is fully paid: base_sum={order_base_sum}, order_total={order_total_amount}")
-    
-    # Check if the sum of base amounts matches the order total
-    if order_base_sum != order_total_amount:
-        logger.info(f"Order {order_id} not fully paid yet: ${order_base_sum/100:.2f} of ${order_total_amount/100:.2f}")
-        return {
-            'success': False,
-            'error': 'Order not fully paid yet',
-            'order_id': order_id,
-            'base_sum': order_base_sum,
-            'order_total': order_total_amount,
-            'paid_percentage': (order_base_sum / order_total_amount * 100) if order_total_amount > 0 else 0
-        }
-    
-    # If fully paid, create the order
-    logger.info(f"Order {order_id} is fully paid! Creating order via /create endpoint")
-    
-    try:
-        # Call the order creation endpoint
-        order_response = requests.post(
-            "http://localhost:8000/api/orders/create/",
-            headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'order_id': order_id,
-                'amount': order_total_amount,
-                'currency': 'GBP'
-            }
-        )
-        
-        if order_response.status_code == 200:
-            order_data = order_response.json()
-            if order_data.get('success'):
-                logger.info(f"Successfully created order {order_id} in Square")
-                return {
-                    'success': True,
-                    'order_id': order_id,
-                    'square_order': order_data.get('order'),
-                    'message': 'Order created successfully - payment complete'
-                }
-            else:
-                logger.error(f"Failed to create order: {order_data.get('error', 'Unknown error')}")
-                return {
-                    'success': False,
-                    'error': f"Order creation failed: {order_data.get('error', 'Unknown error')}",
-                    'order_id': order_id
-                }
-        else:
-            logger.error(f"Order creation API returned status {order_response.status_code}")
-            return {
-                'success': False,
-                'error': f"Order creation API error: {order_response.status_code}",
-                'order_id': order_id
-            }
-            
-    except Exception as e:
-        logger.exception(f"Exception occurred while creating order: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e),
-            'order_id': order_id
-        }
-
-def create_square_external_payment(order_id, base_sum):
-    """
-    Helper function to create an external payment in Square when base amounts match order total
-    Gets the order total from the database instead of calling Square API
-    """
-    logger.info(f"Attempting to create Square external payment for order_id: {order_id} with base_sum (cents): {base_sum}")
-    
-    try:
-        # Get the order total from the database instead of calling Square
-        order_payment = PhillyCheesesteakPayment.objects.filter(
-            order_id=order_id,
-            total_money__isnull=False
-        ).first()
-        
-        if not order_payment or order_payment.total_money is None:
-            logger.warning(f"No payment record with total_money found for order_id: {order_id}")
-            return {
-                'success': False,
-                'error': 'No payment record with order total found in database',
-                'order_id': order_id
-            }
-        
-        # Get the total amount from the database record
-        order_total_amount = order_payment.total_money
-        
-        # Calculate the sum of all tip amounts for this order
-        tip_sum = PhillyCheesesteakPayment.objects.filter(
-            order_id=order_id
-        ).aggregate(sum_tip_amount=Sum('tip_amount'))['sum_tip_amount'] or 0
-        
-        logger.info(f"Order total from database (cents): {order_total_amount}, Base sum (cents): {base_sum}")
-        logger.info(f"Total tips for this order (cents): {tip_sum}")
-        
-        # Check if the sum of base amounts matches the order total
-        if base_sum != order_total_amount:
-            logger.info(f"Sum of base amounts ({base_sum} cents) does not match order total ({order_total_amount} cents)")
-            logger.info(f"Amounts in currency format: base_sum=${base_sum/100:.2f}, order_total=${order_total_amount/100:.2f}")
-            return {
-                'success': False,
-                'error': 'Sum of base amounts does not match order total',
-                'order_id': order_id,
-                'base_sum': base_sum,
-                'order_total': order_total_amount,
-                'base_sum_formatted': f"${base_sum/100:.2f}",
-                'order_total_formatted': f"${order_total_amount/100:.2f}",
-                'match': False
-            }
-        
-        # If they match, create the external payment
-        logger.info(f"Creating external payment in Square for order_id: {order_id} with amount: {base_sum} cents (${base_sum/100:.2f})")
-        logger.info(f"Including total tips of {tip_sum} cents (${tip_sum/100:.2f})")
-        square_adapter = SquareAdapter()
-        result = square_adapter.create_external_payment(
-            order_id=order_id,
-            amount=base_sum,  # Already in cents, pass directly
-            source="stripe",
-            tip_amount=tip_sum  # Pass the sum of all tips for this order
-        )
-        
-        if result.get('success'):
-            logger.info(f"Successfully created external payment in Square for order_id: {order_id} - Amount: ${base_sum/100:.2f}, Tips: ${tip_sum/100:.2f}")
-            return {
-                'success': True,
-                'order_id': order_id,
-                'amount': base_sum,
-                'amount_formatted': f"${base_sum/100:.2f}",
-                'tip_sum': tip_sum,
-                'tip_sum_formatted': f"${tip_sum/100:.2f}",
-                'order_total': order_total_amount,
-                'order_total_formatted': f"${order_total_amount/100:.2f}",
-                'match': True,
-                'square_payment': result.get('payment')
-            }
-        else:
-            error_msg = result.get('error', 'Unknown error creating Square payment')
-            logger.error(f"Failed to create external payment in Square: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'order_id': order_id,
-                'amount': base_sum,
-                'amount_formatted': f"${base_sum/100:.2f}",
-                'tip_sum': tip_sum,
-                'tip_sum_formatted': f"${tip_sum/100:.2f}",
-                'match': True
-            }
-            
-    except Exception as e:
-        logger.exception(f"Exception occurred while creating external payment: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
 
 @csrf_exempt
 def record_philly_payment(request):
     """
     Endpoint to record successful payments to the Marwan's-Philly-Cheesesteak-Payments table
     All amounts are in cents
+    Order should already exist - we only record the payment
     """
     if request.method == 'POST':
         try:
@@ -339,7 +178,7 @@ def record_philly_payment(request):
                 try:
                     logger.info(f"Fetching order details for order_id: {order_id}")
                     order_response = requests.get(
-                        f"http://localhost:8000/api/orders/get/{order_id}/",
+                        f"http://localhost:8000/api/orders/{order_id}/",
                         headers={
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
@@ -353,13 +192,19 @@ def record_philly_payment(request):
                             order_total_money = total_money_data.get('amount')
                             order_total_currency = total_money_data.get('currency', 'GBP')
                             logger.info(f"Retrieved total_money from order: {order_total_money} {order_total_currency}")
+                        else:
+                            logger.warning(f"Order API returned success=False: {order_data.get('error')}")
                     else:
                         logger.warning(f"Failed to fetch order details, status code: {order_response.status_code}")
                 except Exception as e:
                     logger.exception(f"Error fetching order details: {str(e)}")
             
-            logger.info(f"Recording payment - Order ID: {order_id}, Payment ID: {payment_id}, Amount: {total_amount} cents (${total_amount/100:.2f})")
-            logger.debug(f"Payment details - Base: {base_amount} cents, Tip: {tip_amount} cents, Order Total: {order_total_money} {order_total_currency}")
+            logger.info(f"Recording payment - Order ID: {order_id}, Payment ID: {payment_id}")
+            if total_amount:
+                logger.info(f"Amount: {total_amount} cents (${total_amount/100:.2f})")
+            logger.debug(f"Payment details - Base: {base_amount} cents, Tip: {tip_amount} cents")
+            if order_total_money:
+                logger.debug(f"Order Total: {order_total_money} {order_total_currency}")
             
             # Get location ID from environment variables
             location_id = os.getenv('SQUARE_LOCATION_ID')
@@ -408,15 +253,17 @@ def record_philly_payment(request):
             
             logger.info(f"Current sum of base_amounts for order_id {order_id}: {order_base_sum} cents (${order_base_sum/100:.2f})")
             
-            # Check if order is fully paid and create order if so
-            logger.info(f"Checking if order {order_id} is fully paid")
-            order_creation_result = create_order_when_fully_paid(order_id, order_base_sum, order_total_money)
-            
-            # Log the result of the order creation attempt
-            if order_creation_result.get('success'):
-                logger.info(f"Order {order_id} created successfully - payment complete!")
-            else:
-                logger.info(f"Order {order_id} not created: {order_creation_result.get('error', 'Unknown reason')}")
+            # Now try to create external payment in Square
+            try:
+                logger.info(f"Attempting to create external payment in Square for order_id: {order_id}")
+                square_payment_result = create_square_external_payment(order_id, order_base_sum)
+                logger.info(f"Square external payment result: {square_payment_result}")
+            except Exception as e:
+                logger.exception(f"Error creating external payment in Square: {str(e)}")
+                square_payment_result = {
+                    'success': False,
+                    'error': f"Exception creating external payment: {str(e)}"
+                }
             
             # Prepare the response
             response_data = {
@@ -432,7 +279,7 @@ def record_philly_payment(request):
                 'order_total_formatted': f"${order_total_money/100:.2f}" if order_total_money else None,
                 'order_base_sum': order_base_sum,
                 'order_base_sum_formatted': f"${order_base_sum/100:.2f}",
-                'order_creation_attempt': order_creation_result
+                'square_external_payment': square_payment_result
             }
             
             return JsonResponse(response_data)
@@ -445,6 +292,113 @@ def record_philly_payment(request):
             }, status=500)
             
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+def create_square_external_payment(order_id, base_sum):
+    """
+    Helper function to create an external payment in Square when base amounts match order total
+    Gets the order total from the database instead of calling Square API
+    """
+    logger.info(f"=== CREATE SQUARE EXTERNAL PAYMENT START ===")
+    logger.info(f"Order ID: {order_id}")
+    logger.info(f"Base sum (cents): {base_sum} (${base_sum/100:.2f})")
+    
+    try:
+        # Get the order total from the database instead of calling Square
+        order_payment = PhillyCheesesteakPayment.objects.filter(
+            order_id=order_id,
+            total_money__isnull=False
+        ).first()
+        
+        if not order_payment or order_payment.total_money is None:
+            logger.warning(f"No payment record with total_money found for order_id: {order_id}")
+            return {
+                'success': False,
+                'error': 'No payment record with order total found in database',
+                'order_id': order_id
+            }
+        
+        # Get the total amount from the database record
+        order_total_amount = order_payment.total_money
+        
+        # Calculate the sum of all tip amounts for this order
+        tip_sum = PhillyCheesesteakPayment.objects.filter(
+            order_id=order_id
+        ).aggregate(sum_tip_amount=Sum('tip_amount'))['sum_tip_amount'] or 0
+        
+        logger.info(f"Order total from database (cents): {order_total_amount} (${order_total_amount/100:.2f})")
+        logger.info(f"Base sum (cents): {base_sum} (${base_sum/100:.2f})")
+        logger.info(f"Total tips for this order (cents): {tip_sum} (${tip_sum/100:.2f})")
+        
+        # Check if the sum of base amounts matches the order total
+        if base_sum != order_total_amount:
+            logger.info(f"Sum of base amounts ({base_sum} cents) does not match order total ({order_total_amount} cents)")
+            logger.info(f"Amounts in currency format: base_sum=${base_sum/100:.2f}, order_total=${order_total_amount/100:.2f}")
+            return {
+                'success': False,
+                'error': 'Sum of base amounts does not match order total',
+                'order_id': order_id,
+                'base_sum': base_sum,
+                'order_total': order_total_amount,
+                'base_sum_formatted': f"${base_sum/100:.2f}",
+                'order_total_formatted': f"${order_total_amount/100:.2f}",
+                'match': False
+            }
+        
+        # If they match, create the external payment
+        logger.info(f"=== CALLING SQUARE ADAPTER CREATE_EXTERNAL_PAYMENT ===")
+        logger.info(f"Order ID: {order_id}")
+        logger.info(f"Amount: {base_sum} cents (${base_sum/100:.2f})")
+        logger.info(f"Tip Amount: {tip_sum} cents (${tip_sum/100:.2f})")
+        logger.info(f"Source: stripe")
+        
+        square_adapter = SquareAdapter()
+        result = square_adapter.create_external_payment(
+            order_id=order_id,
+            amount=base_sum,  # Already in cents, pass directly
+            tip_amount=tip_sum,  # Pass the sum of all tips for this order
+            source="stripe"
+        )
+        
+        logger.info(f"Square adapter result: {result}")
+        
+        if result.get('success'):
+            logger.info(f"✅ Successfully created external payment in Square for order_id: {order_id} - Amount: ${base_sum/100:.2f}, Tips: ${tip_sum/100:.2f}")
+            return {
+                'success': True,
+                'order_id': order_id,
+                'amount': base_sum,
+                'amount_formatted': f"${base_sum/100:.2f}",
+                'tip_sum': tip_sum,
+                'tip_sum_formatted': f"${tip_sum/100:.2f}",
+                'order_total': order_total_amount,
+                'order_total_formatted': f"${order_total_amount/100:.2f}",
+                'match': True,
+                'square_payment': result.get('payment')
+            }
+        else:
+            error_msg = result.get('error', 'Unknown error creating Square payment')
+            logger.error(f"❌ Failed to create external payment in Square: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg,
+                'order_id': order_id,
+                'amount': base_sum,
+                'amount_formatted': f"${base_sum/100:.2f}",
+                'tip_sum': tip_sum,
+                'tip_sum_formatted': f"${tip_sum/100:.2f}",
+                'match': True
+            }
+            
+    except Exception as e:
+        logger.exception(f"💥 Exception occurred while creating external payment: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+    finally:
+        logger.info(f"=== CREATE SQUARE EXTERNAL PAYMENT END ===\n")
+
 
 @csrf_exempt
 def get_order_base_sum(request, order_id=None):

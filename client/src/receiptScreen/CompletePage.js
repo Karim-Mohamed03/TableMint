@@ -4,7 +4,9 @@ import { loadStripe } from "@stripe/stripe-js";
 import axios from "axios";
 import "./CompletePage.css";
 
-const stripePromise = loadStripe("pk_test_51MNLkFEACKuyUvsyQSMfwsU2oCp1tMz9B3EyvzrVqkrE3664tGDabLl94k7xxfrAMJiV8mnYw2Ri8WB2Y6UF0Mey00QS6yNYOj");
+const stripePromise = loadStripe("pk_test_51RaEPK4cqToPgSHS8ngSIwFZBod0famsu6BB0erJlCgBFVcYlO2pq2YFxFX2Ux0qp5IENkciYVzsGk7KxjaWb9xN00KTY0Xift", {
+  stripeAccount: 'acct_1Rab3QQBvc6fFqZ8'  // Connected account ID
+});
 
 // Star Rating Modal Component
 const StarRatingModal = ({ isOpen, onClose }) => {

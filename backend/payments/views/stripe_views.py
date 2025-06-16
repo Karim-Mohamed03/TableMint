@@ -18,8 +18,8 @@ logger = logging.getLogger('payments')
 # Get the base directory (backend folder)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Always load environment variables from .env.example
-env_file = os.path.join(BASE_DIR, '.env.example')
+# Load environment variables from .env file (not .env.example)
+env_file = os.path.join(BASE_DIR, '.env')
 load_dotenv(env_file)
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
@@ -40,6 +40,9 @@ def create_payment_intent(request):
                     'error': f'Unable to calculate order amount: {str(calc_error)}'
                 }, status=400)
             
+            #Calculate application fee amount
+            application_fee = int(round(amount * 0.02))
+            
             # Create a PaymentIntent with the order amount and currency
             intent = stripe.PaymentIntent.create(
                 amount=amount,
@@ -48,6 +51,8 @@ def create_payment_intent(request):
                 automatic_payment_methods={
                     'enabled': True,
                 },
+                stripe_account='acct_1Rab3QQBvc6fFqZ8',  # Stripe Connect account ID
+                application_fee_amount=application_fee,  # Application fee in cents
             )
             return JsonResponse({
                 'clientSecret': intent['client_secret']

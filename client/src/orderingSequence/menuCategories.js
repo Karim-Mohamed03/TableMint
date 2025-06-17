@@ -349,6 +349,8 @@ const MenuCategories = () => {
   const navigate = useNavigate();
   const { locationId } = useParams(); // Extract location_id from URL
   const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem, clearCart } = useCart();
+  
+  // State for menu data
   const [catalogData, setCatalogData] = useState(null);
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -357,6 +359,161 @@ const MenuCategories = () => {
   const [inventoryData, setInventoryData] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for restaurant and table context
+  const [tableContext, setTableContext] = useState(null);
+  const [restaurantContext, setRestaurantContext] = useState(null);
+  const [effectiveLocationId, setEffectiveLocationId] = useState(null);
+
+  // Load context from sessionStorage and URL parameters
+  useEffect(() => {
+    // Get table context from sessionStorage
+    const storedTableContext = sessionStorage.getItem('table_context');
+    if (storedTableContext) {
+      try {
+        const tableData = JSON.parse(storedTableContext);
+        setTableContext(tableData);
+        console.log('Loaded table context:', tableData);
+      } catch (e) {
+        console.error('Failed to parse table context:', e);
+      }
+    }
+
+    // Get restaurant context from sessionStorage
+    const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+    if (storedRestaurantContext) {
+      try {
+        const restaurantData = JSON.parse(storedRestaurantContext);
+        setRestaurantContext(restaurantData);
+        console.log('Loaded restaurant context:', restaurantData);
+      } catch (e) {
+        console.error('Failed to parse restaurant context:', e);
+      }
+    }
+
+    // Determine effective location ID from multiple sources
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlLocationId = urlParams.get('location_id');
+    const urlRestaurantId = urlParams.get('restaurant_id');
+    
+    // Priority order: URL param > restaurant context > URL param from path
+    let finalLocationId = urlLocationId || 
+                          (storedRestaurantContext ? JSON.parse(storedRestaurantContext).location_id : null) || 
+                          locationId;
+    
+    console.log('Location ID sources:', {
+      urlLocationId,
+      restaurantLocationId: storedRestaurantContext ? JSON.parse(storedRestaurantContext).location_id : null,
+      pathLocationId: locationId,
+      finalLocationId
+    });
+    
+    setEffectiveLocationId(finalLocationId);
+  }, [locationId]);
+
+  // Fetch catalog data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      console.log(`🚀 [DEBUG] Starting data fetch process with location_id: ${effectiveLocationId}`);
+      console.log(`🏪 [DEBUG] Restaurant context:`, restaurantContext);
+      console.log(`🍽️ [DEBUG] Table context:`, tableContext);
+      
+      setLoading(true);
+      setError(null);
+      
+      // Use restaurant-specific location ID if available
+      const locationIdToUse = effectiveLocationId || restaurantContext?.location_id;
+      console.log(`📍 [DEBUG] Using location ID: ${locationIdToUse}`);
+      
+      // Fetch catalog data with location_id
+      console.log(`📋 [DEBUG] Fetching catalog data for location: ${locationIdToUse}`);
+      const catalogResponse = await getCatalogData(locationIdToUse);
+      console.log(`📋 [DEBUG] Catalog response:`, catalogResponse);
+      
+      if (catalogResponse && catalogResponse.success) {
+        console.log(`✅ [DEBUG] Catalog fetch successful, setting catalog data`);
+        setCatalogData(catalogResponse.objects);
+        
+        // Set image map if available
+        if (catalogResponse.imageMap) {
+          console.log(`🖼️ [DEBUG] Setting image map with ${Object.keys(catalogResponse.imageMap).length} images`);
+          setImageMap(catalogResponse.imageMap);
+        }
+        
+        // Extract item variation IDs for inventory check, but keep mapping to item IDs
+        const items = catalogResponse.objects.filter(obj => obj.type === 'ITEM');
+        console.log(`🔍 [DEBUG] Found ${items.length} items in catalog`);
+        
+        const itemVariationMap = []; // Array of {itemId, variationId} objects
+        
+        items.forEach((item, index) => {
+          console.log(`🔍 [DEBUG] Processing item ${index + 1}/${items.length}: ${item.id} (${item.item_data?.name})`);
+          if (item.item_data?.variations && item.item_data.variations.length > 0) {
+            // Use the first variation (most common case)
+            const variation = item.item_data.variations[0];
+            console.log(`🔍 [DEBUG] Item ${item.id} has variation: ${variation.id}`);
+            itemVariationMap.push({
+              itemId: item.id,
+              variationId: variation.id
+            });
+          } else {
+            console.log(`⚠️ [DEBUG] Item ${item.id} has no variations`);
+          }
+        });
+        
+        console.log(`🔍 [DEBUG] Final item variation map (${itemVariationMap.length} items):`, itemVariationMap);
+        
+        if (itemVariationMap.length > 0) {
+          console.log(`📦 [DEBUG] Starting inventory fetch for ${itemVariationMap.length} variations with location_id: ${locationIdToUse}`);
+          setInventoryLoading(true);
+          
+          // Pass the location_id to the inventory fetch
+          const inventoryResponse = await getInventoryData(itemVariationMap, locationIdToUse);
+          console.log(`📦 [DEBUG] Inventory response:`, inventoryResponse);
+          
+          if (inventoryResponse && inventoryResponse.success) {
+            console.log(`✅ [DEBUG] Inventory fetch successful, processing data`);
+            // Convert inventory array to object for easier lookup
+            // Map variation inventory back to item IDs for UI consistency
+            const inventoryMap = {};
+            inventoryResponse.counts.forEach((count, index) => {
+              console.log(`🔄 [DEBUG] Processing inventory count ${index + 1}/${inventoryResponse.counts.length}:`, count);
+              // Find the item ID that corresponds to this variation ID
+              const itemVariation = itemVariationMap.find(mapping => mapping.variationId === count.catalog_object_id);
+              if (itemVariation) {
+                console.log(`✅ [DEBUG] Mapping variation ${count.catalog_object_id} to item ${itemVariation.itemId}`);
+                inventoryMap[itemVariation.itemId] = {
+                  quantity: parseInt(count.quantity || '0'),
+                  state: count.state,
+                  location_id: count.location_id
+                };
+              } else {
+                console.log(`⚠️ [DEBUG] No item mapping found for variation ${count.catalog_object_id}`);
+              }
+            });
+            console.log(`🔄 [DEBUG] Final inventory map:`, inventoryMap);
+            setInventoryData(inventoryMap);
+          } else {
+            console.error(`❌ [DEBUG] Inventory fetch failed or returned no success`);
+          }
+          setInventoryLoading(false);
+        } else {
+          console.log(`⚠️ [DEBUG] No item variations found, skipping inventory fetch`);
+        }
+      } else {
+        console.error(`❌ [DEBUG] Catalog fetch failed`);
+        setError('Failed to load menu items');
+      }
+      
+      console.log(`🏁 [DEBUG] Data fetch process complete`);
+      setLoading(false);
+    };
+
+    // Only fetch data when we have an effective location ID or when restaurant context is loaded
+    if (effectiveLocationId !== null || restaurantContext) {
+      fetchData();
+    }
+  }, [effectiveLocationId, restaurantContext]); // Add dependencies for restaurant-specific data
 
   // Handle adding item to cart
   const handleAddToCart = (item) => {
@@ -541,100 +698,6 @@ const MenuCategories = () => {
 
 
 
-  // Fetch catalog data on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      console.log(`🚀 [DEBUG] Starting data fetch process with location_id: ${locationId}`);
-      setLoading(true);
-      setError(null);
-      
-      // Fetch catalog data with location_id
-      console.log(`📋 [DEBUG] Fetching catalog data for location: ${locationId}`);
-      const catalogResponse = await getCatalogData(locationId);
-      console.log(`📋 [DEBUG] Catalog response:`, catalogResponse);
-      
-      if (catalogResponse && catalogResponse.success) {
-        console.log(`✅ [DEBUG] Catalog fetch successful, setting catalog data`);
-        setCatalogData(catalogResponse.objects);
-        
-        // Set image map if available
-        if (catalogResponse.imageMap) {
-          console.log(`🖼️ [DEBUG] Setting image map with ${Object.keys(catalogResponse.imageMap).length} images`);
-          setImageMap(catalogResponse.imageMap);
-        }
-        
-        // Extract item variation IDs for inventory check, but keep mapping to item IDs
-        const items = catalogResponse.objects.filter(obj => obj.type === 'ITEM');
-        console.log(`🔍 [DEBUG] Found ${items.length} items in catalog`);
-        
-        const itemVariationMap = []; // Array of {itemId, variationId} objects
-        
-        items.forEach((item, index) => {
-          console.log(`🔍 [DEBUG] Processing item ${index + 1}/${items.length}: ${item.id} (${item.item_data?.name})`);
-          if (item.item_data?.variations && item.item_data.variations.length > 0) {
-            // Use the first variation (most common case)
-            const variation = item.item_data.variations[0];
-            console.log(`🔍 [DEBUG] Item ${item.id} has variation: ${variation.id}`);
-            itemVariationMap.push({
-              itemId: item.id,
-              variationId: variation.id
-            });
-          } else {
-            console.log(`⚠️ [DEBUG] Item ${item.id} has no variations`);
-          }
-        });
-        
-        console.log(`🔍 [DEBUG] Final item variation map (${itemVariationMap.length} items):`, itemVariationMap);
-        
-        if (itemVariationMap.length > 0) {
-          console.log(`📦 [DEBUG] Starting inventory fetch for ${itemVariationMap.length} variations with location_id: ${locationId}`);
-          setInventoryLoading(true);
-          
-          // Pass the location_id to the inventory fetch
-          const inventoryResponse = await getInventoryData(itemVariationMap, locationId);
-          console.log(`📦 [DEBUG] Inventory response:`, inventoryResponse);
-          
-          if (inventoryResponse && inventoryResponse.success) {
-            console.log(`✅ [DEBUG] Inventory fetch successful, processing data`);
-            // Convert inventory array to object for easier lookup
-            // Map variation inventory back to item IDs for UI consistency
-            const inventoryMap = {};
-            inventoryResponse.counts.forEach((count, index) => {
-              console.log(`🔄 [DEBUG] Processing inventory count ${index + 1}/${inventoryResponse.counts.length}:`, count);
-              // Find the item ID that corresponds to this variation ID
-              const itemVariation = itemVariationMap.find(mapping => mapping.variationId === count.catalog_object_id);
-              if (itemVariation) {
-                console.log(`✅ [DEBUG] Mapping variation ${count.catalog_object_id} to item ${itemVariation.itemId}`);
-                inventoryMap[itemVariation.itemId] = {
-                  quantity: parseInt(count.quantity || '0'),
-                  state: count.state,
-                  location_id: count.location_id
-                };
-              } else {
-                console.log(`⚠️ [DEBUG] No item mapping found for variation ${count.catalog_object_id}`);
-              }
-            });
-            console.log(`🔄 [DEBUG] Final inventory map:`, inventoryMap);
-            setInventoryData(inventoryMap);
-          } else {
-            console.error(`❌ [DEBUG] Inventory fetch failed or returned no success`);
-          }
-          setInventoryLoading(false);
-        } else {
-          console.log(`⚠️ [DEBUG] No item variations found, skipping inventory fetch`);
-        }
-      } else {
-        console.error(`❌ [DEBUG] Catalog fetch failed`);
-        setError('Failed to load menu items');
-      }
-      
-      console.log(`🏁 [DEBUG] Data fetch process complete`);
-      setLoading(false);
-    };
-
-    fetchData();
-  }, [locationId]); // Add locationId as dependency to refetch when it changes
-
   // Parse and organize catalog data
   const organizedData = React.useMemo(() => {
     if (!catalogData) return { categories: [], items: [] };
@@ -645,12 +708,16 @@ const MenuCategories = () => {
     return { categories, items };
   }, [catalogData]);
 
-  // Format currency
-  const formatCurrency = (amount, currency = 'GBP') => {
+  // Format currency using restaurant's currency preference
+  const formatCurrency = (amount, currency = null) => {
     if (!amount) return '£0.00';
+    
+    // Use restaurant's currency if available, otherwise default
+    const currencyToUse = currency || restaurantContext?.currency || 'GBP';
+    
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: currency
+      currency: currencyToUse
     }).format(amount / 100);
   };
 
@@ -663,27 +730,27 @@ const MenuCategories = () => {
     return inventory.quantity > 0 && inventory.state !== 'SOLD_OUT';
   };
 
-  // Filter items by category and location
+  // Filter items by category and location (using effective location ID)
   const getFilteredItems = () => {
     let items = organizedData.items;
     
     console.log(`🔍 [FILTER DEBUG] Starting with ${items.length} total items`);
-    console.log(`🔍 [FILTER DEBUG] Current locationId from URL: "${locationId}"`);
+    console.log(`🔍 [FILTER DEBUG] Current effectiveLocationId: "${effectiveLocationId}"`);
     console.log(`🔍 [FILTER DEBUG] Selected category: "${selectedCategory}"`);
     
-    // Filter by location first if locationId is provided
-    if (locationId) {
-      console.log(`🔍 [LOCATION FILTER] Filtering ${items.length} items for location: ${locationId}`);
+    // Filter by location first if effectiveLocationId is provided
+    if (effectiveLocationId) {
+      console.log(`🔍 [LOCATION FILTER] Filtering ${items.length} items for location: ${effectiveLocationId}`);
       
       items.forEach((item, index) => {
         console.log(`🔍 [ITEM ${index + 1}] ${item.item_data?.name} (${item.id})`);
         console.log(`  - present_at_all_locations: ${item.present_at_all_locations}`);
         console.log(`  - present_at_location_ids: ${JSON.stringify(item.present_at_location_ids)}`);
-        const isAvailable = isItemAvailableAtLocation(item, locationId);
+        const isAvailable = isItemAvailableAtLocation(item, effectiveLocationId);
         console.log(`  - isAvailable: ${isAvailable}`);
       });
       
-      items = items.filter(item => isItemAvailableAtLocation(item, locationId));
+      items = items.filter(item => isItemAvailableAtLocation(item, effectiveLocationId));
       console.log(`🔍 [LOCATION FILTER] After location filtering: ${items.length} items remaining`);
       
       if (items.length > 0) {
@@ -739,8 +806,11 @@ const MenuCategories = () => {
       <div className="menu-header">
         <div className="header-content">
           <div className="header-text">
-            <h1>Menu</h1>
-            <p>Choose from our delicious selection</p>
+            <h1>{restaurantContext?.name || 'Menu'}</h1>
+            <p>
+              {tableContext ? `Table ${tableContext.label} • ` : ''}
+              Choose from our delicious selection
+            </p>
           </div>
           <div className="header-actions">
             {getItemCount() > 0 && (
@@ -754,6 +824,7 @@ const MenuCategories = () => {
           </div>
         </div>
       </div>
+
 
       {/* Category Filter */}
       <div className="category-filter">
@@ -892,6 +963,7 @@ const MenuCategories = () => {
           </div>
         </div>
       </div>
+
     );
   })}
 </div>
@@ -915,23 +987,23 @@ const MenuCategories = () => {
       )}
 
       {/* Cart Confirmation Modal */}
-      <CartConfirmationModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmOrder}
-      />
+  <CartConfirmationModal 
+    isOpen={isModalOpen}
+    onClose={handleCloseModal}
+    onConfirm={handleConfirmOrder}
+  />
 
   <style jsx>{`
-        .menu-categories {
-          max-width: 100%;
-          margin: 0;
-          padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background: #fff;
-          min-height: 100vh;
-        }
+    .menu-categories {
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #fff;
+      min-height: 100vh;
+    }
 
-        .loading-container {
+    .loading-container {
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1361,74 +1433,8 @@ const MenuCategories = () => {
         .no-items {
           text-align: center;
           padding: 60px 20px;
-          color: #718096;
         }
-
-        .bottom-cart-container {
-          position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 1000;
-          padding: 0 20px;
-        }
-
-        .bottom-cart-button {
-          background: #000000;
-          color: white;
-          border: none;
-          border-radius: 25px;
-          padding: 12px 24px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 16px;
-          font-weight: 500;
-          transition: all 0.2s ease;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-          min-width: 160px;
-          justify-content: center;
-        }
-
-        .bottom-cart-button:hover {
-          background: #333333;
-          transform: scale(1.02);
-        }
-
-        .cart-text {
-          white-space: nowrap;
-        }
-
-        /* Mobile-first design - no media queries needed as this is already mobile-optimized */
-        
-        /* Larger screens */
-        @media (min-width: 768px) {
-          .menu-categories {
-            max-width: 480px;
-            margin: 0 auto;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-          }
-          
-          .menu-header {
-            padding: 20px 20px 12px 20px;
-          }
-          
-          .category-filter {
-            padding: 20px;
-          }
-          
-          .menu-item-card {
-            padding: 20px;
-          }
-          
-          .item-image-container {
-            width: 100px;
-            height: 100px;
-          }
-        }
-      `}
-    </style>
+      `}</style>
     </div>
   );
 };

@@ -9,6 +9,7 @@ import SmartMenu from "./orderingSequence/smartMenu";
 import CartPage from "./pages/CartPage";
 import SharedCartPage from "./pages/SharedCartPage";
 import SplitPaymentPage from "./pages/SplitPaymentPage";
+import TablePage from "./pages/TablePage";
 import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
 
@@ -140,16 +141,17 @@ function App() {
                   />
                 } 
               />
-              {/* <Route 
-                path="/menu/:locationId" 
+              {/* QR Code Table Route */}
+              <Route 
+                path="/table/:token" 
+                element={<TablePage />} 
+              />
+              <Route 
+                path="/QROrderPay" 
                 element={<MenuCategories />} 
               />
               <Route 
                 path="/menu" 
-                element={<MenuCategories />} 
-              /> */}
-              <Route 
-                path="/QROrderPay" 
                 element={<MenuCategories />} 
               />
               <Route 

@@ -1,10 +1,27 @@
 from django.db import models
 
 class Restaurant(models.Model):
+    # Keep existing primary key structure
     name = models.CharField(max_length=100)
-    address = models.CharField(max_length=255)
-    phone = models.CharField(max_length=20)
-    email = models.EmailField()
+    
+    # New fields for POS integration
+    location_id = models.TextField(null=True, blank=True)
+    access_token = models.TextField(null=True, blank=True)  # Encrypted access token
+    refresh_token = models.TextField(null=True, blank=True)
+    token_expires = models.DateTimeField(null=True, blank=True)
+    currency = models.TextField(default='GBP')
+    timezone = models.TextField(default='Europe/London')
+    integration_name = models.TextField(null=True, blank=True)
+    is_connected = models.BooleanField(default=False, null=True)
+    active_menu = models.TextField(null=True, blank=True)  # Menu ID from Square
+    stripe_account_id = models.TextField(null=True, blank=True)
+    stripe_is_connected = models.BooleanField(default=False)
+    stripe_onboarding_completed = models.BooleanField(default=False)
+    
+    # Keep existing branding fields
+    address = models.CharField(max_length=255, null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
     logo = models.ImageField(upload_to='restaurant_logos/', blank=True, null=True)
     background_image = models.ImageField(upload_to='restaurant_backgrounds/', blank=True, null=True, 
                                          help_text="Background image to display on the payment page")
@@ -18,7 +35,7 @@ class Restaurant(models.Model):
                                             help_text="Display restaurant logo on payment receipt")
     show_background_image = models.BooleanField(default=True, 
                                              help_text="Display background image on payment page")
-    # This field would contain API credentials for the restaurant's POS system
+    # Legacy fields for backward compatibility
     pos_api_key = models.CharField(max_length=255, blank=True, null=True, help_text="API key for connecting to POS system")
     pos_type = models.CharField(max_length=50, blank=True, null=True, help_text="Type of POS system used")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -26,7 +43,7 @@ class Restaurant(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.name
+        return self.name or f"Restaurant {self.id}"
 
     def branding_config(self):
         """
@@ -34,7 +51,7 @@ class Restaurant(models.Model):
         for use in the frontend
         """
         return {
-            'id': self.id,
+            'id': str(self.id),
             'name': self.name,
             'logo_url': self.logo.url if self.logo else None,
             'background_image_url': self.background_image.url if self.background_image else None,

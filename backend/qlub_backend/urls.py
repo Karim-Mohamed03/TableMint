@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 import os
+from tables.views import table_qr_redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +31,9 @@ urlpatterns = [
     path('api/webhooks/', include('webhooks.urls')),
     # Include restaurant URLs
     path('', include('restaurants.urls')),
+    
+    # QR Code redirect route - this handles the QR code scans
+    path('table/<str:token>/', table_qr_redirect, name='table-qr-redirect'),
     
     # Direct URL path to serve assets directly
     path('static/assets/<path:path>', serve, {

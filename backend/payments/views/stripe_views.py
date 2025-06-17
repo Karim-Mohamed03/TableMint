@@ -183,7 +183,7 @@ def record_philly_payment(request):
                 try:
                     logger.info(f"Fetching order details for order_id: {order_id}")
                     order_response = requests.get(
-                        f"http://localhost:8000/api/orders/{order_id}/",
+                        f"https://tablemint.onrender.com/api/orders/{order_id}/",
                         headers={
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'

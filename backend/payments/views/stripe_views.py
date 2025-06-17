@@ -12,6 +12,14 @@ from dotenv import load_dotenv
 from ..models import PhillyCheesesteakPayment
 from pos.square_adapter import SquareAdapter
 
+def add_cors_headers(response):
+    """Add CORS headers to response for payment endpoints"""
+    response['Access-Control-Allow-Origin'] = 'https://test-app-fawn-phi.vercel.app'
+    response['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
 # Set up logger - use the 'payments' logger configured in settings.py
 logger = logging.getLogger('payments')
 
@@ -27,6 +35,11 @@ stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
 @csrf_exempt
 def create_payment_intent(request):
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = JsonResponse({'status': 'ok'})
+        return add_cors_headers(response)
+        
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -36,9 +49,10 @@ def create_payment_intent(request):
                 amount = calculate_order_amount(data.get('items', []))
             except ValueError as calc_error:
                 logger.error(f"Failed to calculate order amount: {str(calc_error)}")
-                return JsonResponse({
+                response = JsonResponse({
                     'error': f'Unable to calculate order amount: {str(calc_error)}'
                 }, status=400)
+                return add_cors_headers(response)
             
             #Calculate application fee amount
             application_fee = int(round(amount * 0.02))
@@ -54,13 +68,17 @@ def create_payment_intent(request):
                 stripe_account='acct_1Rab3QQBvc6fFqZ8',  # Stripe Connect account ID
                 application_fee_amount=application_fee,  # Application fee in cents
             )
-            return JsonResponse({
+            response = JsonResponse({
                 'clientSecret': intent['client_secret']
             })
+            return add_cors_headers(response)
         except Exception as e:
             logger.error(f"Error creating payment intent: {str(e)}")
-            return JsonResponse({'error': str(e)}, status=403)
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+            response = JsonResponse({'error': str(e)}, status=403)
+            return add_cors_headers(response)
+    
+    response = JsonResponse({'error': 'Invalid request method'}, status=405)
+    return add_cors_headers(response)
 
 
 def calculate_order_amount(items):
@@ -165,6 +183,11 @@ def record_philly_payment(request):
     All amounts are in cents
     Order should already exist - we only record the payment
     """
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = JsonResponse({'status': 'ok'})
+        return add_cors_headers(response)
+    
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -287,16 +310,19 @@ def record_philly_payment(request):
                 'square_external_payment': square_payment_result
             }
             
-            return JsonResponse(response_data)
+            response = JsonResponse(response_data)
+            return add_cors_headers(response)
             
         except Exception as e:
             logger.exception(f"Exception in record_philly_payment: {str(e)}")
-            return JsonResponse({
+            response = JsonResponse({
                 'success': False,
                 'error': str(e)
             }, status=500)
+            return add_cors_headers(response)
             
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    response = JsonResponse({'error': 'Invalid request method'}, status=405)
+    return add_cors_headers(response)
 
 
 def create_square_external_payment(order_id, base_sum):

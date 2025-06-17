@@ -6,10 +6,22 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import json
 
+def add_cors_headers(response):
+    """Add CORS headers to response for payment endpoints"""
+    response['Access-Control-Allow-Origin'] = 'https://test-app-fawn-phi.vercel.app'
+    response['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    response['Access-Control-Allow-Credentials'] = 'true'
+    return response
 
 @csrf_exempt
 def send_email_receipt(request):
     """Send email receipt to customer with payment details."""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = JsonResponse({'status': 'ok'})
+        return add_cors_headers(response)
+    
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -25,10 +37,11 @@ def send_email_receipt(request):
             
             # Validate required fields
             if not email or not payment_id:
-                return JsonResponse({
+                response = JsonResponse({
                     'success': False,
                     'error': 'Email and payment ID are required'
                 }, status=400)
+                return add_cors_headers(response)
             
             # Format currency amounts
             def format_currency(amount):
@@ -87,28 +100,33 @@ def send_email_receipt(request):
                     fail_silently=False,
                 )
                 
-                return JsonResponse({
+                response = JsonResponse({
                     'success': True,
                     'message': 'Receipt sent successfully'
                 })
+                return add_cors_headers(response)
                 
             except Exception as email_error:
                 print(f"Email sending error: {str(email_error)}")
-                return JsonResponse({
+                response = JsonResponse({
                     'success': False,
                     'error': 'Failed to send email. Please check your email configuration.'
                 }, status=500)
+                return add_cors_headers(response)
             
         except json.JSONDecodeError:
-            return JsonResponse({
+            response = JsonResponse({
                 'success': False,
                 'error': 'Invalid JSON data'
             }, status=400)
+            return add_cors_headers(response)
         except Exception as e:
             print(f"Email receipt error: {str(e)}")
-            return JsonResponse({
+            response = JsonResponse({
                 'success': False,
                 'error': str(e)
             }, status=500)
+            return add_cors_headers(response)
     
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    response = JsonResponse({'error': 'Invalid request method'}, status=405)
+    return add_cors_headers(response)

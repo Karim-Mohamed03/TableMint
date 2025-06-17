@@ -36,9 +36,22 @@ def create(request):
                 'success': False,
                 'error': 'At least one line item is required'
             }, status=400)
-            
-        # Initialize the POS service
-        pos_service = POSService()
+        
+        # Extract restaurant context from request data
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
+        
+        # Initialize the POS service with restaurant-specific credentials if provided
+        if restaurant_id or table_token:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
+        else:
+            # Fallback to default credentials from .env
+            pos_service = POSService()
+            logger.info("Using default POS service credentials from .env")
         
         # Log before calling create
         logger.info(f"About to call pos_service.create with data: {json.dumps(data, indent=2)}")

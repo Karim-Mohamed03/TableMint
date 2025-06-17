@@ -272,16 +272,31 @@ def get_catalog(request):
     
     Query Parameters:
         location_id (optional): Specific location ID to filter catalog for
+        restaurant_id (optional): Restaurant UUID to use restaurant-specific credentials
+        table_token (optional): Table token to look up restaurant through
+        menu_id (optional): Menu ID to filter items and categories for active menu
     
     Returns:
         JSON response with catalog data including items and categories
     """
     try:
-        # Get location_id from query parameters
+        # Get query parameters
         location_id = request.GET.get('location_id')
+        restaurant_id = request.GET.get('restaurant_id')
+        table_token = request.GET.get('table_token')
+        menu_id = request.GET.get('menu_id')
         
-        # Initialize the POS service (will use default adapter from factory)
-        pos_service = POSService()
+        # Initialize the POS service with restaurant-specific credentials if provided
+        if restaurant_id or table_token:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
+        else:
+            # Fallback to default credentials from .env
+            pos_service = POSService()
+            logger.info("Using default POS service credentials from .env")
         
         # Check if the adapter is authenticated
         if not pos_service.is_authenticated():
@@ -291,14 +306,45 @@ def get_catalog(request):
             }, status=401)
         
         # Get catalog data using the POS service
-        # Note: We'll pass location_id to the service, though the current Square adapter
-        # doesn't filter by location as catalog is typically global across locations
         result = pos_service.get_catalog()
         
         if result.get('success', False):
+            catalog_objects = result.get('objects', [])
+            
+            # Filter by menu_id if provided
+            if menu_id:
+                logger.info(f"Filtering catalog by menu_id: {menu_id}")
+                filtered_objects = []
+                
+                for obj in catalog_objects:
+                    # Filter items that belong to the specified menu
+                    if obj.get('type') == 'ITEM':
+                        item_data = obj.get('item_data', {})
+                        # Check if item has categories that belong to this menu
+                        categories = item_data.get('categories', [])
+                        if any(cat.get('id') == menu_id for cat in categories):
+                            filtered_objects.append(obj)
+                    
+                    # Filter categories that match the menu_id
+                    elif obj.get('type') == 'CATEGORY':
+                        if obj.get('id') == menu_id:
+                            filtered_objects.append(obj)
+                        # Also include subcategories that have this menu as parent
+                        category_data = obj.get('category_data', {})
+                        parent_category = category_data.get('parent_category', {})
+                        if parent_category.get('id') == menu_id:
+                            filtered_objects.append(obj)
+                    
+                    # Include other types (like IMAGE) as they may be referenced by filtered items
+                    elif obj.get('type') in ['IMAGE', 'TAX', 'DISCOUNT', 'MODIFIER_LIST']:
+                        filtered_objects.append(obj)
+                
+                logger.info(f"Filtered catalog: {len(catalog_objects)} -> {len(filtered_objects)} objects")
+                catalog_objects = filtered_objects
+            
             return JsonResponse({
                 'success': True,
-                'objects': result.get('objects', [])
+                'objects': catalog_objects
             })
         else:
             # Handle the error field which could be a string or list

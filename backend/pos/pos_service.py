@@ -13,7 +13,8 @@ class POSService:
     changing the service implementation.
     """
     
-    def __init__(self, adapter: Optional[POSAdapter] = None, pos_type: Optional[str] = None):
+    def __init__(self, adapter: Optional[POSAdapter] = None, pos_type: Optional[str] = None, 
+                 restaurant_id: Optional[str] = None, table_token: Optional[str] = None):
         """
         Initialize the POS service with a specific adapter.
         
@@ -21,11 +22,32 @@ class POSService:
             adapter: A concrete POSAdapter implementation. If None, one will be created
                     using the POSFactory based on the pos_type or environment configuration.
             pos_type: The type of POS adapter to create if adapter is None.
+            restaurant_id: UUID of the restaurant to get credentials for
+            table_token: Token of a table to look up restaurant through
         """
         if adapter:
             self.adapter = adapter
         else:
-            self.adapter = POSFactory.create_adapter(pos_type)
+            self.adapter = POSFactory.create_adapter(
+                pos_type=pos_type, 
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+
+    @classmethod
+    def for_restaurant(cls, restaurant_id: str = None, table_token: str = None, pos_type: str = None):
+        """
+        Create a POSService instance for a specific restaurant.
+        
+        Args:
+            restaurant_id: UUID of the restaurant
+            table_token: Token of a table to look up restaurant through
+            pos_type: Type of POS system (defaults to 'square')
+            
+        Returns:
+            POSService: An instance configured with restaurant-specific credentials
+        """
+        return cls(pos_type=pos_type, restaurant_id=restaurant_id, table_token=table_token)
             
     def create(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -24,9 +24,27 @@ const SmartMenu = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch catalog data
-      console.log(`📋 [DEBUG] Fetching catalog data...`);
-      const catalogResponse = await getCatalogData();
+      // Get restaurant context for menu filtering
+      const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+      let restaurantContext = null;
+      if (storedRestaurantContext) {
+        try {
+          restaurantContext = JSON.parse(storedRestaurantContext);
+          console.log(`🏪 [DEBUG] Restaurant context loaded:`, restaurantContext);
+        } catch (e) {
+          console.error('Failed to parse restaurant context:', e);
+        }
+      }
+      
+      // Get active menu ID from restaurant context or URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlMenuId = urlParams.get('menu_id');
+      const menuIdToUse = urlMenuId || restaurantContext?.active_menu;
+      console.log(`🍽️ [DEBUG] Using menu ID for Smart Menu: ${menuIdToUse}`);
+      
+      // Fetch catalog data with menu filtering
+      console.log(`📋 [DEBUG] Fetching catalog data with menu filter...`);
+      const catalogResponse = await getCatalogData(null, menuIdToUse);
       console.log(`📋 [DEBUG] Catalog response:`, catalogResponse);
       
       if (catalogResponse && catalogResponse.success) {
@@ -427,24 +445,6 @@ const SmartMenu = () => {
 
         .menu-item-card {
           background: white;
-          border-radius: 16px;
-          padding: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          cursor: pointer;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .menu-item-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        }
-
-        .item-content {
-          flex: 1;
-          display: flex;
           flex-direction: column;
           gap: 8px;
         }

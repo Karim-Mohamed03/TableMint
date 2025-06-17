@@ -11,6 +11,7 @@ from square.environment import SquareEnvironment
 from square.core.api_error import ApiError
 
 from .pos_adapter import POSAdapter
+from qlub_backend.encryption import decrypt_token
 
 # Get the base directory (backend folder)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,18 +22,102 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 logger = logging.getLogger(__name__)
 
 class SquareAdapter(POSAdapter):
-    def __init__(self):
-        """Initialize Square client with access token from .env file"""
-        self.access_token = os.environ.get('SQUARE_ACCESS_TOKEN')
-        self.location_id = os.environ.get('SQUARE_LOCATION_ID')
+    def __init__(self, restaurant=None, restaurant_location=None):
+        """
+        Initialize Square client with restaurant-specific credentials
+        
+        Args:
+            restaurant: Restaurant model instance with access_token, integration_name, etc.
+            restaurant_location: RestaurantLocation model instance with location_id
+        """
+        # Initialize with restaurant-specific credentials if provided
+        if restaurant and restaurant.access_token:
+            try:
+                # Try to decrypt the access token from the database
+                self.access_token = decrypt_token(restaurant.access_token)
+                logger.info(f"SquareAdapter initialized with decrypted restaurant access token for: {restaurant.name}")
+            except Exception as e:
+                logger.warning(f"Failed to decrypt access token for restaurant {restaurant.id}: {str(e)}")
+                # Check if the token might already be in plain text (for backward compatibility)
+                if restaurant.access_token and not restaurant.access_token.startswith('gAAAAAB'):
+                    # Looks like a plain text token
+                    self.access_token = restaurant.access_token
+                    logger.info(f"Using plain text access token for restaurant: {restaurant.name}")
+                else:
+                    # Fallback to .env file
+                    self.access_token = os.environ.get('SQUARE_ACCESS_TOKEN')
+                    logger.warning("Falling back to .env SQUARE_ACCESS_TOKEN")
+        else:
+            # Fallback to .env file
+            self.access_token = os.environ.get('SQUARE_ACCESS_TOKEN')
+            logger.info("No restaurant access token provided, using .env SQUARE_ACCESS_TOKEN")
+        
+        # Use location_id from restaurant_location if provided
+        if restaurant_location and restaurant_location.location_id:
+            self.location_id = restaurant_location.location_id
+            logger.info(f"SquareAdapter using location_id from restaurant_location: {self.location_id}")
+        else:
+            # Fallback to .env file
+            self.location_id = os.environ.get('SQUARE_LOCATION_ID')
+            logger.info("No restaurant location provided, using .env SQUARE_LOCATION_ID")
+        
+        # Store restaurant info for logging/debugging
+        self.restaurant = restaurant
+        self.restaurant_location = restaurant_location
         
         logger.info(f"SquareAdapter initialized with access token: {'*' * 5}{self.access_token[-4:] if self.access_token else 'None'}")
         logger.info(f"SquareAdapter location ID: {self.location_id or 'None'}")
         
         self.client = Square(
             token=self.access_token,
-            environment=SquareEnvironment.SANDBOX
+            environment=SquareEnvironment.PRODUCTION
         )
+
+    @classmethod
+    def from_restaurant_data(cls, restaurant_id=None, table_token=None):
+        """
+        Create a SquareAdapter instance from restaurant data in the database
+        
+        Args:
+            restaurant_id: UUID of the restaurant
+            table_token: Token of a table (to look up restaurant through table -> restaurant_location -> restaurant)
+            
+        Returns:
+            SquareAdapter instance or None if restaurant data not found
+        """
+        try:
+            from restaurants.models import Restaurant, RestaurantLocation
+            from tables.models import Table
+            
+            restaurant = None
+            restaurant_location = None
+            
+            if restaurant_id:
+                # Direct restaurant lookup
+                restaurant = Restaurant.objects.filter(id=restaurant_id).first()
+                if restaurant:
+                    # Find the restaurant location for this restaurant
+                    restaurant_location = RestaurantLocation.objects.filter(rest_id=restaurant.id).first()
+                    
+            elif table_token:
+                # Lookup through table -> restaurant_location -> restaurant chain
+                table = Table.objects.filter(token=table_token, is_active=True).first()
+                if table:
+                    restaurant_location = table.get_restaurant_location()
+                    if restaurant_location:
+                        restaurant = restaurant_location.get_restaurant()
+            
+            if restaurant:
+                logger.info(f"Creating SquareAdapter for restaurant: {restaurant.name} (ID: {restaurant.id})")
+                return cls(restaurant=restaurant, restaurant_location=restaurant_location)
+            else:
+                logger.warning("No restaurant found, creating SquareAdapter with .env credentials")
+                return cls()
+                
+        except Exception as e:
+            logger.error(f"Error creating SquareAdapter from restaurant data: {str(e)}")
+            # Fallback to .env credentials
+            return cls()
         
     def authenticate(self) -> bool:
         """
@@ -649,11 +734,6 @@ class SquareAdapter(POSAdapter):
                 "error": str(e)
             }
     
-    
-    
-    
-    
-    
     def create_external_payment(self, order_id: str, amount: int, tip_amount: int, source: str = "stripe") -> Dict[str, Any]:
         """
         Create a payment record in Square for a payment that was processed externally (e.g., with Stripe).
@@ -1068,7 +1148,7 @@ class SquareAdapter(POSAdapter):
                 "errors": [str(e)],
                 "counts": []
             }
-                
 
-            
+
+
 

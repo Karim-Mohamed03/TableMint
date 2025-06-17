@@ -5,11 +5,14 @@ import { ShoppingCart } from 'lucide-react';
 import CartConfirmationModal from '../components/CartConfirmationModal';
 
 // Function to fetch catalog data from the backend API
-const getCatalogData = async (locationId = null) => {
+const getCatalogData = async (locationId = null, menuId = null) => {
   try {
     const url = new URL('https://tablemint.onrender.com/api/pos/catalog/');
     if (locationId) {
       url.searchParams.append('location_id', locationId);
+    }
+    if (menuId) {
+      url.searchParams.append('menu_id', menuId);
     }
 
     const response = await fetch(url.toString(), {
@@ -411,7 +414,7 @@ const MenuCategories = () => {
     setEffectiveLocationId(finalLocationId);
   }, [locationId]);
 
-  // Fetch catalog data on component mount
+// Fetch catalog data on component mount
   useEffect(() => {
     const fetchData = async () => {
       console.log(`🚀 [DEBUG] Starting data fetch process with location_id: ${effectiveLocationId}`);
@@ -425,9 +428,15 @@ const MenuCategories = () => {
       const locationIdToUse = effectiveLocationId || restaurantContext?.location_id;
       console.log(`📍 [DEBUG] Using location ID: ${locationIdToUse}`);
       
-      // Fetch catalog data with location_id
-      console.log(`📋 [DEBUG] Fetching catalog data for location: ${locationIdToUse}`);
-      const catalogResponse = await getCatalogData(locationIdToUse);
+      // Get active menu ID from restaurant context or URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlMenuId = urlParams.get('menu_id');
+      const menuIdToUse = urlMenuId || restaurantContext?.active_menu;
+      console.log(`🍽️ [DEBUG] Using menu ID: ${menuIdToUse}`);
+      
+      // Fetch catalog data with location_id and menu_id
+      console.log(`📋 [DEBUG] Fetching catalog data for location: ${locationIdToUse}, menu: ${menuIdToUse}`);
+      const catalogResponse = await getCatalogData(locationIdToUse, menuIdToUse);
       console.log(`📋 [DEBUG] Catalog response:`, catalogResponse);
       
       if (catalogResponse && catalogResponse.success) {

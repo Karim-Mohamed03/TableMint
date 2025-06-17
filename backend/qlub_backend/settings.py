@@ -142,7 +142,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'https://test-app-fawn-phi.vercel.app').split(',')
+
+# Production CORS settings
+if DEBUG:
+    # Development - allow all origins
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    # Production - only allow specific origins
+    CORS_ALLOWED_ORIGINS = [
+        'https://test-app-fawn-phi.vercel.app',
+        'https://test-app-fawn-phi.vercel.app/',  # With trailing slash
+    ]
+    
+    # Also check environment variable for additional origins
+    env_origins = os.getenv('CORS_ALLOWED_ORIGINS', '')
+    if env_origins:
+        additional_origins = env_origins.split(',')
+        CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in additional_origins if origin.strip()])
 
 # Additional CORS settings for production
 CORS_ALLOW_CREDENTIALS = True
@@ -166,6 +182,9 @@ CORS_ALLOWED_METHODS = [
     'POST',
     'PUT',
 ]
+
+# Additional CORS settings to handle preflight requests
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
 
 # REST Framework settings
 REST_FRAMEWORK = {

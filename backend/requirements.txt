@@ -15,6 +15,8 @@ certifi==2025.4.26
     #   requests
 charset-normalizer==3.4.2
     # via requests
+cryptography==43.0.1
+    # via backend (added for Fernet encryption)
 django==4.2.10
     # via
     #   backend (pyproject.toml)

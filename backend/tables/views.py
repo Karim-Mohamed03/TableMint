@@ -40,45 +40,37 @@ def table_qr_redirect(request, token):
     """
     try:
         # Find the table by token
-        table = get_object_or_404(Table, token=token, is_active=True)
+        table = Table.objects.filter(token=token, is_active=True).first()
         
-        # Get restaurant information
-        restaurant = table.restaurant
-        if restaurant:
-            # Decrypt the access token if it exists
-            decrypted_access_token = None
-            if restaurant.access_token:
-                try:
-                    decrypted_access_token = decrypt_token(restaurant.access_token)
-                except Exception as e:
-                    logger.error(f"Failed to decrypt access token for restaurant {restaurant.id}: {str(e)}")
+        if not table:
+            logger.error(f"Table not found for token: {token}")
+            # Redirect to main menu with error
+            return redirect("https://test-app-fawn-phi.vercel.app/QROrderPay?error=invalid_table")
+        
+        # Build the redirect URL with parameters
+        frontend_url = "https://test-app-fawn-phi.vercel.app/QROrderPay"
+        
+        # Add query parameters for context
+        params = []
+        params.append(f"table_token={token}")
+        params.append(f"table_label={table.table_label}")
+        
+        if table.restaurant_id:
+            params.append(f"restaurant_id={table.restaurant_id}")
+        
+        # Get restaurant information using the fallback method
+        restaurant_info = table.get_restaurant_info()
+        
+        if restaurant_info.get('active_menu'):
+            params.append(f"menu_id={restaurant_info['active_menu']}")
+        if restaurant_info.get('location_id'):
+            params.append(f"location_id={restaurant_info['location_id']}")
+        
+        redirect_url = f"{frontend_url}?{'&'.join(params)}"
+        
+        logger.info(f"Redirecting table {token} to: {redirect_url}")
+        return redirect(redirect_url)
             
-            # Build the redirect URL with parameters
-            frontend_url = "https://test-app-fawn-phi.vercel.app/QROrderPay"
-            
-            # Add query parameters for context
-            params = []
-            params.append(f"table_token={token}")
-            params.append(f"table_label={table.table_label}")
-            params.append(f"restaurant_id={restaurant.id}")
-            
-            if restaurant.active_menu:
-                params.append(f"menu_id={restaurant.active_menu}")
-            
-            if restaurant.location_id:
-                params.append(f"location_id={restaurant.location_id}")
-            
-            redirect_url = f"{frontend_url}?{'&'.join(params)}"
-            
-            return redirect(redirect_url)
-        else:
-            # No restaurant associated, redirect to generic menu
-            return redirect(f"https://test-app-fawn-phi.vercel.app/QROrderPay?table_token={token}&table_label={table.table_label}")
-            
-    except Table.DoesNotExist:
-        logger.error(f"Table not found for token: {token}")
-        # Redirect to main menu with error
-        return redirect("https://test-app-fawn-phi.vercel.app/QROrderPay?error=invalid_table")
     except Exception as e:
         logger.error(f"Error processing QR code for token {token}: {str(e)}")
         return redirect("https://test-app-fawn-phi.vercel.app/QROrderPay?error=system_error")
@@ -91,50 +83,34 @@ def get_table_context(request, token):
     URL: /api/tables/context/{token}/
     """
     try:
-        table = get_object_or_404(Table, token=token, is_active=True)
+        # Use filter instead of get_object_or_404 to avoid Http404 exception
+        table = Table.objects.filter(token=token, is_active=True).first()
+        
+        if not table:
+            logger.warning(f"Table not found for token: {token}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Table not found'
+            }, status=404)
         
         response_data = {
             'success': True,
             'table': {
                 'token': table.token,
                 'label': table.table_label,
-                'restaurant_id': str(table.restaurant.id) if table.restaurant else None
+                'restaurant_id': str(table.restaurant_id) if table.restaurant_id else None
             }
         }
         
-        # Get restaurant information if available
-        if table.restaurant:
-            restaurant = table.restaurant
-            
-            # Decrypt access token
-            decrypted_access_token = None
-            if restaurant.access_token:
-                try:
-                    decrypted_access_token = decrypt_token(restaurant.access_token)
-                except Exception as e:
-                    logger.error(f"Failed to decrypt access token: {str(e)}")
-            
-            response_data['restaurant'] = {
-                'id': str(restaurant.id),
-                'name': restaurant.name,
-                'location_id': restaurant.location_id,
-                'active_menu': restaurant.active_menu,
-                'currency': restaurant.currency,
-                'timezone': restaurant.timezone,
-                'integration_name': restaurant.integration_name,
-                'access_token': decrypted_access_token,  # Only send in secure context
-                'branding': restaurant.branding_config()
-            }
+        # Get restaurant information using the fallback method
+        restaurant_info = table.get_restaurant_info()
+        response_data['restaurant'] = restaurant_info
         
+        logger.info(f"Successfully retrieved context for table {token}")
         return JsonResponse(response_data)
         
-    except Table.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Table not found'
-        }, status=404)
     except Exception as e:
-        logger.error(f"Error getting table context: {str(e)}")
+        logger.error(f"Error getting table context for token {token}: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': 'Internal server error'

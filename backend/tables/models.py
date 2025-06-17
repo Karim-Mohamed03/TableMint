@@ -74,10 +74,10 @@ class Table(models.Model):
                 'id': str(restaurant.id),
                 'name': restaurant.name,
                 'location_id': restaurant_location.location_id,  # From restaurant_locations table
-                'active_menu': None,  # Not available in simplified schema
-                'currency': 'GBP',  # Default value
-                'timezone': 'Europe/London',  # Default value
-                'integration_name': 'square',  # Default to square since we have location_id
+                'active_menu': restaurant.active_menu,  # Now using actual field from database
+                'currency': restaurant.currency or 'GBP',
+                'timezone': restaurant.timezone or 'Europe/London',
+                'integration_name': restaurant.integration_name,
                 'branding': restaurant.branding_config()
             }
         elif restaurant_location:

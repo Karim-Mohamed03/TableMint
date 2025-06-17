@@ -277,7 +277,6 @@ def get_catalog(request):
         location_id (optional): Specific location ID to filter catalog for
         restaurant_id (optional): Restaurant UUID to use restaurant-specific credentials
         table_token (optional): Table token to look up restaurant through
-        menu_id (optional): Menu ID to filter items and categories for active menu
     
     Returns:
         JSON response with catalog data including items and categories
@@ -287,9 +286,9 @@ def get_catalog(request):
         location_id = request.GET.get('location_id')
         restaurant_id = request.GET.get('restaurant_id')
         table_token = request.GET.get('table_token')
-        menu_id = request.GET.get('menu_id')
         
         # Initialize the POS service with restaurant-specific credentials if provided
+        restaurant = None
         if restaurant_id or table_token:
             try:
                 pos_service = POSService.for_restaurant(
@@ -297,6 +296,16 @@ def get_catalog(request):
                     table_token=table_token
                 )
                 logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
+                
+                # Get the restaurant instance to access active_menu
+                if restaurant_id:
+                    from restaurants.models import Restaurant
+                    restaurant = Restaurant.objects.get(id=restaurant_id)
+                elif table_token:
+                    from tables.models import Table
+                    table = Table.objects.get(token=table_token)
+                    restaurant = table.restaurant
+                    
             except ValueError as e:
                 logger.error(f"Failed to create POS service for restaurant: {str(e)}")
                 return JsonResponse({
@@ -312,6 +321,7 @@ def get_catalog(request):
                 if connected_restaurant:
                     logger.info(f"No restaurant context provided, using first connected restaurant: {connected_restaurant.name} (ID: {connected_restaurant.id})")
                     pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                    restaurant = connected_restaurant
                 else:
                     logger.error("No connected restaurants found with valid access tokens")
                     return JsonResponse({
@@ -338,36 +348,63 @@ def get_catalog(request):
         if result.get('success', False):
             catalog_objects = result.get('objects', [])
             
-            # Filter by menu_id if provided
-            if menu_id:
-                logger.info(f"Filtering catalog by menu_id: {menu_id}")
+            # Filter by active_menu if the restaurant has one configured
+            if restaurant and restaurant.active_menu:
+                active_menu_id = restaurant.active_menu
+                logger.info(f"Filtering catalog by active_menu: {active_menu_id}")
                 filtered_objects = []
                 
+                # First, find all categories that belong to this menu (including subcategories)
+                menu_category_ids = set()
+                menu_category_ids.add(active_menu_id)  # Include the menu itself
+                
+                # Find all subcategories that belong to this menu
                 for obj in catalog_objects:
-                    # Filter items that belong to the specified menu
-                    if obj.get('type') == 'ITEM':
-                        item_data = obj.get('item_data', {})
-                        # Check if item has categories that belong to this menu
-                        categories = item_data.get('categories', [])
-                        if any(cat.get('id') == menu_id for cat in categories):
-                            filtered_objects.append(obj)
-                    
-                    # Filter categories that match the menu_id
-                    elif obj.get('type') == 'CATEGORY':
-                        if obj.get('id') == menu_id:
-                            filtered_objects.append(obj)
-                        # Also include subcategories that have this menu as parent
+                    if obj.get('type') == 'CATEGORY':
                         category_data = obj.get('category_data', {})
                         parent_category = category_data.get('parent_category', {})
-                        if parent_category.get('id') == menu_id:
-                            filtered_objects.append(obj)
+                        root_category = category_data.get('root_category')
+                        
+                        # Check if this category is a direct child of the menu
+                        if parent_category.get('id') == active_menu_id:
+                            menu_category_ids.add(obj.get('id'))
+                        
+                        # Check if this category belongs to the menu via root_category
+                        elif root_category == active_menu_id:
+                            menu_category_ids.add(obj.get('id'))
+                
+                logger.info(f"Found category IDs for menu {active_menu_id}: {menu_category_ids}")
+                
+                for obj in catalog_objects:
+                    should_include = False
                     
-                    # Include other types (like IMAGE) as they may be referenced by filtered items
+                    # Include the menu category itself and all its subcategories
+                    if obj.get('type') == 'CATEGORY':
+                        if obj.get('id') in menu_category_ids:
+                            should_include = True
+                    
+                    # Include items that belong to any category in this menu
+                    elif obj.get('type') == 'ITEM':
+                        item_data = obj.get('item_data', {})
+                        categories = item_data.get('categories', [])
+                        
+                        # Check if any of the item's categories are in our menu
+                        for cat in categories:
+                            if cat.get('id') in menu_category_ids:
+                                should_include = True
+                                break
+                    
+                    # Include other types (like IMAGE, TAX, DISCOUNT, MODIFIER_LIST) as they may be referenced
                     elif obj.get('type') in ['IMAGE', 'TAX', 'DISCOUNT', 'MODIFIER_LIST']:
+                        should_include = True
+                    
+                    if should_include:
                         filtered_objects.append(obj)
                 
                 logger.info(f"Filtered catalog: {len(catalog_objects)} -> {len(filtered_objects)} objects")
                 catalog_objects = filtered_objects
+            else:
+                logger.info("No active_menu configured for restaurant, returning all catalog items")
             
             return JsonResponse({
                 'success': True,

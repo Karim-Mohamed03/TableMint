@@ -169,18 +169,21 @@ class TableOrderView(APIView):
         
         # If we have a Square order ID and no order items yet, try to sync with Square
         if order.pos_reference and not order.items.exists():
-            # Initialize Square adapter
-            square_adapter = SquareAdapter()
-            
-            # Get the full order details from Square
-            square_order = square_adapter.get(order.pos_reference)
-            
-            # If successful, add the Square order items to our order
-            if square_order and 'success' in square_order and square_order['success']:
-                # Process Square order items into our database
-                # This would need additional code to parse Square line items 
-                # and create OrderItem objects
-                pass
+            try:
+                # Initialize POS service using the table's restaurant context
+                pos_service = POSService.for_restaurant(table_token=table.token)
+                
+                # Get the full order details from Square
+                square_order = pos_service.get(order.pos_reference)
+                
+                # If successful, add the Square order items to our order
+                if square_order and 'success' in square_order and square_order['success']:
+                    # Process Square order items into our database
+                    # This would need additional code to parse Square line items 
+                    # and create OrderItem objects
+                    pass
+            except Exception as e:
+                logger.warning(f"Failed to sync order {order.pos_reference} from POS: {str(e)}")
         
         # Serialize and return the order
         serializer = OrderSerializer(order)
@@ -423,6 +426,96 @@ def get_catalog(request):
             
     except Exception as e:
         logger.error(f"Error fetching catalog: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_locations(request):
+    """
+    API endpoint to list all locations available for the POS account
+    
+    GET /api/pos/locations/
+    
+    Query Parameters:
+        restaurant_id (optional): Restaurant UUID to use restaurant-specific credentials
+        table_token (optional): Table token to look up restaurant through
+    
+    Returns:
+        JSON response with locations data
+    """
+    try:
+        # Get query parameters
+        restaurant_id = request.GET.get('restaurant_id')
+        table_token = request.GET.get('table_token')
+        
+        # Initialize the POS service with restaurant-specific credentials if provided
+        if restaurant_id or table_token:
+            try:
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for locations: restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Restaurant configuration error: {str(e)}'
+                }, status=400)
+        else:
+            # If no specific restaurant context, try to use the first connected restaurant
+            try:
+                from restaurants.models import Restaurant
+                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                
+                if connected_restaurant:
+                    logger.info(f"No restaurant context provided for locations, using first connected restaurant: {connected_restaurant.name}")
+                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                else:
+                    logger.error("No connected restaurants found with valid access tokens")
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'No connected restaurants available. Please configure a restaurant with Square integration.'
+                    }, status=503)
+            except Exception as e:
+                logger.error(f"Error finding connected restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to find connected restaurant: {str(e)}'
+                }, status=500)
+        
+        # Check if the adapter is authenticated
+        if not pos_service.is_authenticated():
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
+        
+        # Get locations data using the POS service
+        result = pos_service.list_locations()
+        
+        if result.get('success', False):
+            return JsonResponse({
+                'success': True,
+                'locations': result.get('locations', [])
+            })
+        else:
+            # Handle the error field which could be a string or list
+            error = result.get('error')
+            if error is None:
+                error = result.get('errors', 'Unknown error')
+                
+            return JsonResponse({
+                'success': False,
+                'error': error
+            }, status=400)
+            
+    except Exception as e:
+        logger.error(f"Error fetching locations: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)

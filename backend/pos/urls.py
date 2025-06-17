@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import SquareWebhookView, TableOrderView, get_catalog
+from .views import SquareWebhookView, TableOrderView, get_catalog, get_locations
 from .api_views import get_order_by_reference
 from .clover_api_views import create_clover_order, get_clover_order, list_clover_orders
 
@@ -20,4 +20,7 @@ urlpatterns = [
     
     # Catalog endpoint
     path('catalog/', get_catalog, name='get_catalog'),
+    
+    # Locations endpoint
+    path('locations/', get_locations, name='get_locations'),
 ]

@@ -166,6 +166,8 @@ def create_external_payment(request):
         try:
             data = json.loads(request.body)
             order_id = data.get('order_id')
+            restaurant_id = data.get('restaurant_id')
+            table_token = data.get('table_token')
             
             if not order_id:
                 return JsonResponse({
@@ -177,12 +179,45 @@ def create_external_payment(request):
             single_payment_amount = data.get('amount')
             single_payment_tip = data.get('tip_amount', 0)
             
-            # Create a Square adapter to interact with Square APIs
-            square_adapter = SquareAdapter()
+            # Initialize POS service with restaurant-specific credentials if provided
+            if restaurant_id or table_token:
+                try:
+                    pos_service = POSService.for_restaurant(
+                        restaurant_id=restaurant_id, 
+                        table_token=table_token
+                    )
+                    logger.info(f"Using restaurant-specific POS service for external payment: restaurant_id={restaurant_id}, table_token={table_token}")
+                except ValueError as e:
+                    logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Restaurant configuration error: {str(e)}'
+                    }, status=400)
+            else:
+                # If no specific restaurant context, try to use the first connected restaurant
+                try:
+                    from restaurants.models import Restaurant
+                    connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                    
+                    if connected_restaurant:
+                        logger.info(f"No restaurant context provided for external payment, using first connected restaurant: {connected_restaurant.name}")
+                        pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                    else:
+                        logger.error("No connected restaurants found with valid access tokens")
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'No connected restaurants available. Please configure a restaurant with Square integration.'
+                        }, status=503)
+                except Exception as e:
+                    logger.error(f"Error finding connected restaurant: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Failed to find connected restaurant: {str(e)}'
+                    }, status=500)
             
             if single_payment_amount is not None:
                 # Single Payment Mode - create payment record for this specific payment
-                result = square_adapter.create_external_payment(
+                result = pos_service.adapter.create_external_payment(
                     order_id=order_id,
                     amount=single_payment_amount,
                     tip_amount=single_payment_tip,
@@ -219,7 +254,7 @@ def create_external_payment(request):
                 ).aggregate(sum_tip_amount=Sum('tip_amount'))['sum_tip_amount'] or 0
                 
                 # Get the order details from Square to check the total amount
-                order_result = square_adapter.get(order_id)
+                order_result = pos_service.get(order_id)
                 
                 # Check if we got a successful response
                 if not hasattr(order_result, 'is_success') or not order_result.is_success():
@@ -261,7 +296,7 @@ def create_external_payment(request):
                     })
                 
                 # If they match, create the external payment
-                result = square_adapter.create_external_payment(
+                result = pos_service.adapter.create_external_payment(
                     order_id=order_id,
                     amount=order_base_sum,
                     tip_amount=order_tip_sum,
@@ -322,6 +357,8 @@ def create_payment(request):
         # Extract and validate required fields
         source_id = data.get('source_id')
         amount = data.get('amount')
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
         
         if not source_id or not amount:
             logger.warning("Missing required fields in payment request")
@@ -410,8 +447,54 @@ def create_payment(request):
             )
             
             try:
-                # Initialize Square adapter and create payment
-                square_adapter = SquareAdapter()
+                # Initialize POS service with restaurant-specific credentials if provided
+                if restaurant_id or table_token:
+                    try:
+                        pos_service = POSService.for_restaurant(
+                            restaurant_id=restaurant_id, 
+                            table_token=table_token
+                        )
+                        logger.info(f"Using restaurant-specific POS service for payment creation: restaurant_id={restaurant_id}, table_token={table_token}")
+                    except ValueError as e:
+                        logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                        payment_record.status = 'error'
+                        payment_record.response_data = {'error': f'Restaurant configuration error: {str(e)}'}
+                        payment_record.save()
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Restaurant configuration error: {str(e)}',
+                            'payment_record_id': payment_record.id
+                        }, status=400)
+                else:
+                    # If no specific restaurant context, try to use the first connected restaurant
+                    try:
+                        from restaurants.models import Restaurant
+                        connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                        
+                        if connected_restaurant:
+                            logger.info(f"No restaurant context provided for payment, using first connected restaurant: {connected_restaurant.name}")
+                            pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                        else:
+                            logger.error("No connected restaurants found with valid access tokens")
+                            payment_record.status = 'error'
+                            payment_record.response_data = {'error': 'No connected restaurants available'}
+                            payment_record.save()
+                            return JsonResponse({
+                                'success': False,
+                                'error': 'No connected restaurants available. Please configure a restaurant with Square integration.',
+                                'payment_record_id': payment_record.id
+                            }, status=503)
+                    except Exception as e:
+                        logger.error(f"Error finding connected restaurant: {str(e)}")
+                        payment_record.status = 'error'
+                        payment_record.response_data = {'error': f'Failed to find connected restaurant: {str(e)}'}
+                        payment_record.save()
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Failed to find connected restaurant: {str(e)}',
+                            'payment_record_id': payment_record.id
+                        }, status=500)
+
                 payment_data = {
                     'source_id': source_id,
                     'amount': amount,
@@ -428,7 +511,7 @@ def create_payment(request):
                     'verification_token': verification_token
                 }
                 
-                payment_result = square_adapter.create_payment(payment_data)
+                payment_result = pos_service.adapter.create_payment(payment_data)
                 
                 # Update our payment record with Square payment ID and response
                 if payment_result.get('success', False) and 'payment' in payment_result:

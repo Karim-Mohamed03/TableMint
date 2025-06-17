@@ -708,7 +708,9 @@ def get_inventory(request):
     try:
         # Get query parameters
         catalog_object_id = request.GET.get('catalog_object_id')
-        location_ids = request.GET.get('location_ids')  # New parameter
+        location_ids = request.GET.get('location_ids')
+        restaurant_id = request.GET.get('restaurant_id')
+        table_token = request.GET.get('table_token')
         
         # Validate required parameters
         if not catalog_object_id:
@@ -717,20 +719,53 @@ def get_inventory(request):
                 'counts': []
             }, status=400)
         
-        # Initialize Square adapter
-        square_adapter = SquareAdapter()
+        # Initialize POS service with restaurant-specific credentials if provided
+        if restaurant_id or table_token:
+            try:
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for inventory: restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                return JsonResponse({
+                    'errors': [f'Restaurant configuration error: {str(e)}'],
+                    'counts': []
+                }, status=400)
+        else:
+            # If no specific restaurant context, try to use the first connected restaurant
+            try:
+                from restaurants.models import Restaurant
+                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                
+                if connected_restaurant:
+                    logger.info(f"No restaurant context provided for inventory, using first connected restaurant: {connected_restaurant.name}")
+                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                else:
+                    logger.error("No connected restaurants found with valid access tokens")
+                    return JsonResponse({
+                        'errors': ['No connected restaurants available. Please configure a restaurant with Square integration.'],
+                        'counts': []
+                    }, status=503)
+            except Exception as e:
+                logger.error(f"Error finding connected restaurant: {str(e)}")
+                return JsonResponse({
+                    'errors': [f'Failed to find connected restaurant: {str(e)}'],
+                    'counts': []
+                }, status=500)
         
         # Check authentication
-        if not square_adapter.authenticate():
+        if not pos_service.is_authenticated():
             return JsonResponse({
-                'errors': ['Failed to authenticate with Square API'],
+                'errors': ['Failed to authenticate with POS system'],
                 'counts': []
             }, status=401)
         
-        # Get inventory data using our fixed function with location_ids
-        result = square_adapter.get_inventory(
+        # Get inventory data using the POS service
+        result = pos_service.get_inventory(
             catalog_object_id=catalog_object_id,
-            location_ids=location_ids  # Pass location_ids to the function
+            location_ids=[location_ids] if location_ids else None
         )
         
         # Return the result in Square API format
@@ -757,7 +792,9 @@ def batch_get_inventory(request):
     {
         "catalog_object_ids": ["id1", "id2", "id3"],
         "location_ids": ["loc1", "loc2"] (optional),
-        "cursor": "pagination_cursor" (optional)
+        "cursor": "pagination_cursor" (optional),
+        "restaurant_id": "uuid" (optional),
+        "table_token": "token" (optional)
     }
     """
     try:
@@ -777,6 +814,8 @@ def batch_get_inventory(request):
         catalog_object_ids = data.get('catalog_object_ids', [])
         location_ids = data.get('location_ids')
         cursor = data.get('cursor')
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
         
         logger.info(f"Extracted catalog_object_ids: {catalog_object_ids}")
         logger.info(f"Extracted location_ids: {location_ids}")
@@ -790,19 +829,55 @@ def batch_get_inventory(request):
                 'counts': []
             }, status=400)
         
-        # Initialize Square adapter
-        square_adapter = SquareAdapter()
+        # Initialize POS service with restaurant-specific credentials if provided
+        if restaurant_id or table_token:
+            try:
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for batch inventory: restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'errors': [f'Restaurant configuration error: {str(e)}'],
+                    'counts': []
+                }, status=400)
+        else:
+            # If no specific restaurant context, try to use the first connected restaurant
+            try:
+                from restaurants.models import Restaurant
+                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                
+                if connected_restaurant:
+                    logger.info(f"No restaurant context provided for batch inventory, using first connected restaurant: {connected_restaurant.name}")
+                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                else:
+                    logger.error("No connected restaurants found with valid access tokens")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': ['No connected restaurants available. Please configure a restaurant with Square integration.'],
+                        'counts': []
+                    }, status=503)
+            except Exception as e:
+                logger.error(f"Error finding connected restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'errors': [f'Failed to find connected restaurant: {str(e)}'],
+                    'counts': []
+                }, status=500)
         
         # Check authentication
-        if not square_adapter.authenticate():
+        if not pos_service.is_authenticated():
             return JsonResponse({
                 'success': False,
-                'errors': ['Failed to authenticate with Square API'],
+                'errors': ['Failed to authenticate with POS system'],
                 'counts': []
             }, status=401)
         
         # Get batch inventory data
-        result = square_adapter.batch_retrieve_inventory_counts(
+        result = pos_service.batch_retrieve_inventory_counts(
             catalog_object_ids=catalog_object_ids,
             location_ids=location_ids,
             cursor=cursor
@@ -833,23 +908,63 @@ def get_inventory_by_location(request, location_id):
     
     Query Parameters:
         - cursor (optional): Pagination cursor
+        - restaurant_id (optional): Restaurant UUID to use restaurant-specific credentials
+        - table_token (optional): Table token to look up restaurant through
     """
     try:
         cursor = request.GET.get('cursor')
+        restaurant_id = request.GET.get('restaurant_id')
+        table_token = request.GET.get('table_token')
         
-        # Initialize Square adapter
-        square_adapter = SquareAdapter()
+        # Initialize POS service with restaurant-specific credentials if provided
+        if (restaurant_id or table_token):
+            try:
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for location inventory: restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'errors': [f'Restaurant configuration error: {str(e)}'],
+                    'counts': []
+                }, status=400)
+        else:
+            # If no specific restaurant context, try to use the first connected restaurant
+            try:
+                from restaurants.models import Restaurant
+                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                
+                if connected_restaurant:
+                    logger.info(f"No restaurant context provided for location inventory, using first connected restaurant: {connected_restaurant.name}")
+                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                else:
+                    logger.error("No connected restaurants found with valid access tokens")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': ['No connected restaurants available. Please configure a restaurant with Square integration.'],
+                        'counts': []
+                    }, status=503)
+            except Exception as e:
+                logger.error(f"Error finding connected restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'errors': [f'Failed to find connected restaurant: {str(e)}'],
+                    'counts': []
+                }, status=500)
         
         # Check authentication
-        if not square_adapter.authenticate():
+        if not pos_service.is_authenticated():
             return JsonResponse({
                 'success': False,
-                'errors': ['Failed to authenticate with Square API'],
+                'errors': ['Failed to authenticate with POS system'],
                 'counts': []
             }, status=401)
         
         # First, get catalog items
-        catalog_result = square_adapter.get_catalog()
+        catalog_result = pos_service.get_catalog()
         
         if not catalog_result.get('success'):
             return JsonResponse({
@@ -877,7 +992,7 @@ def get_inventory_by_location(request, location_id):
             }, status=200)
         
         # Get inventory for all catalog items at this location
-        result = square_adapter.batch_retrieve_inventory_counts(
+        result = pos_service.batch_retrieve_inventory_counts(
             catalog_object_ids=catalog_object_ids,
             location_ids=[location_id],
             cursor=cursor

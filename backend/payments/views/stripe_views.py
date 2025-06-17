@@ -326,21 +326,45 @@ def create_square_external_payment(order_id, base_sum):
             }
         
         # If they match, create the external payment
-        logger.info(f"=== CALLING SQUARE ADAPTER CREATE_EXTERNAL_PAYMENT ===")
+        logger.info(f"=== CALLING POS SERVICE CREATE_EXTERNAL_PAYMENT ===")
         logger.info(f"Order ID: {order_id}")
         logger.info(f"Amount: {base_sum} cents (${base_sum/100:.2f})")
         logger.info(f"Tip Amount: {tip_sum} cents (${tip_sum/100:.2f})")
         logger.info(f"Source: stripe")
         
-        square_adapter = SquareAdapter()
-        result = square_adapter.create_external_payment(
+        # Initialize POS service - try to use the first connected restaurant since we don't have context here
+        try:
+            from restaurants.models import Restaurant
+            from pos.pos_service import POSService
+            
+            connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+            
+            if connected_restaurant:
+                logger.info(f"Using first connected restaurant for external payment: {connected_restaurant.name}")
+                pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+            else:
+                logger.error("No connected restaurants found with valid access tokens")
+                return {
+                    'success': False,
+                    'error': 'No connected restaurants available. Please configure a restaurant with Square integration.',
+                    'order_id': order_id
+                }
+        except Exception as e:
+            logger.error(f"Error creating POS service: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Failed to initialize POS service: {str(e)}',
+                'order_id': order_id
+            }
+        
+        result = pos_service.adapter.create_external_payment(
             order_id=order_id,
             amount=base_sum,  # Already in cents, pass directly
             tip_amount=tip_sum,  # Pass the sum of all tips for this order
             source="stripe"
         )
         
-        logger.info(f"Square adapter result: {result}")
+        logger.info(f"POS service result: {result}")
         
         if result.get('success'):
             logger.info(f"✅ Successfully created external payment in Square for order_id: {order_id} - Amount: ${base_sum/100:.2f}, Tips: ${tip_sum/100:.2f}")

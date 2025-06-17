@@ -128,7 +128,7 @@ class SquareAdapter(POSAdapter):
         """
         try:
             if not self.access_token:
-                logger.error("No Square access token found in environment variables")
+                logger.error("No Square access token found")
                 return False
                 
             # Try to list locations as a simple API test
@@ -567,7 +567,7 @@ class SquareAdapter(POSAdapter):
             Dict: Location information or error details.
         """
         try:
-            result = self.client.locations.list_locations()
+            result = self.client.locations.list()
             
             # Check for errors first
             if hasattr(result, 'errors') and result.errors:

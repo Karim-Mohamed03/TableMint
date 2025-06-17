@@ -297,9 +297,22 @@ def get_catalog(request):
             )
             logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
         else:
-            # Fallback to default credentials from .env
-            pos_service = POSService()
-            logger.info("Using default POS service credentials from .env")
+            # If no specific restaurant context, try to use the first connected restaurant
+            try:
+                from restaurants.models import Restaurant
+                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
+                
+                if connected_restaurant:
+                    logger.info(f"No restaurant context provided, using first connected restaurant: {connected_restaurant.name} (ID: {connected_restaurant.id})")
+                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
+                else:
+                    logger.warning("No connected restaurants found, falling back to .env credentials")
+                    pos_service = POSService()
+            except Exception as e:
+                logger.error(f"Error finding connected restaurant: {str(e)}")
+                # Fallback to default credentials from .env
+                pos_service = POSService()
+                logger.info("Using default POS service credentials from .env")
         
         # Check if the adapter is authenticated
         if not pos_service.is_authenticated():

@@ -8,6 +8,8 @@ from django.views import View
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 
 from tables.models import Table
@@ -263,7 +265,8 @@ def create_clover_order(request):
         }, status=500)
 
 @csrf_exempt
-@require_http_methods(["GET"])
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_catalog(request):
     """
     API endpoint to fetch catalog items and categories from the POS system

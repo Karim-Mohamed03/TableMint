@@ -30,36 +30,37 @@ class SquareAdapter(POSAdapter):
             restaurant: Restaurant model instance with access_token, integration_name, etc.
             restaurant_location: RestaurantLocation model instance with location_id
         """
-        # Initialize with restaurant-specific credentials if provided
-        if restaurant and restaurant.access_token:
-            try:
-                # Try to decrypt the access token from the database
-                self.access_token = decrypt_token(restaurant.access_token)
-                logger.info(f"SquareAdapter initialized with decrypted restaurant access token for: {restaurant.name}")
-            except Exception as e:
-                logger.warning(f"Failed to decrypt access token for restaurant {restaurant.id}: {str(e)}")
-                # Check if the token might already be in plain text (for backward compatibility)
-                if restaurant.access_token and not restaurant.access_token.startswith('gAAAAAB'):
-                    # Looks like a plain text token
-                    self.access_token = restaurant.access_token
-                    logger.info(f"Using plain text access token for restaurant: {restaurant.name}")
-                else:
-                    # Fallback to .env file
-                    self.access_token = os.environ.get('SQUARE_ACCESS_TOKEN')
-                    logger.warning("Falling back to .env SQUARE_ACCESS_TOKEN")
-        else:
-            # Fallback to .env file
-            self.access_token = os.environ.get('SQUARE_ACCESS_TOKEN')
-            logger.info("No restaurant access token provided, using .env SQUARE_ACCESS_TOKEN")
+        # We MUST have a restaurant with an access token - no .env fallback
+        if not restaurant or not restaurant.access_token:
+            raise ValueError("SquareAdapter requires a restaurant with a valid access_token. No .env fallback allowed.")
+        
+        try:
+            # Try to decrypt the access token from the database
+            decrypted_token = decrypt_token(restaurant.access_token)
+            
+            # Check if decryption actually worked by comparing with original
+            if not decrypted_token or decrypted_token == restaurant.access_token:
+                # Decryption failed or returned the same encrypted token
+                raise ValueError(f"Token decryption failed for restaurant {restaurant.name}. Token may be corrupted or encryption key mismatch.")
+            
+            self.access_token = decrypted_token
+            logger.info(f"SquareAdapter initialized with decrypted restaurant access token for: {restaurant.name}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to decrypt access token for restaurant {restaurant.id}: {str(e)}")
+            raise ValueError(f"Cannot initialize SquareAdapter: Token decryption failed for restaurant {restaurant.name}: {str(e)}")
         
         # Use location_id from restaurant_location if provided
         if restaurant_location and restaurant_location.location_id:
             self.location_id = restaurant_location.location_id
             logger.info(f"SquareAdapter using location_id from restaurant_location: {self.location_id}")
         else:
-            # Fallback to .env file
-            self.location_id = os.environ.get('SQUARE_LOCATION_ID')
-            logger.info("No restaurant location provided, using .env SQUARE_LOCATION_ID")
+            # Try to get location from restaurant record
+            if hasattr(restaurant, 'location_id') and restaurant.location_id:
+                self.location_id = restaurant.location_id
+                logger.info(f"SquareAdapter using location_id from restaurant: {self.location_id}")
+            else:
+                raise ValueError(f"SquareAdapter requires a valid location_id. Restaurant {restaurant.name} has no location configured.")
         
         # Store restaurant info for logging/debugging
         self.restaurant = restaurant
@@ -83,7 +84,7 @@ class SquareAdapter(POSAdapter):
             table_token: Token of a table (to look up restaurant through table -> restaurant_location -> restaurant)
             
         Returns:
-            SquareAdapter instance or None if restaurant data not found
+            SquareAdapter instance or raises ValueError if restaurant data not found
         """
         try:
             from restaurants.models import Restaurant, RestaurantLocation
@@ -111,13 +112,13 @@ class SquareAdapter(POSAdapter):
                 logger.info(f"Creating SquareAdapter for restaurant: {restaurant.name} (ID: {restaurant.id})")
                 return cls(restaurant=restaurant, restaurant_location=restaurant_location)
             else:
-                logger.warning("No restaurant found, creating SquareAdapter with .env credentials")
-                return cls()
+                error_msg = f"No restaurant found for restaurant_id={restaurant_id}, table_token={table_token}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
                 
         except Exception as e:
             logger.error(f"Error creating SquareAdapter from restaurant data: {str(e)}")
-            # Fallback to .env credentials
-            return cls()
+            raise ValueError(f"Failed to create SquareAdapter: {str(e)}")
         
     def authenticate(self) -> bool:
         """

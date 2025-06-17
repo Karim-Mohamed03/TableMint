@@ -291,11 +291,18 @@ def get_catalog(request):
         
         # Initialize the POS service with restaurant-specific credentials if provided
         if restaurant_id or table_token:
-            pos_service = POSService.for_restaurant(
-                restaurant_id=restaurant_id, 
-                table_token=table_token
-            )
-            logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
+            try:
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Restaurant configuration error: {str(e)}'
+                }, status=400)
         else:
             # If no specific restaurant context, try to use the first connected restaurant
             try:
@@ -306,13 +313,17 @@ def get_catalog(request):
                     logger.info(f"No restaurant context provided, using first connected restaurant: {connected_restaurant.name} (ID: {connected_restaurant.id})")
                     pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
                 else:
-                    logger.warning("No connected restaurants found, falling back to .env credentials")
-                    pos_service = POSService()
+                    logger.error("No connected restaurants found with valid access tokens")
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'No connected restaurants available. Please configure a restaurant with Square integration.'
+                    }, status=503)
             except Exception as e:
                 logger.error(f"Error finding connected restaurant: {str(e)}")
-                # Fallback to default credentials from .env
-                pos_service = POSService()
-                logger.info("Using default POS service credentials from .env")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to find connected restaurant: {str(e)}'
+                }, status=500)
         
         # Check if the adapter is authenticated
         if not pos_service.is_authenticated():

@@ -104,10 +104,9 @@ export default function PaymentPage({
     setOrderError(null);
     
     try {
-      const response = await axios.get(`http://localhost:8000/api/orders/${orderId}/`, {
+      const response = await axios.get(`https://tablemint.onrender.com/api/orders/${orderId}/`, {
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         }
       });
       

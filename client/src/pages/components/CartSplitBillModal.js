@@ -122,7 +122,7 @@ const SharePaymentLink = ({ remainingAmount, totalAmount, onClose, onPayMyPart }
       };
 
       // Call the secure backend API to create share session
-      const response = await fetch('http://localhost:8000/api/orders/share/create/', {
+      const response = await fetch('https://tablemint.onrender.com/api/orders/share/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

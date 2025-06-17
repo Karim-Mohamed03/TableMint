@@ -26,8 +26,8 @@ function App() {
   const [restaurantBranding, setRestaurantBranding] = useState({
     id: null,
     name: "Restaurant",
-    logo_url: "http://localhost:8000/static/assets/logo.jpg",
-    background_image_url: "http://localhost:8000/static/assets/background.jpg",
+    logo_url: "https://tablemint.onrender.com/static/assets/logo.jpg",
+    background_image_url: "https://tablemint.onrender.com/static/assets/background.jpg",
     primary_color: "#0071e3",
     secondary_color: "#f5f5f7",
     show_logo_on_receipt: true,
@@ -44,7 +44,7 @@ function App() {
   const createPaymentIntent = useCallback((amount) => {
     setIsCreatingPaymentIntent(true);
     
-    return fetch("http://localhost:8000/api/payments/create-payment-intent", {
+    return fetch("https://tablemint.onrender.com/api/payments/create-payment-intent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +82,7 @@ function App() {
         const testOrderId = "NoLCNb59WpHHUGuinqUQFU7rqg4F";
         
         console.log("Fetching restaurant branding for order:", testOrderId);
-        const response = await axios.get(`http://localhost:8000/api/restaurants/order/${testOrderId}/branding/`);
+        const response = await axios.get(`https://tablemint.onrender.com/api/restaurants/order/${testOrderId}/branding/`);
         
         console.log("Restaurant branding API response:", response.data);
         
@@ -92,15 +92,15 @@ function App() {
           
           // Keep our hardcoded URLs if the API doesn't return valid ones
           if (!branding.logo_url) {
-            branding.logo_url = "http://localhost:8000/static/assets/logo.jpg";
+            branding.logo_url = "https://tablemint.onrender.com/static/assets/logo.jpg";
           } else if (!branding.logo_url.startsWith('http')) {
-            branding.logo_url = `http://localhost:8000${branding.logo_url.startsWith('/') ? '' : '/'}${branding.logo_url}`;
+            branding.logo_url = `https://tablemint.onrender.com${branding.logo_url.startsWith('/') ? '' : '/'}${branding.logo_url}`;
           }
           
           if (!branding.background_image_url) {
-            branding.background_image_url = "http://localhost:8000/static/assets/background.jpg";
+            branding.background_image_url = "https://tablemint.onrender.com/static/assets/background.jpg";
           } else if (!branding.background_image_url.startsWith('http')) {
-            branding.background_image_url = `http://localhost:8000${branding.background_image_url.startsWith('/') ? '' : '/'}${branding.background_image_url}`;
+            branding.background_image_url = `https://tablemint.onrender.com${branding.background_image_url.startsWith('/') ? '' : '/'}${branding.background_image_url}`;
           }
           
           console.log("Logo URL:", branding.logo_url);

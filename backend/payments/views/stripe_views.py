@@ -175,35 +175,9 @@ def record_philly_payment(request):
             base_amount = data.get('base_amount')
             tip_amount = data.get('tip_amount')
             
-            # Get total_money from the order details
-            order_total_money = data.get('total_money')
+            # Get total_money from the request data (passed from frontend)
+            order_total_money = data.get('total_money', total_amount)  # Fallback to total_amount if not provided
             order_total_currency = data.get('total_currency', 'GBP')
-            
-            # If total_money isn't provided, try to fetch it from the orders API
-            if not order_total_money and order_id:
-                try:
-                    logger.info(f"Fetching order details for order_id: {order_id}")
-                    order_response = requests.get(
-                        f"https://tablemint.onrender.com/api/orders/{order_id}/",
-                        headers={
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        }
-                    )
-                    
-                    if order_response.status_code == 200:
-                        order_data = order_response.json()
-                        if order_data.get('success') and order_data.get('order'):
-                            total_money_data = order_data['order'].get('total_money', {})
-                            order_total_money = total_money_data.get('amount')
-                            order_total_currency = total_money_data.get('currency', 'GBP')
-                            logger.info(f"Retrieved total_money from order: {order_total_money} {order_total_currency}")
-                        else:
-                            logger.warning(f"Order API returned success=False: {order_data.get('error')}")
-                    else:
-                        logger.warning(f"Failed to fetch order details, status code: {order_response.status_code}")
-                except Exception as e:
-                    logger.exception(f"Error fetching order details: {str(e)}")
             
             logger.info(f"Recording payment - Order ID: {order_id}, Payment ID: {payment_id}")
             if total_amount:

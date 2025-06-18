@@ -26,7 +26,6 @@ def create(request):
         
         # Log the received data for debugging
         logger.info(f"Received order data: {json.dumps(data, indent=2)}")
-
         logger.info("TESTTTTT")
         
         # Validate required fields
@@ -41,17 +40,35 @@ def create(request):
         restaurant_id = data.get('restaurant_id')
         table_token = data.get('table_token')
         
-        # Initialize the POS service with restaurant-specific credentials if provided
-        if restaurant_id or table_token:
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            logger.error("No restaurant context provided for order creation")
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
             pos_service = POSService.for_restaurant(
                 restaurant_id=restaurant_id, 
                 table_token=table_token
             )
-            logger.info(f"Using restaurant-specific POS service for restaurant_id={restaurant_id}, table_token={table_token}")
-        else:
-            # Fallback to default credentials from .env
-            pos_service = POSService()
-            logger.info("Using default POS service credentials from .env")
+            logger.info(f"Using restaurant-specific POS service for order creation: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
         
         # Log before calling create
         logger.info(f"About to call pos_service.create with data: {json.dumps(data, indent=2)}")
@@ -95,9 +112,41 @@ def search(request):
     """Endpoint to search for orders using the POS system"""
     try:
         # Parse the request body
-        data = request.data        
-        # Initialize the POS service
-        pos_service = POSService()
+        data = request.data
+        
+        # Extract restaurant context from request data
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            logger.error("No restaurant context provided for order search")
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for order search: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
         
         # Extract parameters from the request
         # We're passing all parameters directly to the search method
@@ -164,8 +213,39 @@ def search(request):
 def get(request, order_id):
     """Endpoint to retrieve a specific order by ID using the POS system"""
     try:
-        # Initialize the POS service
-        pos_service = POSService()
+        # Extract restaurant context from query parameters
+        restaurant_id = request.GET.get('restaurant_id')
+        table_token = request.GET.get('table_token')
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            logger.error("No restaurant context provided for order retrieval")
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for order retrieval: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
         
         # Get the order using the get method
         result = pos_service.get(order_id=order_id)
@@ -391,9 +471,41 @@ def search(request):
     """Endpoint to search for orders using the POS system"""
     try:
         # Parse the request body
-        data = request.data        
-        # Initialize the POS service
-        pos_service = POSService()
+        data = request.data
+        
+        # Extract restaurant context from request data
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            logger.error("No restaurant context provided for order search")
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for order search: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
         
         # Extract parameters from the request
         # We're passing all parameters directly to the search method
@@ -460,8 +572,39 @@ def search(request):
 def get(request, order_id):
     """Endpoint to retrieve a specific order by ID using the POS system"""
     try:
-        # Initialize the POS service
-        pos_service = POSService()
+        # Extract restaurant context from query parameters
+        restaurant_id = request.GET.get('restaurant_id')
+        table_token = request.GET.get('table_token')
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            logger.error("No restaurant context provided for order retrieval")
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for order retrieval: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
         
         # Get the order using the get method
         result = pos_service.get(order_id=order_id)
@@ -719,41 +862,26 @@ def get_inventory(request):
                 'counts': []
             }, status=400)
         
-        # Initialize POS service with restaurant-specific credentials if provided
-        if restaurant_id or table_token:
-            try:
-                pos_service = POSService.for_restaurant(
-                    restaurant_id=restaurant_id, 
-                    table_token=table_token
-                )
-                logger.info(f"Using restaurant-specific POS service for inventory: restaurant_id={restaurant_id}, table_token={table_token}")
-            except ValueError as e:
-                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
-                return JsonResponse({
-                    'errors': [f'Restaurant configuration error: {str(e)}'],
-                    'counts': []
-                }, status=400)
-        else:
-            # If no specific restaurant context, try to use the first connected restaurant
-            try:
-                from restaurants.models import Restaurant
-                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
-                
-                if connected_restaurant:
-                    logger.info(f"No restaurant context provided for inventory, using first connected restaurant: {connected_restaurant.name}")
-                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
-                else:
-                    logger.error("No connected restaurants found with valid access tokens")
-                    return JsonResponse({
-                        'errors': ['No connected restaurants available. Please configure a restaurant with Square integration.'],
-                        'counts': []
-                    }, status=503)
-            except Exception as e:
-                logger.error(f"Error finding connected restaurant: {str(e)}")
-                return JsonResponse({
-                    'errors': [f'Failed to find connected restaurant: {str(e)}'],
-                    'counts': []
-                }, status=500)
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            return JsonResponse({
+                'errors': ['Restaurant context is required. Provide either restaurant_id or table_token parameter.'],
+                'counts': []
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for inventory: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'errors': [f'Restaurant configuration error: {str(e)}'],
+                'counts': []
+            }, status=400)
         
         # Check authentication
         if not pos_service.is_authenticated():
@@ -793,8 +921,8 @@ def batch_get_inventory(request):
         "catalog_object_ids": ["id1", "id2", "id3"],
         "location_ids": ["loc1", "loc2"] (optional),
         "cursor": "pagination_cursor" (optional),
-        "restaurant_id": "uuid" (optional),
-        "table_token": "token" (optional)
+        "restaurant_id": "uuid" (required),
+        "table_token": "token" (alternative to restaurant_id)
     }
     """
     try:
@@ -829,44 +957,28 @@ def batch_get_inventory(request):
                 'counts': []
             }, status=400)
         
-        # Initialize POS service with restaurant-specific credentials if provided
-        if restaurant_id or table_token:
-            try:
-                pos_service = POSService.for_restaurant(
-                    restaurant_id=restaurant_id, 
-                    table_token=table_token
-                )
-                logger.info(f"Using restaurant-specific POS service for batch inventory: restaurant_id={restaurant_id}, table_token={table_token}")
-            except ValueError as e:
-                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
-                return JsonResponse({
-                    'success': False,
-                    'errors': [f'Restaurant configuration error: {str(e)}'],
-                    'counts': []
-                }, status=400)
-        else:
-            # If no specific restaurant context, try to use the first connected restaurant
-            try:
-                from restaurants.models import Restaurant
-                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
-                
-                if connected_restaurant:
-                    logger.info(f"No restaurant context provided for batch inventory, using first connected restaurant: {connected_restaurant.name}")
-                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
-                else:
-                    logger.error("No connected restaurants found with valid access tokens")
-                    return JsonResponse({
-                        'success': False,
-                        'errors': ['No connected restaurants available. Please configure a restaurant with Square integration.'],
-                        'counts': []
-                    }, status=503)
-            except Exception as e:
-                logger.error(f"Error finding connected restaurant: {str(e)}")
-                return JsonResponse({
-                    'success': False,
-                    'errors': [f'Failed to find connected restaurant: {str(e)}'],
-                    'counts': []
-                }, status=500)
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            return JsonResponse({
+                'success': False,
+                'errors': ['Restaurant context is required. Provide either restaurant_id or table_token parameter.'],
+                'counts': []
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for batch inventory: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': [f'Restaurant configuration error: {str(e)}'],
+                'counts': []
+            }, status=400)
         
         # Check authentication
         if not pos_service.is_authenticated():
@@ -908,52 +1020,36 @@ def get_inventory_by_location(request, location_id):
     
     Query Parameters:
         - cursor (optional): Pagination cursor
-        - restaurant_id (optional): Restaurant UUID to use restaurant-specific credentials
-        - table_token (optional): Table token to look up restaurant through
+        - restaurant_id (required): Restaurant UUID to use restaurant-specific credentials
+        - table_token (alternative to restaurant_id): Table token to look up restaurant through
     """
     try:
         cursor = request.GET.get('cursor')
         restaurant_id = request.GET.get('restaurant_id')
         table_token = request.GET.get('table_token')
         
-        # Initialize POS service with restaurant-specific credentials if provided
-        if (restaurant_id or table_token):
-            try:
-                pos_service = POSService.for_restaurant(
-                    restaurant_id=restaurant_id, 
-                    table_token=table_token
-                )
-                logger.info(f"Using restaurant-specific POS service for location inventory: restaurant_id={restaurant_id}, table_token={table_token}")
-            except ValueError as e:
-                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
-                return JsonResponse({
-                    'success': False,
-                    'errors': [f'Restaurant configuration error: {str(e)}'],
-                    'counts': []
-                }, status=400)
-        else:
-            # If no specific restaurant context, try to use the first connected restaurant
-            try:
-                from restaurants.models import Restaurant
-                connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
-                
-                if connected_restaurant:
-                    logger.info(f"No restaurant context provided for location inventory, using first connected restaurant: {connected_restaurant.name}")
-                    pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
-                else:
-                    logger.error("No connected restaurants found with valid access tokens")
-                    return JsonResponse({
-                        'success': False,
-                        'errors': ['No connected restaurants available. Please configure a restaurant with Square integration.'],
-                        'counts': []
-                    }, status=503)
-            except Exception as e:
-                logger.error(f"Error finding connected restaurant: {str(e)}")
-                return JsonResponse({
-                    'success': False,
-                    'errors': [f'Failed to find connected restaurant: {str(e)}'],
-                    'counts': []
-                }, status=500)
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            return JsonResponse({
+                'success': False,
+                'errors': ['Restaurant context is required. Provide either restaurant_id or table_token parameter.'],
+                'counts': []
+            }, status=400)
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for location inventory: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': [f'Restaurant configuration error: {str(e)}'],
+                'counts': []
+            }, status=400)
         
         # Check authentication
         if not pos_service.is_authenticated():
@@ -1029,6 +1125,8 @@ def batch_create_changes(request):
         idempotency_key = data.get('idempotency_key')
         changes = data.get('changes')
         ignore_unchanged_counts = data.get('ignore_unchanged_counts')
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
         
         # Validate required parameters
         if not idempotency_key:
@@ -1040,6 +1138,13 @@ def batch_create_changes(request):
         if not changes or not isinstance(changes, list):
             return JsonResponse({
                 'errors': ['changes is required and must be an array'],
+                'counts': []
+            }, status=400)
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            return JsonResponse({
+                'errors': ['Restaurant context is required. Provide either restaurant_id or table_token parameter.'],
                 'counts': []
             }, status=400)
         
@@ -1057,8 +1162,19 @@ def batch_create_changes(request):
                 'counts': []
             }, status=400)
         
-        # Initialize POS service
-        pos_service = POSService()
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for batch create changes: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'errors': [f'Restaurant configuration error: {str(e)}'],
+                'counts': []
+            }, status=400)
         
         # Check authentication
         if not pos_service.is_authenticated():

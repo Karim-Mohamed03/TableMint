@@ -161,6 +161,7 @@ def create_external_payment(request):
     2. Aggregate Mode: Creates a payment record based on the sum of all Stripe payments for an order
     
     This keeps the Square system in sync with payments processed through Stripe.
+    Restaurant context is REQUIRED - no fallbacks.
     """
     if request.method == 'POST':
         try:
@@ -175,45 +176,30 @@ def create_external_payment(request):
                     'error': 'Missing required field: order_id'
                 }, status=400)
             
+            # Restaurant context is REQUIRED - no fallbacks
+            if not restaurant_id and not table_token:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+                }, status=400)
+            
             # Check if this is a single payment mode (has amount and tip_amount)
             single_payment_amount = data.get('amount')
             single_payment_tip = data.get('tip_amount', 0)
             
-            # Initialize POS service with restaurant-specific credentials if provided
-            if restaurant_id or table_token:
-                try:
-                    pos_service = POSService.for_restaurant(
-                        restaurant_id=restaurant_id, 
-                        table_token=table_token
-                    )
-                    logger.info(f"Using restaurant-specific POS service for external payment: restaurant_id={restaurant_id}, table_token={table_token}")
-                except ValueError as e:
-                    logger.error(f"Failed to create POS service for restaurant: {str(e)}")
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Restaurant configuration error: {str(e)}'
-                    }, status=400)
-            else:
-                # If no specific restaurant context, try to use the first connected restaurant
-                try:
-                    from restaurants.models import Restaurant
-                    connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
-                    
-                    if connected_restaurant:
-                        logger.info(f"No restaurant context provided for external payment, using first connected restaurant: {connected_restaurant.name}")
-                        pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
-                    else:
-                        logger.error("No connected restaurants found with valid access tokens")
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'No connected restaurants available. Please configure a restaurant with Square integration.'
-                        }, status=503)
-                except Exception as e:
-                    logger.error(f"Error finding connected restaurant: {str(e)}")
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Failed to find connected restaurant: {str(e)}'
-                    }, status=500)
+            # Initialize POS service with restaurant-specific credentials
+            try:
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for external payment: restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Restaurant configuration error: {str(e)}'
+                }, status=400)
             
             if single_payment_amount is not None:
                 # Single Payment Mode - create payment record for this specific payment
@@ -446,71 +432,53 @@ def create_payment(request):
                 status='pending'  # Set initial status as pending
             )
             
+            # Restaurant context is REQUIRED - no fallbacks
+            if not restaurant_id and not table_token:
+                logger.error("No restaurant context provided for payment creation")
+                payment_record.status = 'error'
+                payment_record.response_data = {'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'}
+                payment_record.save()
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.',
+                    'payment_record_id': payment_record.id
+                }, status=400)
+            
+            # Initialize POS service with restaurant-specific credentials
             try:
-                # Initialize POS service with restaurant-specific credentials if provided
-                if restaurant_id or table_token:
-                    try:
-                        pos_service = POSService.for_restaurant(
-                            restaurant_id=restaurant_id, 
-                            table_token=table_token
-                        )
-                        logger.info(f"Using restaurant-specific POS service for payment creation: restaurant_id={restaurant_id}, table_token={table_token}")
-                    except ValueError as e:
-                        logger.error(f"Failed to create POS service for restaurant: {str(e)}")
-                        payment_record.status = 'error'
-                        payment_record.response_data = {'error': f'Restaurant configuration error: {str(e)}'}
-                        payment_record.save()
-                        return JsonResponse({
-                            'success': False,
-                            'error': f'Restaurant configuration error: {str(e)}',
-                            'payment_record_id': payment_record.id
-                        }, status=400)
-                else:
-                    # If no specific restaurant context, try to use the first connected restaurant
-                    try:
-                        from restaurants.models import Restaurant
-                        connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
-                        
-                        if connected_restaurant:
-                            logger.info(f"No restaurant context provided for payment, using first connected restaurant: {connected_restaurant.name}")
-                            pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
-                        else:
-                            logger.error("No connected restaurants found with valid access tokens")
-                            payment_record.status = 'error'
-                            payment_record.response_data = {'error': 'No connected restaurants available'}
-                            payment_record.save()
-                            return JsonResponse({
-                                'success': False,
-                                'error': 'No connected restaurants available. Please configure a restaurant with Square integration.',
-                                'payment_record_id': payment_record.id
-                            }, status=503)
-                    except Exception as e:
-                        logger.error(f"Error finding connected restaurant: {str(e)}")
-                        payment_record.status = 'error'
-                        payment_record.response_data = {'error': f'Failed to find connected restaurant: {str(e)}'}
-                        payment_record.save()
-                        return JsonResponse({
-                            'success': False,
-                            'error': f'Failed to find connected restaurant: {str(e)}',
-                            'payment_record_id': payment_record.id
-                        }, status=500)
+                pos_service = POSService.for_restaurant(
+                    restaurant_id=restaurant_id, 
+                    table_token=table_token
+                )
+                logger.info(f"Using restaurant-specific POS service for payment creation: restaurant_id={restaurant_id}, table_token={table_token}")
+            except ValueError as e:
+                logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+                payment_record.status = 'error'
+                payment_record.response_data = {'error': f'Restaurant configuration error: {str(e)}'}
+                payment_record.save()
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Restaurant configuration error: {str(e)}',
+                    'payment_record_id': payment_record.id
+                }, status=400)
 
-                payment_data = {
-                    'source_id': source_id,
-                    'amount': amount,
-                    'currency': currency,
-                    'idempotency_key': idempotency_key,
-                    'order_id': order_id,
-                    'customer_id': customer_id,
-                    'location_id': location_id,
-                    'reference_id': reference_id,
-                    'note': note,
-                    'tip_money': tip_money,
-                    'app_fee_amount': app_fee_amount,
-                    'autocomplete': autocomplete,
-                    'verification_token': verification_token
-                }
-                
+            payment_data = {
+                'source_id': source_id,
+                'amount': amount,
+                'currency': currency,
+                'idempotency_key': idempotency_key,
+                'order_id': order_id,
+                'customer_id': customer_id,
+                'location_id': location_id,
+                'reference_id': reference_id,
+                'note': note,
+                'tip_money': tip_money,
+                'app_fee_amount': app_fee_amount,
+                'autocomplete': autocomplete,
+                'verification_token': verification_token
+            }
+            
+            try:
                 payment_result = pos_service.adapter.create_payment(payment_data)
                 
                 # Update our payment record with Square payment ID and response

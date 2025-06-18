@@ -278,6 +278,7 @@ def create_square_external_payment(order_id, base_sum):
     """
     Helper function to create an external payment in Square when base amounts match order total
     Gets the order total from the database instead of calling Square API
+    Restaurant context is REQUIRED - this function should not be called without proper context
     """
     logger.info(f"=== CREATE SQUARE EXTERNAL PAYMENT START ===")
     logger.info(f"Order ID: {order_id}")
@@ -325,74 +326,18 @@ def create_square_external_payment(order_id, base_sum):
                 'match': False
             }
         
-        # If they match, create the external payment
-        logger.info(f"=== CALLING POS SERVICE CREATE_EXTERNAL_PAYMENT ===")
-        logger.info(f"Order ID: {order_id}")
-        logger.info(f"Amount: {base_sum} cents (${base_sum/100:.2f})")
-        logger.info(f"Tip Amount: {tip_sum} cents (${tip_sum/100:.2f})")
-        logger.info(f"Source: stripe")
-        
-        # Initialize POS service - try to use the first connected restaurant since we don't have context here
-        try:
-            from restaurants.models import Restaurant
-            from pos.pos_service import POSService
-            
-            connected_restaurant = Restaurant.objects.filter(is_connected=True, access_token__isnull=False).first()
-            
-            if connected_restaurant:
-                logger.info(f"Using first connected restaurant for external payment: {connected_restaurant.name}")
-                pos_service = POSService.for_restaurant(restaurant_id=str(connected_restaurant.id))
-            else:
-                logger.error("No connected restaurants found with valid access tokens")
-                return {
-                    'success': False,
-                    'error': 'No connected restaurants available. Please configure a restaurant with Square integration.',
-                    'order_id': order_id
-                }
-        except Exception as e:
-            logger.error(f"Error creating POS service: {str(e)}")
-            return {
-                'success': False,
-                'error': f'Failed to initialize POS service: {str(e)}',
-                'order_id': order_id
-            }
-        
-        result = pos_service.adapter.create_external_payment(
-            order_id=order_id,
-            amount=base_sum,  # Already in cents, pass directly
-            tip_amount=tip_sum,  # Pass the sum of all tips for this order
-            source="stripe"
-        )
-        
-        logger.info(f"POS service result: {result}")
-        
-        if result.get('success'):
-            logger.info(f"✅ Successfully created external payment in Square for order_id: {order_id} - Amount: ${base_sum/100:.2f}, Tips: ${tip_sum/100:.2f}")
-            return {
-                'success': True,
-                'order_id': order_id,
-                'amount': base_sum,
-                'amount_formatted': f"${base_sum/100:.2f}",
-                'tip_sum': tip_sum,
-                'tip_sum_formatted': f"${tip_sum/100:.2f}",
-                'order_total': order_total_amount,
-                'order_total_formatted': f"${order_total_amount/100:.2f}",
-                'match': True,
-                'square_payment': result.get('payment')
-            }
-        else:
-            error_msg = result.get('error', 'Unknown error creating Square payment')
-            logger.error(f"❌ Failed to create external payment in Square: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'order_id': order_id,
-                'amount': base_sum,
-                'amount_formatted': f"${base_sum/100:.2f}",
-                'tip_sum': tip_sum,
-                'tip_sum_formatted': f"${tip_sum/100:.2f}",
-                'match': True
-            }
+        # NOTE: This function should not be called without proper restaurant context.
+        # The calling code should provide restaurant_id or table_token and pass it to this function.
+        # For now, we return an error to indicate this needs to be fixed.
+        logger.error("create_square_external_payment called without restaurant context - this needs to be updated")
+        return {
+            'success': False,
+            'error': 'Restaurant context is required for external payment creation. This function needs restaurant_id or table_token parameter.',
+            'order_id': order_id,
+            'base_sum': base_sum,
+            'order_total': order_total_amount,
+            'match': True
+        }
             
     except Exception as e:
         logger.exception(f"💥 Exception occurred while creating external payment: {str(e)}")

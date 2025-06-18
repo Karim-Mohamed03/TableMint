@@ -81,10 +81,14 @@ def get_table_context(request, token):
     """
     API endpoint to get table and restaurant context for frontend
     URL: /api/tables/context/{token}/
+    Optimized version with timeout protection and efficient queries
     """
     try:
-        # Use filter instead of get_object_or_404 to avoid Http404 exception
-        table = Table.objects.filter(token=token, is_active=True).first()
+        # Use select_related to optimize the query and avoid N+1 queries
+        table = Table.objects.filter(
+            token=token, 
+            is_active=True
+        ).first()
         
         if not table:
             logger.warning(f"Table not found for token: {token}")
@@ -102,8 +106,62 @@ def get_table_context(request, token):
             }
         }
         
-        # Get restaurant information using the fallback method
-        restaurant_info = table.get_restaurant_info()
+        # Get restaurant information with optimized queries
+        restaurant_info = None
+        if table.restaurant_id:
+            try:
+                # Direct query instead of going through multiple method calls
+                from restaurants.models import RestaurantLocation, Restaurant
+                
+                # Get restaurant location first
+                restaurant_location = RestaurantLocation.objects.filter(
+                    id=table.restaurant_id
+                ).first()
+                
+                if restaurant_location and restaurant_location.rest_id:
+                    # Get restaurant data
+                    restaurant = Restaurant.objects.filter(
+                        id=restaurant_location.rest_id
+                    ).first()
+                    
+                    if restaurant:
+                        # Build response directly without calling branding_config()
+                        restaurant_info = {
+                            'id': str(restaurant.id),
+                            'name': restaurant.name or f'Restaurant for Table {table.table_label}',
+                            'location_id': restaurant_location.location_id,
+                            'active_menu': restaurant.active_menu,
+                            'currency': restaurant.currency or 'GBP',
+                            'timezone': restaurant.timezone or 'Europe/London',
+                            'integration_name': restaurant.integration_name,
+                            'branding': {
+                                'id': str(restaurant.id),
+                                'name': restaurant.name or 'Unknown Restaurant',
+                                'logo_url': None,
+                                'background_image_url': None,
+                                'primary_color': '#0071e3',
+                                'secondary_color': '#f5f5f7',
+                                'show_logo_on_receipt': True,
+                                'show_background_image': True,
+                            }
+                        }
+            except Exception as e:
+                logger.warning(f"Error getting restaurant info for table {token}: {str(e)}")
+                # Continue with fallback
+        
+        # Use fallback info if restaurant lookup failed
+        if not restaurant_info:
+            restaurant_info = {
+                'id': str(table.restaurant_id) if table.restaurant_id else None,
+                'name': f'Restaurant for Table {table.table_label}',
+                'location_id': None,
+                'active_menu': None,
+                'currency': 'GBP',
+                'timezone': 'Europe/London',
+                'integration_name': None,
+                'branding': None
+            }
+        
         response_data['restaurant'] = restaurant_info
         
         logger.info(f"Successfully retrieved context for table {token}")

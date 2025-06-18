@@ -646,15 +646,56 @@ const MenuCategories = () => {
         return;
       }
 
-      // Step 6: Prepare order data for creation
+      // Step 6: Get restaurant context from session storage
+      let restaurantId = null;
+      let tableToken = null;
+
+      // Try to get restaurant context
+      const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+      if (storedRestaurantContext) {
+        try {
+          const restaurantData = JSON.parse(storedRestaurantContext);
+          restaurantId = restaurantData.id;
+        } catch (e) {
+          console.error('Failed to parse restaurant context:', e);
+        }
+      }
+
+      // Try to get table context
+      const storedTableContext = sessionStorage.getItem('table_context');
+      if (storedTableContext) {
+        try {
+          const tableData = JSON.parse(storedTableContext);
+          tableToken = tableData.token;
+          // If we don't have restaurant_id from restaurant context, try to get it from table context
+          if (!restaurantId && tableData.restaurant_id) {
+            restaurantId = tableData.restaurant_id;
+          }
+        } catch (e) {
+          console.error('Failed to parse table context:', e);
+        }
+      }
+
+      // Validate that we have restaurant context
+      if (!restaurantId && !tableToken) {
+        console.error("No restaurant context found in session storage");
+        alert("Restaurant context is missing. Please scan the QR code again or refresh the page.");
+        setIsModalOpen(false);
+        return;
+      }
+
+      // Step 7: Prepare order data for creation (now including restaurant context)
       const orderData = {
         line_items: lineItems,
-        idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}` // Unique key to prevent duplicates
+        idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Unique key to prevent duplicates
+        // Include restaurant context - backend requires either restaurant_id or table_token
+        restaurant_id: restaurantId,
+        table_token: tableToken
       };
       
       console.log("Creating order with data:", orderData);
       
-      // Step 7: Create the order via API call
+      // Step 8: Create the order via API call
       const response = await fetch('https://tablemint.onrender.com/api/orders/create/', {
         method: 'POST',
         headers: {

@@ -10,17 +10,27 @@ const TablePage = () => {
 
   useEffect(() => {
     const fetchTableContext = async () => {
+      console.log('=== TABLE PAGE DEBUG ===');
+      console.log('Current URL:', window.location.href);
+      console.log('Token from useParams:', token);
+      console.log('Token type:', typeof token);
+      console.log('Token length:', token?.length);
+      
       if (!token) {
+        console.log('❌ No token found - this means the URL pattern might not be matching');
         setError('Invalid QR code - no token provided');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('Fetching table context for token:', token);
+        const apiUrl = `https://tablemint.onrender.com/api/tables/context/${token}/`;
+        console.log('🚀 Making API call to:', apiUrl);
         
         // Fetch table and restaurant context from backend
-        const response = await axios.get(`https://tablemint.onrender.com/api/tables/context/${token}/`);
+        const response = await axios.get(apiUrl);
+        
+        console.log('✅ API Response received:', response.data);
         
         if (response.data.success) {
           const { table, restaurant } = response.data;
@@ -71,10 +81,14 @@ const TablePage = () => {
           navigate(redirectUrl);
           
         } else {
+          console.log('❌ API returned success: false');
           setError(response.data.error || 'Failed to load table information');
         }
       } catch (err) {
-        console.error('Error fetching table context:', err);
+        console.error('❌ API call failed:', err);
+        console.error('Error response:', err.response?.data);
+        console.error('Error status:', err.response?.status);
+        
         if (err.response?.status === 404) {
           setError('Table not found - please check your QR code');
         } else {

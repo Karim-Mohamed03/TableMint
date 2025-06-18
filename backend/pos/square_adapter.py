@@ -1161,6 +1161,152 @@ class SquareAdapter(POSAdapter):
                 "errors": [str(e)],
                 "counts": []
             }
+    
+    def update_order_to_paid(self, order_id: str, amount: int, tip_amount: int = 0, source: str = "stripe") -> Dict[str, Any]:
+        """
+        Update a Square order to 'COMPLETED' state and optionally create an external payment record.
+        This should be called after successful payment processing to mark the order as paid in Square.
+        
+        Args:
+            order_id: The Square order ID to update
+            amount: Payment amount in smallest currency unit (cents for GBP) 
+            tip_amount: Tip amount in smallest currency unit (default: 0)
+            source: Name of the external payment source (default: "stripe")
+            
+        Returns:
+            Dict: Update result including updated order details or error information
+        """
+        try:
+            if not order_id or amount is None:
+                return {
+                    'success': False,
+                    'error': 'Missing required fields: order_id and amount are required'
+                }
+            
+            logger.info(f"Updating order {order_id} to COMPLETED state - Amount: {amount}, Tip: {tip_amount}")
+            
+            # Step 1: First, get the current order to get its version
+            order_result = self.get(order_id)
+            
+            if not hasattr(order_result, 'order') and not hasattr(order_result, 'body'):
+                return {
+                    'success': False,
+                    'error': f'Failed to retrieve order {order_id}: {order_result.get("error", "Unknown error")}'
+                }
+            
+            # Extract order from result
+            order = None
+            if hasattr(order_result, 'order'):
+                order = order_result.order
+            elif hasattr(order_result, 'body') and hasattr(order_result.body, 'order'):
+                order = order_result.body.order
+            
+            if not order:
+                return {
+                    'success': False,
+                    'error': f'Order {order_id} not found in Square'
+                }
+            
+            # Get current version for update
+            current_version = getattr(order, 'version', 0)
+            location_id = getattr(order, 'location_id', self.location_id)
+            
+            logger.info(f"Current order version: {current_version}, location: {location_id}")
+            
+            # Step 2: Update the order state to COMPLETED
+            idempotency_key = str(uuid.uuid4())
+            
+            update_body = {
+                "order": {
+                    "location_id": location_id,
+                    "version": current_version,
+                    "state": "COMPLETED"
+                },
+                "idempotency_key": idempotency_key
+            }
+            
+            # Update the order
+            logger.info(f"Updating order state to COMPLETED...")
+            update_result = self.client.orders.update(
+                order_id=order_id,
+                **update_body
+            )
+            
+            # Check for errors in update
+            if hasattr(update_result, 'errors') and update_result.errors:
+                logger.error(f"Failed to update order state: {update_result.errors}")
+                return {
+                    'success': False,
+                    'error': f'Failed to update order state: {[e.detail if hasattr(e, "detail") else str(e) for e in update_result.errors]}'
+                }
+            
+            # Extract updated order
+            updated_order = None
+            if hasattr(update_result, 'order'):
+                updated_order = update_result.order
+            elif hasattr(update_result, 'body') and hasattr(update_result.body, 'order'):
+                updated_order = update_result.body.order
+            
+            logger.info(f"Order state updated successfully")
+            
+            # Step 3: Create external payment record if amount > 0
+            payment_result = None
+            if amount > 0:
+                logger.info(f"Creating external payment record...")
+                payment_result = self.create_external_payment(
+                    order_id=order_id,
+                    amount=amount,
+                    tip_amount=tip_amount,
+                    source=source
+                )
+                
+                if payment_result.get('success'):
+                    logger.info(f"External payment created successfully")
+                else:
+                    logger.warning(f"Failed to create external payment: {payment_result.get('error')}")
+                    # Don't fail the whole operation if payment creation fails
+            
+            # Step 4: Return success response
+            response = {
+                'success': True,
+                'order_id': order_id,
+                'order_state': 'COMPLETED',
+                'amount': amount,
+                'tip_amount': tip_amount,
+                'source': source
+            }
+            
+            # Include updated order if available
+            if updated_order:
+                if hasattr(updated_order, 'dict'):
+                    response['order'] = updated_order.dict()
+                elif isinstance(updated_order, dict):
+                    response['order'] = updated_order
+                else:
+                    try:
+                        response['order'] = vars(updated_order)
+                    except:
+                        response['order'] = str(updated_order)
+            
+            # Include payment result if created
+            if payment_result:
+                response['external_payment'] = payment_result
+            
+            return response
+            
+        except ApiError as e:
+            logger.error(f"Square API error updating order {order_id}: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Square API error: {str(e)}',
+                'code': getattr(e, 'status_code', 'unknown')
+            }
+        except Exception as e:
+            logger.error(f"Exception updating order {order_id}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
 

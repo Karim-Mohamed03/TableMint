@@ -4,6 +4,7 @@ import logging
 import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.db.models import Sum, Max
 import os
@@ -11,6 +12,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from ..models import PhillyCheesesteakPayment
 from pos.square_adapter import SquareAdapter
+from pos.pos_service import POSService
 
 # Set up logger - use the 'payments' logger configured in settings.py
 logger = logging.getLogger('payments')
@@ -418,3 +420,128 @@ def get_order_base_sum(request, order_id=None):
             }, status=500)
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_order_to_paid(request):
+    """
+    Update a Square order to 'COMPLETED' state after successful payment.
+    This endpoint should be called after payment processing to mark orders as paid in Square.
+    
+    Expected request body:
+    {
+        "order_id": "square_order_id",
+        "amount": 1299,  // amount in cents without tip
+        "tip_amount": 200,  // tip in cents (optional, default: 0)
+        "source": "stripe",  // payment source (optional, default: "stripe")
+        "restaurant_id": "uuid",  // required for restaurant context
+        "table_token": "token"  // alternative to restaurant_id
+    }
+    """
+    try:
+        # Parse JSON body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid JSON in request body'
+            }, status=400)
+        
+        # Extract and validate required fields
+        order_id = data.get('order_id')
+        amount = data.get('amount')
+        tip_amount = data.get('tip_amount', 0)
+        source = data.get('source', 'stripe')
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
+        
+        # Validate required fields
+        if not order_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required field: order_id'
+            }, status=400)
+        
+        if amount is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required field: amount'
+            }, status=400)
+        
+        # Validate amount is positive integer
+        try:
+            amount = int(amount)
+            if amount < 0:
+                raise ValueError("Amount cannot be negative")
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Amount must be a non-negative integer'
+            }, status=400)
+        
+        # Validate tip_amount if provided
+        try:
+            tip_amount = int(tip_amount)
+            if tip_amount < 0:
+                raise ValueError("Tip amount cannot be negative")
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Tip amount must be a non-negative integer'
+            }, status=400)
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        logger.info(f"Updating order {order_id} to paid - Amount: {amount}, Tip: {tip_amount}, Source: {source}")
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for order update: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
+        
+        # Update the order to paid status
+        result = pos_service.update_order_to_paid(
+            order_id=order_id,
+            amount=amount,
+            tip_amount=tip_amount,
+            source=source
+        )
+        
+        # Return the result
+        if result.get('success'):
+            logger.info(f"Successfully updated order {order_id} to COMPLETED state")
+            return JsonResponse(result, status=200)
+        else:
+            logger.error(f"Failed to update order {order_id}: {result.get('error', 'Unknown error')}")
+            return JsonResponse(result, status=400)
+            
+    except Exception as e:
+        logger.exception(f"Exception in update_order_to_paid: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error occurred'
+        }, status=500)

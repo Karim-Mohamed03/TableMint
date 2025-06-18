@@ -410,8 +410,6 @@ const CompletePageContent = () => {
       
       if (response.data.success) {
         setPaymentRecorded(true);
-        // Show star rating modal when payment is successfully recorded
-        setIsRatingModalOpen(true);
         console.log("Payment recorded successfully in database");
         
         // Check if Square external payment was created
@@ -422,6 +420,64 @@ const CompletePageContent = () => {
           console.warn("Failed to record external payment in Square:", squareResult?.error);
           // Don't set error state as the main payment was still recorded
         }
+        
+        // NEW: Update the Square order status to COMPLETED after successful payment recording
+        try {
+          console.log("Updating Square order to COMPLETED status...");
+          
+          // Get restaurant context from session storage
+          let restaurantId = null;
+          let tableToken = null;
+
+          // Try to get restaurant context
+          const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+          if (storedRestaurantContext) {
+            try {
+              const restaurantData = JSON.parse(storedRestaurantContext);
+              restaurantId = restaurantData.id;
+            } catch (e) {
+              console.error('Failed to parse restaurant context:', e);
+            }
+          }
+
+          // Try to get table context
+          const storedTableContext = sessionStorage.getItem('table_context');
+          if (storedTableContext) {
+            try {
+              const tableData = JSON.parse(storedTableContext);
+              tableToken = tableData.token;
+              // If we don't have restaurant_id from restaurant context, try to get it from table context
+              if (!restaurantId && tableData.restaurant_id) {
+                restaurantId = tableData.restaurant_id;
+              }
+            } catch (e) {
+              console.error('Failed to parse table context:', e);
+            }
+          }
+          
+          const updateOrderResponse = await axios.post('https://tablemint.onrender.com/api/payments/update-order-to-paid', {
+            order_id: orderId,
+            amount: baseAmt, // Amount without tip
+            tip_amount: tipAmt,
+            source: 'stripe',
+            restaurant_id: restaurantId,
+            table_token: tableToken
+          });
+          
+          if (updateOrderResponse.data.success) {
+            console.log("Successfully updated Square order to COMPLETED:", updateOrderResponse.data);
+          } else {
+            console.warn("Failed to update Square order status:", updateOrderResponse.data.error);
+            // Don't fail the whole flow if order update fails
+          }
+          
+        } catch (updateError) {
+          console.warn("Error updating Square order status:", updateError);
+          // Don't fail the whole flow if order update fails
+        }
+        
+        // Show star rating modal when payment is successfully recorded
+        setIsRatingModalOpen(true);
         
       } else {
         setRecordError("Failed to record payment details");

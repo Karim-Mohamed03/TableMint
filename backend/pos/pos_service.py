@@ -195,3 +195,24 @@ class POSService:
             changes=changes,
             ignore_unchanged_counts=ignore_unchanged_counts
         )
+        
+    def update_order_to_paid(self, order_id: str, amount: int, tip_amount: int = 0, source: str = "stripe") -> Dict[str, Any]:
+        """
+        Update an order to 'COMPLETED' state and create an external payment record.
+        This should be called after successful payment processing to mark the order as paid.
+        
+        Args:
+            order_id: The Square order ID to update
+            amount: Payment amount in smallest currency unit (cents for GBP) 
+            tip_amount: Tip amount in smallest currency unit (default: 0)
+            source: Name of the external payment source (default: "stripe")
+            
+        Returns:
+            Dict: Update result including updated order details or error information
+        """
+        return self.adapter.update_order_to_paid(
+            order_id=order_id,
+            amount=amount,
+            tip_amount=tip_amount,
+            source=source
+        )

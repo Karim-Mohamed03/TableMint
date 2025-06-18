@@ -884,14 +884,21 @@ class SquareAdapter(POSAdapter):
             }
         
 
-    def get_inventory(self, catalog_object_id: str, location_ids: str = None) -> Dict[str, Any]:
+    def get_inventory(self, catalog_object_id: str, location_ids: Optional[List[str]] = None, cursor: Optional[str] = None) -> Dict[str, Any]:
         try:
             logger.info(f"=== GET INVENTORY DEBUG ===")
             logger.info(f"Input - catalog_object_id: {catalog_object_id}")
             logger.info(f"Input - location_ids: {location_ids}")
+            logger.info(f"Input - cursor: {cursor}")
             
-            # Convert location_ids to list format
-            location_ids_list = [location_ids] if location_ids else None
+            # Convert location_ids to proper format - it might be a single string or list
+            location_ids_list = None
+            if location_ids:
+                if isinstance(location_ids, list):
+                    location_ids_list = location_ids
+                else:
+                    # If it's a single string, convert to list
+                    location_ids_list = [location_ids]
             logger.info(f"Converted location_ids to: {location_ids_list}")
             
             # Call the Square Inventory API
@@ -900,6 +907,11 @@ class SquareAdapter(POSAdapter):
                 catalog_object_id=catalog_object_id,
                 location_ids=location_ids_list
             )
+            # Note: Square's inventory.get() doesn't support cursor pagination
+            # Cursor is mainly used in batch_retrieve_inventory_counts
+            if cursor:
+                logger.info(f"Cursor parameter provided ({cursor}) but not used in single item inventory retrieval")
+            
             logger.info(f"Square API call completed. Result type: {type(result)}")
             
             # Initialize response with Square API format

@@ -104,7 +104,48 @@ export default function PaymentPage({
     setOrderError(null);
     
     try {
-      const response = await axios.get(`https://tablemint.onrender.com/api/orders/${orderId}/`, {
+      // Get restaurant context from session storage
+      let restaurantId = null;
+      let tableToken = null;
+
+      // Try to get restaurant context
+      const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+      if (storedRestaurantContext) {
+        try {
+          const restaurantData = JSON.parse(storedRestaurantContext);
+          restaurantId = restaurantData.id;
+        } catch (e) {
+          console.error('Failed to parse restaurant context:', e);
+        }
+      }
+
+      // Try to get table context
+      const storedTableContext = sessionStorage.getItem('table_context');
+      if (storedTableContext) {
+        try {
+          const tableData = JSON.parse(storedTableContext);
+          tableToken = tableData.token;
+          // If we don't have restaurant_id from restaurant context, try to get it from table context
+          if (!restaurantId && tableData.restaurant_id) {
+            restaurantId = tableData.restaurant_id;
+          }
+        } catch (e) {
+          console.error('Failed to parse table context:', e);
+        }
+      }
+
+      // Build URL with restaurant context parameters
+      const url = new URL(`https://tablemint.onrender.com/api/orders/${orderId}/`);
+      if (restaurantId) {
+        url.searchParams.append('restaurant_id', restaurantId);
+      }
+      if (tableToken) {
+        url.searchParams.append('table_token', tableToken);
+      }
+
+      console.log('Fetching order details with restaurant context:', { restaurantId, tableToken });
+
+      const response = await axios.get(url.toString(), {
         headers: {
           'Content-Type': 'application/json',
         }

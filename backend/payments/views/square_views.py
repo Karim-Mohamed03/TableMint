@@ -535,3 +535,154 @@ def create_payment(request):
             'success': False,
             'error': 'Internal server error occurred'
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_square_external_payment(request):
+    """
+    Create an external payment record in Square for payments processed through Stripe.
+    This creates a payment with source_id="EXTERNAL" to record external payments in Square.
+    
+    Expected request body:
+    {
+        "order_id": "square_order_id",
+        "amount": 25,  // amount in cents without tip
+        "tip_amount": 7,  // tip in cents
+        "source": "stripe",  // payment source (optional, default: "stripe")
+        "restaurant_id": "uuid",  // required for restaurant context
+        "table_token": "token"  // alternative to restaurant_id
+    }
+    """
+    try:
+        # Parse JSON body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid JSON in request body'
+            }, status=400)
+        
+        # Extract and validate required fields
+        order_id = data.get('order_id')
+        amount = data.get('amount')
+        tip_amount = data.get('tip_amount', 0)
+        source = data.get('source', 'stripe')
+        restaurant_id = data.get('restaurant_id')
+        table_token = data.get('table_token')
+        
+        # Validate required fields
+        if not order_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required field: order_id'
+            }, status=400)
+        
+        if amount is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required field: amount'
+            }, status=400)
+        
+        # Validate amount is positive integer
+        try:
+            amount = int(amount)
+            if amount < 0:
+                raise ValueError("Amount cannot be negative")
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Amount must be a non-negative integer'
+            }, status=400)
+        
+        # Validate tip_amount if provided
+        try:
+            tip_amount = int(tip_amount)
+            if tip_amount < 0:
+                raise ValueError("Tip amount cannot be negative")
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'error': 'Tip amount must be a non-negative integer'
+            }, status=400)
+        
+        # Restaurant context is REQUIRED - no fallbacks
+        if not restaurant_id and not table_token:
+            return JsonResponse({
+                'success': False,
+                'error': 'Restaurant context is required. Provide either restaurant_id or table_token parameter.'
+            }, status=400)
+        
+        logger.info(f"Creating Square external payment for order {order_id} - Amount: {amount}, Tip: {tip_amount}, Source: {source}")
+        
+        # Initialize POS service with restaurant-specific credentials
+        try:
+            pos_service = POSService.for_restaurant(
+                restaurant_id=restaurant_id, 
+                table_token=table_token
+            )
+            logger.info(f"Using restaurant-specific POS service for external payment: restaurant_id={restaurant_id}, table_token={table_token}")
+        except ValueError as e:
+            logger.error(f"Failed to create POS service for restaurant: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Restaurant configuration error: {str(e)}'
+            }, status=400)
+        
+        # Check authentication
+        if not pos_service.is_authenticated():
+            logger.error("POS service authentication failed")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to authenticate with POS system'
+            }, status=401)
+        
+        # Create the external payment using the Square client directly
+        # This matches the exact structure you specified
+        idempotency_key = str(uuid.uuid4())
+        
+        payment_data = {
+            'source_id': 'EXTERNAL',
+            'amount': amount,
+            'currency': 'GBP',
+            'idempotency_key': idempotency_key,
+            'order_id': order_id,
+            'tip_money': tip_amount,
+            'external_details': {
+                'type': 'EXTERNAL',
+                'source': source
+            }
+        }
+        
+        # Use the create_payment method from the adapter
+        result = pos_service.adapter.create_payment(payment_data)
+        
+        # Return the result
+        if result.get('success'):
+            logger.info(f"Successfully created Square external payment for order {order_id}")
+            return JsonResponse({
+                'success': True,
+                'order_id': order_id,
+                'amount': amount,
+                'tip_amount': tip_amount,
+                'source': source,
+                'payment': result.get('payment'),
+                'idempotency_key': idempotency_key
+            }, status=201)
+        else:
+            logger.error(f"Failed to create Square external payment for order {order_id}: {result.get('error', 'Unknown error')}")
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error', 'Unknown error creating Square external payment'),
+                'order_id': order_id,
+                'amount': amount,
+                'tip_amount': tip_amount
+            }, status=400)
+            
+    except Exception as e:
+        logger.exception(f"Exception in create_square_external_payment: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error occurred'
+        }, status=500)

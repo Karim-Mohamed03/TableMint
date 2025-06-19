@@ -13,7 +13,7 @@ from square.core.api_error import ApiError
 from .pos_adapter import POSAdapter
 from qlub_backend.encryption import decrypt_token
 
-from pos_service import POSService
+from pos.pos_service import POSService
 
 # Get the base directory (backend folder)
 BASE_DIR = Path(__file__).resolve().parent.parent

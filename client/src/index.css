@@ -86,6 +86,11 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+}
+
+html {
+  background-color: #ffffff;
 }
 
 code {

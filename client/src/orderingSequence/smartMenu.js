@@ -20,7 +20,6 @@ const SmartMenu = () => {
   // Fetch catalog data on component mount
   useEffect(() => {
     const fetchData = async () => {
-      console.log(`🚀 [DEBUG] Starting data fetch process for Smart Menu`);
       setLoading(true);
       setError(null);
       
@@ -30,7 +29,6 @@ const SmartMenu = () => {
       if (storedRestaurantContext) {
         try {
           restaurantContext = JSON.parse(storedRestaurantContext);
-          console.log(`🏪 [DEBUG] Restaurant context loaded:`, restaurantContext);
         } catch (e) {
           console.error('Failed to parse restaurant context:', e);
         }
@@ -40,89 +38,54 @@ const SmartMenu = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlMenuId = urlParams.get('menu_id');
       const menuIdToUse = urlMenuId || restaurantContext?.active_menu;
-      console.log(`🍽️ [DEBUG] Using menu ID for Smart Menu: ${menuIdToUse}`);
       
       // Fetch catalog data with menu filtering
-      console.log(`📋 [DEBUG] Fetching catalog data with menu filter...`);
       const catalogResponse = await getCatalogData(null, menuIdToUse);
-      console.log(`📋 [DEBUG] Catalog response:`, catalogResponse);
       
       if (catalogResponse && catalogResponse.success) {
-        console.log(`✅ [DEBUG] Catalog fetch successful, setting catalog data`);
         setCatalogData(catalogResponse.objects);
         
-        // Set image map if available
         if (catalogResponse.imageMap) {
-          console.log(`🖼️ [DEBUG] Setting image map with ${Object.keys(catalogResponse.imageMap).length} images`);
           setImageMap(catalogResponse.imageMap);
         }
         
-        // Extract item variation IDs for inventory check, but keep mapping to item IDs
+        // Extract item variation IDs for inventory check
         const items = catalogResponse.objects.filter(obj => obj.type === 'ITEM');
-        console.log(`🔍 [DEBUG] Found ${items.length} items in catalog`);
+        const itemVariationMap = [];
         
-        const itemVariationMap = []; // Array of {itemId, variationId} objects
-        
-        items.forEach((item, index) => {
-          console.log(`🔍 [DEBUG] Processing item ${index + 1}/${items.length}: ${item.id} (${item.item_data?.name})`);
+        items.forEach((item) => {
           if (item.item_data?.variations && item.item_data.variations.length > 0) {
-            // Use the first variation (most common case)
             const variation = item.item_data.variations[0];
-            console.log(`🔍 [DEBUG] Item ${item.id} has variation: ${variation.id}`);
             itemVariationMap.push({
               itemId: item.id,
               variationId: variation.id
             });
-          } else {
-            console.log(`⚠️ [DEBUG] Item ${item.id} has no variations`);
           }
         });
         
-        console.log(`🔍 [DEBUG] Final item variation map (${itemVariationMap.length} items):`, itemVariationMap);
-        
         if (itemVariationMap.length > 0) {
-          console.log(`📦 [DEBUG] Starting inventory fetch for ${itemVariationMap.length} variations`);
           setInventoryLoading(true);
-          
-          // No need to specify location ID - backend will use default location
           const inventoryResponse = await getInventoryData(itemVariationMap);
-          console.log(`📦 [DEBUG] Inventory response:`, inventoryResponse);
           
           if (inventoryResponse && inventoryResponse.success) {
-            console.log(`✅ [DEBUG] Inventory fetch successful, processing data`);
-            // Convert inventory array to object for easier lookup
-            // Map variation inventory back to item IDs for UI consistency
             const inventoryMap = {};
-            inventoryResponse.counts.forEach((count, index) => {
-              console.log(`🔄 [DEBUG] Processing inventory count ${index + 1}/${inventoryResponse.counts.length}:`, count);
-              // Find the item ID that corresponds to this variation ID
+            inventoryResponse.counts.forEach((count) => {
               const itemVariation = itemVariationMap.find(mapping => mapping.variationId === count.catalog_object_id);
               if (itemVariation) {
-                console.log(`✅ [DEBUG] Mapping variation ${count.catalog_object_id} to item ${itemVariation.itemId}`);
                 inventoryMap[itemVariation.itemId] = {
                   quantity: parseInt(count.quantity || '0'),
                   state: count.state,
                   location_id: count.location_id
                 };
-              } else {
-                console.log(`⚠️ [DEBUG] No item mapping found for variation ${count.catalog_object_id}`);
               }
             });
-            console.log(`🔄 [DEBUG] Final inventory map:`, inventoryMap);
             setInventoryData(inventoryMap);
-          } else {
-            console.error(`❌ [DEBUG] Inventory fetch failed or returned no success`);
           }
           setInventoryLoading(false);
-        } else {
-          console.log(`⚠️ [DEBUG] No item variations found, skipping inventory fetch`);
         }
       } else {
-        console.error(`❌ [DEBUG] Catalog fetch failed`);
         setError('Failed to load menu items');
       }
-      
-      console.log(`🏁 [DEBUG] Data fetch process complete for Smart Menu`);
       setLoading(false);
     };
 
@@ -151,9 +114,7 @@ const SmartMenu = () => {
   // Check if item is in stock
   const isItemInStock = (itemId) => {
     const inventory = inventoryData[itemId];
-    if (!inventory) return true; // Default to in stock if no inventory data
-    
-    // Item is considered out of stock if quantity is 0 or state indicates unavailable
+    if (!inventory) return true;
     return inventory.quantity > 0 && inventory.state !== 'SOLD_OUT';
   };
 
@@ -261,10 +222,7 @@ const SmartMenu = () => {
                     src={itemData.primaryImage.url} 
                     alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
                     className="item-image"
-                    onError={(e) => {
-                      console.log(`🖼️ [DEBUG] Image failed to load for item ${item.id}: ${itemData.primaryImage.url}`);
-                      e.target.style.display = 'none';
-                    }}
+                    onError={(e) => e.target.style.display = 'none'}
                   />
                 ) : (
                   <div className="no-image-placeholder">
@@ -424,7 +382,6 @@ const SmartMenu = () => {
           white-space: nowrap;
           transition: all 0.2s ease;
           color: #718096;
-          min-width: fit-content;
         }
 
         .category-btn:hover {
@@ -518,7 +475,6 @@ const SmartMenu = () => {
           color: white;
           font-weight: 500;
           font-size: 12px;
-          border-radius: 12px;
         }
 
         .no-items {

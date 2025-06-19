@@ -430,61 +430,6 @@ const CompletePageContent = () => {
       console.error("Error recording payment:", error);
       setRecordError("Error connecting to payment service");
     }
-
-    // NEW: Create Square external payment record after successful payment recording
-    try {
-      console.log("Creating Square external payment record...");
-      
-      // Get restaurant context from session storage
-      let restaurantId = null;
-      let tableToken = null;
-
-      // Try to get restaurant context
-      const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
-      if (storedRestaurantContext) {
-        try {
-          const restaurantData = JSON.parse(storedRestaurantContext);
-          restaurantId = restaurantData.id;
-        } catch (e) {
-          console.error('Failed to parse restaurant context:', e);
-        }
-      }
-
-      // Try to get table context
-      const storedTableContext = sessionStorage.getItem('table_context');
-      if (storedTableContext) {
-        try {
-          const tableData = JSON.parse(storedTableContext);
-          tableToken = tableData.token;
-          // If we don't have restaurant_id from restaurant context, try to get it from table context
-          if (!restaurantId && tableData.restaurant_id) {
-            restaurantId = tableData.restaurant_id;
-          }
-        } catch (e) {
-          console.error('Failed to parse table context:', e);
-        }
-      }
-      
-      const squarePaymentResponse = await axios.post('https://tablemint.onrender.com/api/payments/create-square-external-payment', {
-        order_id: orderId,
-        amount: baseAmt, // Amount without tip
-        tip_amount: tipAmt,
-        source: 'stripe',
-        restaurant_id: restaurantId,
-        table_token: tableToken
-      });
-      
-      if (squarePaymentResponse.data.success) {
-        console.log("Successfully created Square external payment:", squarePaymentResponse.data);
-      } else {
-        console.warn("Failed to create Square external payment:", squarePaymentResponse.data.error);
-        // Don't fail the whole flow if Square payment creation fails
-      }
-      
-    } catch (squareError) {
-      console.warn("Error creating Square external payment:", squareError);
-      // Don't fail the whole flow if Square payment creation fails
-    }
   };
   
   // Function to send email receipt

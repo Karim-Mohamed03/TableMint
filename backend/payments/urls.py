@@ -11,7 +11,5 @@ urlpatterns = [
     path('create-external-payment', stripe_views.create_square_external_payment, name='create_square_external_payment'),
     path('create-square-payment', square_views.create_external_payment, name='create_square_payment'),  # Backwards compatibility
     path('send-email-receipt', receipt_views.send_email_receipt, name='send_email_receipt'),
-    path('create_payment', square_views.create_payment, name='create_payment'),
-    path('update-order-to-paid', stripe_views.update_order_to_paid, name='update_order_to_paid'),
-    path('create-square-external-payment', square_views.create_square_external_payment, name='create_square_external_payment_new'),
+    path('create_payment', square_views.create_payment, name='create_payment')
 ]

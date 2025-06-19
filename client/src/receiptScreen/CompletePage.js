@@ -399,21 +399,7 @@ const CompletePageContent = () => {
       // Orders are now created only in confirm modal, so we just record the payment
       console.log("Recording payment for existing order:", orderId);
 
-      // Record the payment in our database
-      const response = await axios.post('https://tablemint.onrender.com/api/payments/record-philly-payment', {
-        payment_id: paymentId,
-        amount: amount,
-        order_id: orderId,
-        base_amount: baseAmt,
-        tip_amount: tipAmt
-      });
-
-      if (response.data.success) {
-        setPaymentRecorded(true);
-        // Show star rating modal when payment is successfully recorded
-
-
-        let restaurantId = null;
+      let restaurantId = null;
         let tableToken = null;
         let location_id = null;
         
@@ -460,6 +446,21 @@ const CompletePageContent = () => {
           amount,
           tipAmount
         });
+      
+
+      // Record the payment in our database
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/record-philly-payment', {
+        payment_id: paymentId,
+        amount: amount,
+        order_id: orderId,
+        base_amount: baseAmt,
+        tip_amount: tipAmt,
+        location_id: location_id
+      });
+
+      if (response.data.success) {
+        setPaymentRecorded(true);
+        // Show star rating modal when payment is successfully recorded
 
         const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
           amount: amount,

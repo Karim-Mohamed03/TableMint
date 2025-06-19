@@ -187,7 +187,7 @@ def record_philly_payment(request):
                 logger.debug(f"Order Total: {order_total_money} {order_total_currency}")
             
             # Get location ID from environment variables
-            location_id = os.getenv('SQUARE_LOCATION_ID')
+            location_id = data.get('location_id')
             
             # Validate required fields
             if not all([order_id, payment_id, total_amount, location_id]):

@@ -44,7 +44,7 @@ const SplitPaymentPage = ({
         // First try to use secure token if available
         if (shareToken) {
           // Call the secure backend API to get share session data
-          const response = await fetch(`https://tablemint.onrender.com/api/orders/share/${shareToken}/`);
+          const response = await fetch(`http://localhost:8000/api/orders/share/${shareToken}/`);
           const result = await response.json();
           
           if (!response.ok || !result.success) {

@@ -45,10 +45,10 @@ def table_qr_redirect(request, token):
         if not table:
             logger.error(f"Table not found for token: {token}")
             # Redirect to main menu with error
-            return redirect("https://test-app-fawn-phi.vercel.app/QROrderPay?error=invalid_table")
+            return redirect("http://localhost:3000/QROrderPay?error=invalid_table")
         
         # Build the redirect URL with parameters
-        frontend_url = "https://test-app-fawn-phi.vercel.app/QROrderPay"
+        frontend_url = "http://localhost:3000/QROrderPay"
         
         # Add query parameters for context
         params = []
@@ -73,7 +73,7 @@ def table_qr_redirect(request, token):
             
     except Exception as e:
         logger.error(f"Error processing QR code for token {token}: {str(e)}")
-        return redirect("https://test-app-fawn-phi.vercel.app/QROrderPay?error=system_error")
+        return redirect("http://localhost:3000/QROrderPay?error=system_error")
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

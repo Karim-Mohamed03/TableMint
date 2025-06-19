@@ -383,7 +383,6 @@ def create_payment(request):
         idempotency_key = str(uuid.uuid4())
         order_id = data.get('order_id')
         customer_id = data.get('customer_id')
-        location_id = data.get('location_id', os.getenv('SQUARE_LOCATION_ID'))
         reference_id = data.get('reference_id')
         note = data.get('note', '')[:500]  # Limit note length
         tip_money = data.get('tip_money')
@@ -461,6 +460,14 @@ def create_payment(request):
                     'error': f'Restaurant configuration error: {str(e)}',
                     'payment_record_id': payment_record.id
                 }, status=400)
+
+            # Get location_id from the restaurant context (no .env fallback)
+            # The POS service adapter already has the correct location_id from the restaurant
+            location_id = data.get('location_id')  # Only use explicit location_id if provided
+            if not location_id:
+                # Get the location_id from the restaurant's POS adapter
+                location_id = pos_service.adapter.location_id
+                logger.info(f"Using location_id from restaurant context: {location_id}")
 
             payment_data = {
                 'source_id': source_id,

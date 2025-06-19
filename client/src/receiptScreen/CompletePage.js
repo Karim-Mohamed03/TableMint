@@ -412,8 +412,11 @@ const CompletePageContent = () => {
         setPaymentRecorded(true);
         // Show star rating modal when payment is successfully recorded
 
+
         let restaurantId = null;
         let tableToken = null;
+        let location_id = null;
+        
 
         // Try to get restaurant context
         const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
@@ -421,6 +424,7 @@ const CompletePageContent = () => {
           try {
             const restaurantData = JSON.parse(storedRestaurantContext);
             restaurantId = restaurantData.id;
+            location_id = restaurantData.location_id; // Get location_id if available
           } catch (e) {
             console.error('Failed to parse restaurant context:', e);
           }
@@ -449,6 +453,14 @@ const CompletePageContent = () => {
           return;
         }
 
+        console.log("Creating Square payment with context:", {
+          restaurantId,
+          tableToken,
+          orderId,
+          amount,
+          tipAmount
+        });
+
         const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
           amount: amount,
           tip_money: tipAmount,
@@ -456,6 +468,7 @@ const CompletePageContent = () => {
           source_id: 'EXTERNAL',
           restaurant_id: restaurantId,
           table_token: tableToken,
+          location_id: location_id 
         });
 
         if (create_payment_response.data.success) {

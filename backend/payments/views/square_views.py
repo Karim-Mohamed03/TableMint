@@ -464,10 +464,8 @@ def create_payment(request):
             # Get location_id from the restaurant context (no .env fallback)
             # The POS service adapter already has the correct location_id from the restaurant
             location_id = data.get('location_id')  # Only use explicit location_id if provided
-            if not location_id:
-                # Get the location_id from the restaurant's POS adapter
-                location_id = pos_service.adapter.location_id
-                logger.info(f"Using location_id from restaurant context: {location_id}")
+            logger.info(f"Using location_id: {location_id} for payment creation")
+            
 
             payment_data = {
                 'source_id': source_id,

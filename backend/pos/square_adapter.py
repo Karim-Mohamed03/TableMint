@@ -626,7 +626,6 @@ class SquareAdapter(POSAdapter):
             Dict: Payment creation result including payment details or error information.
         """
 
-        from pos.pos_service import POSService
         try:
             # Extract required fields
             source_id = payment_data.get('source_id')
@@ -651,8 +650,6 @@ class SquareAdapter(POSAdapter):
             app_fee_amount = payment_data.get('app_fee_amount')
             autocomplete = payment_data.get('autocomplete', True)
             verification_token = payment_data.get('verification_token')
-            restaurant_id = payment_data.get('restaurant_id')
-            table_token = payment_data.get('table_token')
 
             
             # Build the payment request arguments (more explicit approach)
@@ -697,48 +694,8 @@ class SquareAdapter(POSAdapter):
                     "currency": currency
                 }
             
-            # Call supabase table "restaurants" to get access token
-            # if restaurant_id:
-            #     from restaurants.models import Restaurant
-            #     restaurant = Restaurant.objects.filter(id=restaurant_id).first()
-            #     if restaurant and restaurant.access_token:
-            #         # Decrypt the access token
-            #         decrypted_token = decrypt_token(restaurant.access_token)
-            #         if decrypted_token:
-            #             self.client.token = decrypted_token
-            #         else:
-            #             return {
-            #                 "success": False,
-            #                 "error": "Failed to decrypt access token for restaurant"
-            #             }
-            #     else:
-            #         return {
-            #             "success": False,
-            #             "error": "Restaurant not found or access token missing"
-            #         }
-            # else:
-            #     # Use the access token from the adapter's initialization
-            #     if not self.client.token:
-            #         return {
-            #             "success": False,
-            #             "error": "Square client is not initialized with a valid access token"
-            #         }
-            
-            pos_service = POSService.for_restaurant(
-                restaurant_id=restaurant_id,
-                table_token=table_token  # Not needed for payments
-            )
-            
-
-            result = pos_service.create_payment(
-                payment_data=payment_request
-            )
-                
-            if not result.get('success', False):
-                return {
-                    "success": False,
-                    "error": result.get('error', 'Unknown error occurred')
-                }
+            # Call the Square Payments API directly using the already initialized client
+            result = self.client.payments.create(**payment_request)
             
             # Handle the response based on Square SDK structure
             # Check for errors first

@@ -698,31 +698,31 @@ class SquareAdapter(POSAdapter):
                 }
             
             # Call supabase table "restaurants" to get access token
-            if restaurant_id:
-                from restaurants.models import Restaurant
-                restaurant = Restaurant.objects.filter(id=restaurant_id).first()
-                if restaurant and restaurant.access_token:
-                    # Decrypt the access token
-                    decrypted_token = decrypt_token(restaurant.access_token)
-                    if decrypted_token:
-                        self.client.token = decrypted_token
-                    else:
-                        return {
-                            "success": False,
-                            "error": "Failed to decrypt access token for restaurant"
-                        }
-                else:
-                    return {
-                        "success": False,
-                        "error": "Restaurant not found or access token missing"
-                    }
-            else:
-                # Use the access token from the adapter's initialization
-                if not self.client.token:
-                    return {
-                        "success": False,
-                        "error": "Square client is not initialized with a valid access token"
-                    }
+            # if restaurant_id:
+            #     from restaurants.models import Restaurant
+            #     restaurant = Restaurant.objects.filter(id=restaurant_id).first()
+            #     if restaurant and restaurant.access_token:
+            #         # Decrypt the access token
+            #         decrypted_token = decrypt_token(restaurant.access_token)
+            #         if decrypted_token:
+            #             self.client.token = decrypted_token
+            #         else:
+            #             return {
+            #                 "success": False,
+            #                 "error": "Failed to decrypt access token for restaurant"
+            #             }
+            #     else:
+            #         return {
+            #             "success": False,
+            #             "error": "Restaurant not found or access token missing"
+            #         }
+            # else:
+            #     # Use the access token from the adapter's initialization
+            #     if not self.client.token:
+            #         return {
+            #             "success": False,
+            #             "error": "Square client is not initialized with a valid access token"
+            #         }
             
             pos_service = POSService.for_restaurant(
                 restaurant_id=restaurant_id,

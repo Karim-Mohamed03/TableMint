@@ -462,10 +462,39 @@ def create_payment(request):
                 }, status=400)
 
             # Get location_id from the restaurant context (no .env fallback)
-            # The POS service adapter already has the correct location_id from the restaurant
-            location_id = data.get('location_id')  # Only use explicit location_id if provided
-            logger.info(f"Using location_id: {location_id} for payment creation")
-            
+            # FIRST: Use the location_id explicitly passed from the frontend
+            location_id = data.get('location_id')
+            if location_id:
+                logger.info(f"Using location_id from request: {location_id}")
+            else:
+                # If an order_id is provided, get the location_id from that order
+                if order_id:
+                    try:
+                        # Get the order details to extract the location_id it was created with
+                        order_result = pos_service.get(order_id)
+                        if hasattr(order_result, 'order'):
+                            order_location_id = getattr(order_result.order, 'location_id', None)
+                            if order_location_id:
+                                location_id = order_location_id
+                                logger.info(f"Using location_id from existing order {order_id}: {location_id}")
+                            else:
+                                logger.warning(f"No location_id found in order {order_id}")
+                        elif hasattr(order_result, 'body') and hasattr(order_result.body, 'order'):
+                            order_location_id = getattr(order_result.body.order, 'location_id', None)
+                            if order_location_id:
+                                location_id = order_location_id
+                                logger.info(f"Using location_id from existing order {order_id}: {location_id}")
+                            else:
+                                logger.warning(f"No location_id found in order {order_id}")
+                        else:
+                            logger.warning(f"Could not retrieve order {order_id} to get location_id")
+                    except Exception as e:
+                        logger.error(f"Error retrieving order {order_id} to get location_id: {str(e)}")
+                
+                # Fallback to adapter's location_id if we couldn't get it from the order or request
+                if not location_id:
+                    location_id = pos_service.adapter.location_id
+                    logger.info(f"Using location_id from restaurant context as fallback: {location_id}")
 
             payment_data = {
                 'source_id': source_id,

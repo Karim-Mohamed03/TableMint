@@ -649,6 +649,7 @@ const MenuCategories = () => {
       // Step 6: Get restaurant context from session storage
       let restaurantId = null;
       let tableToken = null;
+      let location_id = null;
 
       // Try to get restaurant context
       const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
@@ -656,6 +657,7 @@ const MenuCategories = () => {
         try {
           const restaurantData = JSON.parse(storedRestaurantContext);
           restaurantId = restaurantData.id;
+          location_id = restaurantData.location_id;
         } catch (e) {
           console.error('Failed to parse restaurant context:', e);
         }
@@ -690,7 +692,8 @@ const MenuCategories = () => {
         idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Unique key to prevent duplicates
         // Include restaurant context - backend requires either restaurant_id or table_token
         restaurant_id: restaurantId,
-        table_token: tableToken
+        table_token: tableToken,
+        location_id: location_id, // Use effective location ID if available
       };
       
       console.log("Creating order with data:", orderData);

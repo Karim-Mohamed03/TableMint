@@ -35,15 +35,15 @@ const StarRatingModal = ({ isOpen, onClose }) => {
         <div className="modal-header">
           <button className="close-button" onClick={onClose}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
-        
+
         <div className="rating-content">
           <h2>How was your experience?</h2>
           <p>We'd love to hear your feedback</p>
-          
+
           <div className="stars-container">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
@@ -54,10 +54,10 @@ const StarRatingModal = ({ isOpen, onClose }) => {
                 onMouseLeave={handleStarLeave}
               >
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path 
-                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
-                    stroke="#FFD700" 
-                    strokeWidth="2" 
+                  <path
+                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                    stroke="#FFD700"
+                    strokeWidth="2"
                     strokeLinejoin="round"
                     fill={(hoveredStar >= star || rating >= star) ? "#FFD700" : "transparent"}
                   />
@@ -65,14 +65,14 @@ const StarRatingModal = ({ isOpen, onClose }) => {
               </button>
             ))}
           </div>
-          
+
           <div className="rating-labels">
             <span>Poor</span>
             <span>Excellent</span>
           </div>
         </div>
       </div>
-      
+
       <style jsx>{`
         .star-rating-modal {
           position: fixed;
@@ -309,50 +309,50 @@ const CompletePageContent = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
-  
+
   useEffect(() => {
     if (!stripe) {
       return;
     }
-    
+
     const clientSecret = new URLSearchParams(window.location.search).get(
       "payment_intent_client_secret"
     );
-    
+
     if (!clientSecret) {
       return;
     }
-    
+
     // Get order ID from URL parameters - this should be the real Square order ID
     const orderIdFromUrl = new URLSearchParams(window.location.search).get("order_id");
-    
+
     if (!orderIdFromUrl) {
       console.error("No order_id found in URL parameters");
       setStatus("error");
       return;
     }
-    
+
     setOrderId(orderIdFromUrl);
     console.log("Using Square order ID from URL:", orderIdFromUrl);
-    
+
     // Directly get base and tip amounts from URL if available
     const baseAmountFromUrl = new URLSearchParams(window.location.search).get("base_amount");
     const tipAmountFromUrl = new URLSearchParams(window.location.search).get("tip_amount");
-    
-    stripe.retrievePaymentIntent(clientSecret).then(({paymentIntent}) => {
+
+    stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
       if (!paymentIntent) {
         return;
       }
-      
+
       setStatus(paymentIntent.status);
       setIntentId(paymentIntent.id);
       setPaymentAmount(paymentIntent.amount);
-      
+
       // Calculate base and tip amounts correctly
       let total = paymentIntent.amount;
       let base = null;
       let tip = null;
-      
+
       // Check if we have the tip amount from URL parameters
       if (tipAmountFromUrl) {
         // Convert the string to an integer tip amount
@@ -374,15 +374,15 @@ const CompletePageContent = () => {
           tip = 0;
         }
       }
-      
+
       setBaseAmount(base);
       setTipAmount(tip);
-      
+
       // If payment succeeded, record it to our backend
       if (paymentIntent.status === 'succeeded') {
         recordPaymentToPhillyCheesesteak(
-          paymentIntent.id, 
-          total, 
+          paymentIntent.id,
+          total,
           orderIdFromUrl,
           base,
           tip
@@ -390,7 +390,7 @@ const CompletePageContent = () => {
       }
     });
   }, [stripe]);
-  
+
   // Orders are now created only in the confirm modal, not after payment
 
   // Function to record successful payment to the backend and create Square external payment
@@ -407,21 +407,55 @@ const CompletePageContent = () => {
         base_amount: baseAmt,
         tip_amount: tipAmt
       });
-      
+
       if (response.data.success) {
         setPaymentRecorded(true);
         // Show star rating modal when payment is successfully recorded
 
-        restaurant_id = sessionStorage.getItem('restaurant_context') ? JSON.parse(sessionStorage.getItem('restaurant_context')).id : null;
+        let restaurantId = null;
+        let tableToken = null;
 
+        // Try to get restaurant context
+        const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+        if (storedRestaurantContext) {
+          try {
+            const restaurantData = JSON.parse(storedRestaurantContext);
+            restaurantId = restaurantData.id;
+          } catch (e) {
+            console.error('Failed to parse restaurant context:', e);
+          }
+        }
+
+        // Try to get table context
+        const storedTableContext = sessionStorage.getItem('table_context');
+        if (storedTableContext) {
+          try {
+            const tableData = JSON.parse(storedTableContext);
+            tableToken = tableData.token;
+            // If we don't have restaurant_id from restaurant context, try to get it from table context
+            if (!restaurantId && tableData.restaurant_id) {
+              restaurantId = tableData.restaurant_id;
+            }
+          } catch (e) {
+            console.error('Failed to parse table context:', e);
+          }
+        }
+
+        // Validate that we have restaurant context
+        if (!restaurantId && !tableToken) {
+          console.error("No restaurant context found in session storage");
+          alert("Restaurant context is missing. Please scan the QR code again or refresh the page.");
+          setIsModalOpen(false);
+          return;
+        }
 
         const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
           amount: amount,
           tip_money: tipAmount,
           order_id: orderId,
           source_id: 'EXTERNAL',
-          restaurant_id: restaurant_id,
-          table_token: sessionStorage.getItem('table_context') ? JSON.parse(sessionStorage.getItem('table_context')).token : null,
+          restaurant_id: restaurantId,
+          table_token: tableToken,
         });
 
         if (create_payment_response.data.success) {
@@ -432,7 +466,7 @@ const CompletePageContent = () => {
         }
         // setIsRatingModalOpen(true);
         console.log("Payment recorded successfully in database and paid for");
-        
+
         // Check if Square external payment was created
         const squareResult = response.data.square_external_payment;
         if (squareResult && squareResult.success) {
@@ -441,7 +475,7 @@ const CompletePageContent = () => {
           console.warn("Failed to record external payment in Square:", squareResult?.error);
           // Don't set error state as the main payment was still recorded
         }
-        
+
       } else {
         setRecordError("Failed to record payment details");
       }
@@ -450,17 +484,17 @@ const CompletePageContent = () => {
       setRecordError("Error connecting to payment service");
     }
   };
-  
+
   // Function to send email receipt
   const sendEmailReceipt = async () => {
     if (!email || !email.includes('@')) {
       setEmailError('Please enter a valid email address');
       return;
     }
-    
+
     setEmailSending(true);
     setEmailError(null);
-    
+
     try {
       const response = await axios.post('https://tablemint.onrender.com/api/payments/send-email-receipt', {
         email: email,
@@ -471,7 +505,7 @@ const CompletePageContent = () => {
         tip_amount: tipAmount,
         status: status
       });
-      
+
       if (response.data.success) {
         setEmailSent(true);
         setShowEmailInput(false);
@@ -485,14 +519,14 @@ const CompletePageContent = () => {
       setEmailSending(false);
     }
   };
-  
+
   const handleEmailReceipt = () => {
     if (emailSent) return;
     setShowEmailInput(true);
   };
-  
+
   const statusContent = STATUS_CONTENT_MAP[status] || STATUS_CONTENT_MAP.default;
-  
+
   // Format currency display
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return 'N/A';
@@ -501,20 +535,20 @@ const CompletePageContent = () => {
       currency: 'GBP'
     }).format(amount / 100);
   };
-  
+
   return (
     <div className="complete-container">
       <div className="status-card">
         <div className="status-icon">
           {statusContent.icon}
         </div>
-        
+
         <h1 className="status-title">{statusContent.title}</h1>
         <p className="status-message">{statusContent.message}</p>
-        
+
         {intentId && (
           <div className="payment-details">
-            
+
             <div className="detail-row">
               <span className="detail-label">Status</span>
               <span className="detail-value status-badge">{status}</span>
@@ -533,15 +567,15 @@ const CompletePageContent = () => {
                   <span className="detail-label">Tip Amount</span>
                   <span className="detail-value">{formatCurrency(tipAmount)}</span>
                 </div>
-                
+
               </>
             )}
           </div>
         )}
-        
+
         <div className="action-buttons">
           {intentId && status === 'succeeded' && (
-            <button 
+            <button
               className="secondary-button"
               onClick={handleEmailReceipt}
               disabled={emailSent}
@@ -549,32 +583,32 @@ const CompletePageContent = () => {
               {emailSent ? 'Receipt Sent' : 'Email Receipt'}
             </button>
           )}
-          
+
           <a href="/" className="primary-button">
             Return to Home
           </a>
         </div>
-        
+
         {showEmailInput && (
           <div className="email-input-section">
-            <input 
-              type="email" 
-              placeholder="Enter your email address" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+            <input
+              type="email"
+              placeholder="Enter your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={emailSending}
               className="email-input"
             />
             <div className="email-buttons">
-              <button 
+              <button
                 onClick={() => setShowEmailInput(false)}
                 className="cancel-button"
                 disabled={emailSending}
               >
                 Cancel
               </button>
-              <button 
-                onClick={sendEmailReceipt} 
+              <button
+                onClick={sendEmailReceipt}
                 disabled={emailSending || !email}
                 className="send-button"
               >
@@ -593,7 +627,7 @@ const CompletePageContent = () => {
 // Main component that wraps the content with Elements provider
 export default function CompletePage() {
   const [clientSecret, setClientSecret] = useState("");
-  
+
   useEffect(() => {
     // Get the client secret from the URL
     const secret = new URLSearchParams(window.location.search).get(
@@ -603,7 +637,7 @@ export default function CompletePage() {
       setClientSecret(secret);
     }
   }, []);
-  
+
   return (
     clientSecret ? (
       <Elements stripe={stripePromise} options={{ clientSecret }}>

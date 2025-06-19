@@ -412,12 +412,16 @@ const CompletePageContent = () => {
         setPaymentRecorded(true);
         // Show star rating modal when payment is successfully recorded
 
+        restaurant_id = sessionStorage.getItem('restaurant_context') ? JSON.parse(sessionStorage.getItem('restaurant_context')).id : null;
+
 
         const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
           amount: amount,
           tip_money: tipAmount,
           order_id: orderId,
-          source_id: 'EXTERNAL'
+          source_id: 'EXTERNAL',
+          restaurant_id: restaurant_id,
+          table_token: sessionStorage.getItem('table_context') ? JSON.parse(sessionStorage.getItem('table_context')).token : null,
         });
 
         if (create_payment_response.data.success) {

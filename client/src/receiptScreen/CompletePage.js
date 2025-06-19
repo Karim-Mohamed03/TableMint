@@ -411,8 +411,23 @@ const CompletePageContent = () => {
       if (response.data.success) {
         setPaymentRecorded(true);
         // Show star rating modal when payment is successfully recorded
-        setIsRatingModalOpen(true);
-        console.log("Payment recorded successfully in database");
+
+
+        const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
+          amount: amount,
+          tip_money: tipAmount,
+          order_id: orderId,
+
+        });
+
+        if (create_payment_response.data.success) {
+          console.log("Square external payment created successfully:", create_payment_response.data);
+          setIsRatingModalOpen(true);
+        } else {
+          console.warn("Failed to create Square external payment:", create_payment_response.data.error);
+        }
+        // setIsRatingModalOpen(true);
+        console.log("Payment recorded successfully in database and paid for");
         
         // Check if Square external payment was created
         const squareResult = response.data.square_external_payment;

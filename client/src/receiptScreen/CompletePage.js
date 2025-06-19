@@ -445,7 +445,7 @@ const CompletePageContent = () => {
         if (!restaurantId && !tableToken) {
           console.error("No restaurant context found in session storage");
           alert("Restaurant context is missing. Please scan the QR code again or refresh the page.");
-          setIsModalOpen(false);
+          // setIsModalOpen(false);
           return;
         }
 

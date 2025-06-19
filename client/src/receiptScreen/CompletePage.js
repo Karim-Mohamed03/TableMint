@@ -417,7 +417,7 @@ const CompletePageContent = () => {
           amount: amount,
           tip_money: tipAmount,
           order_id: orderId,
-
+          source_id: 'EXTERNAL'
         });
 
         if (create_payment_response.data.success) {

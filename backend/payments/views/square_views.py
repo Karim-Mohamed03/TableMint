@@ -479,7 +479,7 @@ def create_payment(request):
             }
             
             try:
-                payment_result = pos_service.adapter.create_payment(payment_data)
+                payment_result = pos_service.create_payment(payment_data)
                 
                 # Update our payment record with Square payment ID and response
                 if payment_result.get('success', False) and 'payment' in payment_result:

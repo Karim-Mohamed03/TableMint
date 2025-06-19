@@ -110,6 +110,18 @@ class POSService:
         """
         return self.adapter.process_payment(payment_data)
         
+    def create_payment(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a payment in the POS system.
+        
+        Args:
+            payment_data: Dictionary containing payment details.
+            
+        Returns:
+            Dict: Payment creation result.
+        """
+        return self.adapter.create_payment(payment_data)
+        
     def is_authenticated(self) -> bool:
         """
         Check if the adapter is properly authenticated with the POS system.

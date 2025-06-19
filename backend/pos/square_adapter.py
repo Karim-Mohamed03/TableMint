@@ -13,7 +13,7 @@ from square.core.api_error import ApiError
 from .pos_adapter import POSAdapter
 from qlub_backend.encryption import decrypt_token
 
-from pos.pos_service import POSService
+
 
 # Get the base directory (backend folder)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -625,6 +625,8 @@ class SquareAdapter(POSAdapter):
         Returns:
             Dict: Payment creation result including payment details or error information.
         """
+
+        from pos.pos_service import POSService
         try:
             # Extract required fields
             source_id = payment_data.get('source_id')

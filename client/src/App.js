@@ -240,9 +240,9 @@ function App() {
               />
             </Routes>
           </main>
-          <footer>
+          {/* <footer>
             <p>© {new Date().getFullYear()} TableMint</p>
-          </footer>
+          </footer> */}
         </Router>
       </div>
     </CartProvider>

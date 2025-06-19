@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 
 // Import the utility functions from menuCategories
 import { getCatalogData, getInventoryData, processCatalogWithImages } from './menuCategories';
-// Import the ItemDetailModal component
-import ItemDetailModal from '../components/ItemDetailModal';
+// Import the ItemDetailModal component from the new menu folder location
+import ItemDetailModal from '../components/menu/ItemDetailModal';
 
 // Smart Menu component - Menu display only, no cart functionality
 const SmartMenu = () => {

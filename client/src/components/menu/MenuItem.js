@@ -7,14 +7,23 @@ const MenuItem = ({
   soldOutAtLocation, 
   currentQuantity, 
   onIncrement, 
-  onDecrement 
+  onDecrement,
+  onItemClick // Add this new prop for modal functionality
 }) => {
   const itemData = item.item_data;
   const variation = itemData?.variations?.[0];
   const price = variation?.item_variation_data?.price_money;
 
+  const handleCardClick = (e) => {
+    // Don't trigger modal if clicking on quantity controls
+    if (e.target.closest('.quantity-selector') || e.target.closest('.add-button')) {
+      return;
+    }
+    onItemClick?.(item);
+  };
+
   return (
-    <div className="menu-item-card">
+    <div className="menu-item-card" onClick={handleCardClick}>
       <div className="item-content">
         <div className="item-header">
           <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
@@ -101,6 +110,7 @@ const MenuItem = ({
           position: relative;
           gap: 16px;
           font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          cursor: pointer;
         }
 
         .menu-item-card:hover {
@@ -127,7 +137,7 @@ const MenuItem = ({
         }
 
         .item-name {
-          font-size: 18px;
+          font-size: 15px;
           font-weight: 600;
           color: #000;
           margin: 0;
@@ -162,7 +172,7 @@ const MenuItem = ({
         }
 
         .item-price {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 400;
           color:rgb(112, 112, 112);
           margin-top: 4px;
@@ -220,6 +230,7 @@ const MenuItem = ({
           transition: all 0.2s ease;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
           font-family: 'Satoshi', sans-serif;
+          z-index: 10;
         }
 
         .add-button:hover {
@@ -238,6 +249,7 @@ const MenuItem = ({
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
           padding: 2px;
           gap: 2px;
+          z-index: 10;
         }
 
         .quantity-btn {

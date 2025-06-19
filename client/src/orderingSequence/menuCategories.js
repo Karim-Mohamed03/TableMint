@@ -10,6 +10,7 @@ import MenuItemsGrid from '../components/menu/MenuItemsGrid';
 import BottomCartButton from '../components/menu/BottomCartButton';
 import LoadingState from '../components/menu/LoadingState';
 import ErrorState from '../components/menu/ErrorState';
+import ItemDetailModal from '../components/menu/ItemDetailModal';
 
 // Helper functions for catalog and inventory data
 const getCatalogData = async (locationId = null, menuId = null) => {
@@ -212,6 +213,10 @@ const MenuCategories = () => {
   const [tableContext, setTableContext] = useState(null);
   const [restaurantContext, setRestaurantContext] = useState(null);
   const [effectiveLocationId, setEffectiveLocationId] = useState(null);
+
+  // New state for item detail modal
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showItemModal, setShowItemModal] = useState(false);
 
   // Load context from sessionStorage and URL parameters
   useEffect(() => {
@@ -597,6 +602,17 @@ const MenuCategories = () => {
     return <ErrorState error={error} />;
   }
 
+  // Handle item click for modal
+  const handleItemClick = (item) => {
+    setSelectedItem(item);
+    setShowItemModal(true);
+  };
+
+  const handleCloseItemModal = () => {
+    setShowItemModal(false);
+    setSelectedItem(null);
+  };
+
   return (
     <div className="menu-categories">
       <MenuHeader 
@@ -619,11 +635,21 @@ const MenuCategories = () => {
         handleIncrement={handleIncrement}
         handleDecrement={handleDecrement}
         locationId={locationId}
+        onItemClick={handleItemClick}
       />
 
       <BottomCartButton 
         itemCount={getItemCount()}
         onCartClick={goToCart}
+      />
+
+      {/* Item Detail Modal */}
+      <ItemDetailModal
+        isOpen={showItemModal}
+        onClose={handleCloseItemModal}
+        item={selectedItem}
+        formatCurrency={formatCurrency}
+        isItemInStock={isItemInStock}
       />
 
       <CartConfirmationModal 
@@ -637,7 +663,7 @@ const MenuCategories = () => {
           max-width: 100%;
           margin: 0;
           padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
           background: #fff;
           min-height: 100vh;
         }

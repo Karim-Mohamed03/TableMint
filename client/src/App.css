@@ -47,13 +47,11 @@ main {
   box-sizing: border-box;
 }
 
-footer {
+/* footer {
   margin-top: 40px;
   padding: 20px;
-  background-color: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
-  width: 100%;
-}
+  background-color: #ffffff;
+  /* border-top: 1px solid #e0e0e0; */
 
 /* Table Page Styles */
 .table-page {

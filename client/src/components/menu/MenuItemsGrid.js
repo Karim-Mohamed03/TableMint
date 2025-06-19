@@ -9,7 +9,8 @@ const MenuItemsGrid = ({
   getItemQuantity, 
   handleIncrement, 
   handleDecrement,
-  locationId 
+  locationId,
+  onItemClick // Add this new prop
 }) => {
   if (items.length === 0) {
     return (
@@ -56,6 +57,7 @@ const MenuItemsGrid = ({
             currentQuantity={currentQuantity}
             onIncrement={() => handleIncrement(item)}
             onDecrement={() => handleDecrement(item)}
+            onItemClick={onItemClick} // Pass the modal handler
           />
         );
       })}

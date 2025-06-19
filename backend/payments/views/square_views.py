@@ -396,6 +396,8 @@ def create_payment(request):
                 tip_money = int(tip_money)
                 if tip_money < 0:
                     raise ValueError("Tip amount cannot be negative")
+                # Log tip amount for debugging
+                logger.info(f"Tip amount provided: {tip_money} {currency}")
             except (ValueError, TypeError):
                 return JsonResponse({
                     'success': False,

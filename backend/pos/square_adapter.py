@@ -684,6 +684,7 @@ class SquareAdapter(POSAdapter):
             if verification_token:
                 payment_request["verification_token"] = verification_token
             if tip_money:
+                logger.info(f"Adding tip_money to payment request: {tip_money} {currency}")
                 payment_request["tip_money"] = {
                     "amount": tip_money, 
                     "currency": currency
@@ -693,6 +694,8 @@ class SquareAdapter(POSAdapter):
                     "amount": app_fee_amount, 
                     "currency": currency
                 }
+            
+            logger.info(f"Final payment request: {json.dumps(payment_request, indent=2)}")
             
             # Call the Square Payments API directly using the already initialized client
             result = self.client.payments.create(**payment_request)

@@ -8,7 +8,8 @@ const MenuItem = ({
   currentQuantity, 
   onIncrement, 
   onDecrement,
-  onItemClick // Add this new prop for modal functionality
+  onItemClick, // Add this new prop for modal functionality
+  isLastInCategory // Add this new prop for bottom border
 }) => {
   const itemData = item.item_data;
   const variation = itemData?.variations?.[0];
@@ -49,7 +50,7 @@ const MenuItem = ({
         {itemData?.primaryImage ? (
           <img 
             src={itemData.primaryImage.url} 
-            alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
+            alt={'Menu item'}
             className="item-image"
             onError={(e) => {
               e.target.style.display = 'none';
@@ -102,7 +103,6 @@ const MenuItem = ({
         .menu-item-card {
           background: white;
           border: none;
-          border-bottom: 1px solid #f0f0f0;
           transition: background-color 0.2s ease;
           display: flex;
           align-items: flex-start;
@@ -115,10 +115,6 @@ const MenuItem = ({
 
         .menu-item-card:hover {
           background: #f8f9fa;
-        }
-
-        .menu-item-card:last-child {
-          border-bottom: none;
         }
 
         .item-content {

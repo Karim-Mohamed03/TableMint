@@ -5,25 +5,26 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: white;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   z-index: 1000;
-  padding: 20px;
+  padding: 0;
 }
 
 /* Modal content */
 .modal-content {
   background: white;
-  border-radius: 12px;
-  max-width: 400px;
+  border-radius: 0;
+  max-width: none;
   width: 100%;
-  max-height: 80vh;
+  height: 100vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  
+  font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* Modal header */
@@ -31,13 +32,33 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 20px 10px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 16px;
+  border-bottom: none;
+  background: white;
+  top: 0;
+  z-index: 10;
+}
+
+.add-more-button {
+  background-color: #f0f0f0;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.plus-button{
+  margin-right: 4px;
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 10px;
   font-weight: 600;
   color: #333;
 }
@@ -45,12 +66,11 @@
 .close-button {
   background: none;
   border: none;
-  font-size: 24px;
-  color: #666;
+  color: #333;
   cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
+  padding: 8px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,11 +82,25 @@
   background-color: #f5f5f5;
 }
 
+.modal-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #000000;
+  margin: 0;
+  font-family: 'Satoshi', sans-serif;
+  text-align: center;
+  flex: 1;
+}
+
+.header-spacer {
+  width: 40px;
+}
+
 /* Modal body */
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
 }
 
 .empty-cart {
@@ -74,75 +108,134 @@
   color: #666;
   font-size: 16px;
   margin: 40px 0;
+  font-family: 'Satoshi', sans-serif;
 }
 
 /* Cart items */
 .cart-items {
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
 
 .cart-item {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px;
+  border-bottom: 1px solid #edf2f7;
+  gap: 16px;
 }
 
 .cart-item:last-child {
   border-bottom: none;
 }
 
-.item-info {
+.cart-item .item-image-container {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f7fafc;
+  flex-shrink: 0;
+}
+
+.cart-item .item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cart-item .item-info {
   flex: 1;
-  margin-right: 15px;
-}
-
-.item-info h4 {
-  margin: 0 0 5px 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-}
-
-.item-description {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
-  line-height: 1.4;
-}
-
-.item-quantity-price {
+  text-align: left;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  gap: 1px;
 }
 
-.quantity {
-  font-size: 14px;
-  color: #666;
-}
-
-.price {
+.cart-item .item-info h4 {
+  margin: 0;
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: #1a202c;
+}
+
+.cart-item .item-info .item-description {
+  margin: 0;
+  font-size: 14px;
+  color: #718096;
+}
+
+.cart-item .item-price-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.cart-item .price {
+  font-weight: 500;
+  color: #1a202c;
+  font-size: 15px;
+}
+
+.cart-item .quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: transparent;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.cart-item .quantity-btn {
+  border: none;
+  background: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.cart-item .quantity-btn:hover {
+  color: #1a202c;
+}
+
+.cart-item .quantity {
+  font-size: 14px;
+  color: #1a202c;
+  font-weight: 500;
+  min-width: 20px;
+  text-align: center;
+}
+
+.no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+  color: #a0aec0;
+  font-size: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
 }
 
 /* Order summary */
 .order-summary {
-  padding: 20px 0;
-  border-top: 1px solid #eee;
+  padding: 24px 0;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  font-size: 14px;
-  color: #666;
+  margin-bottom: 12px;
+  font-size: 16px;
+  /* color: rgb(112, 112, 112); */
+  font-family: 'Satoshi', sans-serif;
 }
 
 .summary-row:last-child {
@@ -150,18 +243,21 @@
 }
 
 .total-row {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: #333;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-  margin-top: 10px;
+  color: #000;
+  padding-top: 12px;
+  /* border-top: 1px solid #f0f0f0; */
+  margin-top: 12px;
 }
 
 /* Modal footer */
 .modal-footer {
-  padding: 20px;
-  border-top: 1px solid #eee;
+  padding: 20px 16px;
+  /* border-top: 1px solid #f0f0f0; */
+  background: transparent;
+  position: sticky;
+  bottom: 0;
 }
 
 .confirm-button {
@@ -169,12 +265,16 @@
   background-color: #000;
   color: white;
   border: none;
-  border-radius: 25px;
-  padding: 15px 20px;
+  border-radius: 12px;
+  padding: 16px 20px;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  font-family: 'Satoshi', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .confirm-button:hover {
@@ -187,25 +287,19 @@
 
 /* Responsive design */
 @media (max-width: 480px) {
-  .modal-overlay {
-    padding: 10px;
-  }
-  
-  .modal-content {
-    max-width: none;
-    width: 100%;
-    max-height: 90vh;
-  }
-  
   .modal-header {
-    padding: 15px 15px 10px 15px;
+    padding: 16px;
   }
   
   .modal-body {
-    padding: 15px;
+    padding: 16px;
   }
   
   .modal-footer {
-    padding: 15px;
+    padding: 16px;
+  }
+  
+  .modal-title {
+    font-size: 24px;
   }
 }

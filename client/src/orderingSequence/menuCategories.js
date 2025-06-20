@@ -5,7 +5,6 @@ import CartConfirmationModal from '../components/CartConfirmationModal';
 
 // Import the new components from the menu folder
 import MenuHeader from '../components/menu/MenuHeader';
-import CategoryFilter from '../components/menu/CategoryFilter';
 import MenuItemsGrid from '../components/menu/MenuItemsGrid';
 import BottomCartButton from '../components/menu/BottomCartButton';
 import LoadingState from '../components/menu/LoadingState';
@@ -18,7 +17,7 @@ const getCatalogData = async (locationId = null, menuId = null) => {
     const url = new URL('http://localhost:8000/api/pos/catalog/');
     if (locationId) url.searchParams.append('location_id', locationId);
     if (menuId) url.searchParams.append('menu_id', menuId);
-
+    
     const response = await fetch(url.toString(), { method: 'GET' });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
@@ -218,6 +217,46 @@ const MenuCategories = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showItemModal, setShowItemModal] = useState(false);
 
+  // State for dynamic header height
+  const [showCategories, setShowCategories] = useState(false);
+
+  // Track scroll position to adjust padding
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setShowCategories(scrollPosition > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Scroll spy functionality to update active category
+  useEffect(() => {
+    const handleScroll = () => {
+      const categoryElements = document.querySelectorAll('[id^="category-"]');
+      const scrollPosition = window.scrollY + 150; // Offset for sticky header
+      
+      let currentCategory = 'all';
+      
+      categoryElements.forEach((element) => {
+        const elementTop = element.offsetTop;
+        const elementBottom = elementTop + element.offsetHeight;
+        
+        if (scrollPosition >= elementTop && scrollPosition < elementBottom) {
+          currentCategory = element.id.replace('category-', '');
+        }
+      });
+      
+      if (currentCategory !== selectedCategory) {
+        setSelectedCategory(currentCategory);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [selectedCategory]);
+
   // Load context from sessionStorage and URL parameters
   useEffect(() => {
     // Get table context from sessionStorage
@@ -343,8 +382,13 @@ const MenuCategories = () => {
     const cartItem = {
       id: variation?.id || item.id, // Use variation ID for Square API compatibility
       name: itemData?.name || 'Unknown Item',
-      price: price?.amount ? price.amount / 100 : 0, // Convert cents to dollars
-      currency: price?.currency || 'USD'
+      description: itemData?.description,
+      price: price?.amount, // Convert cents to dollars
+      currency: price?.currency || 'USD',
+      item_data: {
+        ...itemData,
+        primaryImage: itemData.primaryImage
+      }
     };
     
     addItem(cartItem);
@@ -540,8 +584,6 @@ const MenuCategories = () => {
     }
   };
 
-
-
   // Parse and organize catalog data
   const organizedData = React.useMemo(() => {
     if (!catalogData) return { categories: [], items: [] };
@@ -573,23 +615,15 @@ const MenuCategories = () => {
     return inventory.quantity > 0 && inventory.state !== 'SOLD_OUT';
   };
 
-  // Filter items by category and location
-  const getFilteredItems = () => {
+  // Get all items (no filtering by category anymore since we show all)
+  const getAllItems = () => {
     let items = organizedData.items;
     
     if (effectiveLocationId) {
       items = items.filter(item => isItemAvailableAtLocation(item, effectiveLocationId));
     }
     
-    if (selectedCategory === 'all') {
-      return items;
-    }
-    
-    const categoryFiltered = items.filter(item => 
-      item.item_data?.categories?.some(cat => cat.id === selectedCategory)
-    );
-    
-    return categoryFiltered;
+    return items;
   };
 
   // Loading state
@@ -617,26 +651,26 @@ const MenuCategories = () => {
     <div className="menu-categories">
       <MenuHeader 
         restaurantContext={restaurantContext} 
-        tableContext={tableContext} 
-      />
-
-      <CategoryFilter 
+        tableContext={tableContext}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
         categories={organizedData.categories}
       />
 
-      <MenuItemsGrid 
-        items={getFilteredItems()}
-        formatCurrency={formatCurrency}
-        isItemInStock={isItemInStock}
-        isItemSoldOutAtLocation={isItemSoldOutAtLocation}
-        getItemQuantity={getItemQuantity}
-        handleIncrement={handleIncrement}
-        handleDecrement={handleDecrement}
-        locationId={locationId}
-        onItemClick={handleItemClick}
-      />
+      <div className="menu-content">
+        <MenuItemsGrid 
+          items={getAllItems()}
+          categories={organizedData.categories}
+          formatCurrency={formatCurrency}
+          isItemInStock={isItemInStock}
+          isItemSoldOutAtLocation={isItemSoldOutAtLocation}
+          getItemQuantity={getItemQuantity}
+          handleIncrement={handleIncrement}
+          handleDecrement={handleDecrement}
+          locationId={locationId}
+          onItemClick={handleItemClick}
+        />
+      </div>
 
       <BottomCartButton 
         itemCount={getItemCount()}
@@ -666,6 +700,12 @@ const MenuCategories = () => {
           font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
           background: #fff;
           min-height: 100vh;
+          padding-bottom: 100px;
+        }
+
+        .menu-content {
+          padding-top: ${showCategories ? '160px' : '100px'};
+          transition: padding-top 0.3s ease;
         }
       `}</style>
     </div>

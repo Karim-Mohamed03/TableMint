@@ -39,6 +39,7 @@ const CartConfirmationModal = ({
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   const [paymentError, setPaymentError] = useState(null);
   const [isProcessingTip, setIsProcessingTip] = useState(false);
+  const [realOrderId, setRealOrderId] = useState(null);
   const navigate = useNavigate();
 
   if (!isOpen) return null;
@@ -99,19 +100,6 @@ const CartConfirmationModal = ({
 
   // Always show section if we have menu items and found some sides
   const showPopularSection = menuItems && menuItems.length > 0 && popularSides.length > 0;
-
-  // Generate or retrieve a consistent temporary order ID
-  const generateTempOrderId = () => {
-    const storedTempId = sessionStorage.getItem("temp_order_id");
-    if (storedTempId) {
-      return storedTempId;
-    }
-    const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
-    sessionStorage.setItem("temp_order_id", randomId);
-    return randomId;
-  };
-
-  const orderId = generateTempOrderId();
 
   const handleConfirmOrder = () => {
     setUserPaymentAmount(null);
@@ -226,6 +214,7 @@ const CartConfirmationModal = ({
           // Update URL with order_id without navigation
           const newUrl = window.location.pathname + `?order_id=${orderId}`;
           window.history.replaceState({}, '', newUrl);
+          setRealOrderId(orderId);
         }
 
         // Also store order data for potential external payment creation later
@@ -458,7 +447,7 @@ const CartConfirmationModal = ({
                   baseAmount={baseAmountInCents}
                   tipAmount={tipInCents}
                   currency="GBP"
-                  orderId={orderId}
+                  orderId={realOrderId}
                   restaurantBranding={restaurantBranding}
                   isBrandingLoaded={isBrandingLoaded}
                   onError={(error) => setPaymentError(error)}

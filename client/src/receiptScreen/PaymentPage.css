@@ -254,7 +254,7 @@ body {
   padding: 32px 24px;
   background-color: var(--card-background);
   border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  /* box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05); */
 }
 
 .payment-header {
@@ -277,7 +277,7 @@ body {
 }
 
 .bill-summary {
-  background-color: var(--background-color);
+  background-color: var(--card-background);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 24px;

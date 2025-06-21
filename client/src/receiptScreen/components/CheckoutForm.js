@@ -21,13 +21,17 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
       url += "?";
       
       const params = [];
-      if (baseAmount) params.push(`base_amount=${baseAmount}`);
-      if (tipAmount) params.push(`tip_amount=${tipAmount}`);
-      if (orderId) params.push(`order_id=${orderId}`);
+      if (baseAmount) params.push(`base_amount=${encodeURIComponent(baseAmount)}`);
+      if (tipAmount) params.push(`tip_amount=${encodeURIComponent(tipAmount)}`);
+      if (orderId) {
+        console.log("Adding order_id to return URL:", orderId);
+        params.push(`order_id=${encodeURIComponent(orderId)}`);
+      }
       
       url += params.join("&");
     }
     
+    console.log("Generated return URL:", url);
     setReturnUrl(url);
   }, [baseAmount, tipAmount, orderId]);
 
@@ -40,21 +44,30 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
 
     setIsLoading(true);
 
+    // Log the values being sent
+    console.log("Submitting payment with values:", {
+      baseAmount,
+      tipAmount,
+      orderId,
+      returnUrl
+    });
+
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: returnUrl,
         payment_method_data: {
-          // Store tip and base amounts in the metadata
           metadata: {
             base_amount: baseAmount || 0,
-            tip_amount: tipAmount || 0
+            tip_amount: tipAmount || 0,
+            order_id: orderId // Add order_id to metadata as well
           }
         }
       },
     });
 
     if (error) {
+      console.error("Payment error:", error);
       setMessage(error.message || "An unexpected error occurred.");
     } else {
       setMessage(null);

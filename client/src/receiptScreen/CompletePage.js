@@ -323,21 +323,15 @@ const CompletePageContent = () => {
       return;
     }
 
-    // Get order ID from URL parameters - this should be the real Square order ID
+    // Get order ID from URL parameters and log the search string for debugging
+    console.log("URL search string:", window.location.search);
     const orderIdFromUrl = new URLSearchParams(window.location.search).get("order_id");
+    console.log("Extracted order_id from URL:", orderIdFromUrl);
 
     if (!orderIdFromUrl) {
       console.error("No order_id found in URL parameters");
-      setStatus("error");
-      return;
+      // Don't set error status immediately, try to get it from payment intent metadata
     }
-
-    setOrderId(orderIdFromUrl);
-    console.log("Using Square order ID from URL:", orderIdFromUrl);
-
-    // Directly get base and tip amounts from URL if available
-    const baseAmountFromUrl = new URLSearchParams(window.location.search).get("base_amount");
-    const tipAmountFromUrl = new URLSearchParams(window.location.search).get("tip_amount");
 
     stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
       if (!paymentIntent) {
@@ -348,19 +342,37 @@ const CompletePageContent = () => {
       setIntentId(paymentIntent.id);
       setPaymentAmount(paymentIntent.amount);
 
+      // Try to get order_id from multiple sources
+      const finalOrderId = orderIdFromUrl || 
+                         paymentIntent.metadata?.order_id || 
+                         sessionStorage.getItem('current_order_id');
+      
+      if (finalOrderId) {
+        console.log("Using order ID:", finalOrderId, "Source:", 
+          orderIdFromUrl ? "URL" : 
+          paymentIntent.metadata?.order_id ? "Payment Intent Metadata" : 
+          "Session Storage"
+        );
+        setOrderId(finalOrderId);
+      } else {
+        console.error("Could not find order_id in any source");
+        setStatus("error");
+        return;
+      }
+
       // Calculate base and tip amounts correctly
       let total = paymentIntent.amount;
       let base = null;
       let tip = null;
 
       // Check if we have the tip amount from URL parameters
-      if (tipAmountFromUrl) {
+      if (paymentIntent.metadata?.tip_amount) {
         // Convert the string to an integer tip amount
-        tip = parseInt(tipAmountFromUrl, 10);
+        tip = parseInt(paymentIntent.metadata.tip_amount, 10);
         base = total - tip;
-      } else if (baseAmountFromUrl) {
+      } else if (paymentIntent.metadata?.base_amount) {
         // If we have base amount but not tip
-        base = parseInt(baseAmountFromUrl, 10);
+        base = parseInt(paymentIntent.metadata.base_amount, 10);
         tip = total - base;
       } else {
         // Get the metadata from the payment intent if available
@@ -383,7 +395,7 @@ const CompletePageContent = () => {
         recordPaymentToPhillyCheesesteak(
           paymentIntent.id,
           total,
-          orderIdFromUrl,
+          finalOrderId,
           base,
           tip
         );

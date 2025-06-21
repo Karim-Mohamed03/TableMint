@@ -39,10 +39,21 @@
   z-index: 10;
 }
 
+.add-more-container {
+  /* display: flex; */
+  justify-content: flex-end;
+  position: relative;
+  margin: 0;
+  padding: 10px 16px;
+  background-color: #f0f0f0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
 .add-more-button {
   background-color: #f0f0f0;
   border: none;
-  padding: 8px 16px;
+  padding: 13px 16px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 400;
@@ -50,10 +61,113 @@
   align-items: center;
   justify-content: flex-end;
   margin-left: auto;
+  margin-bottom: 15px;
 }
 
 .plus-button{
-  margin-right: 4px;
+  margin-right: 6px;
+}
+
+.popular-items-section {
+  padding: 24px 16px;
+  background: white;
+}
+
+.popular-items-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: #000000;
+  align-items: center;
+  text-align: left;
+  margin-bottom: 2px;
+}
+
+.popular-items-sub-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: #718096;
+  align-items: center;
+  text-align: left;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.popular-items-slider {
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  padding: 4px 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.popular-items-slider::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.popular-item-card {
+  flex: 0 0 auto;
+  width: 150px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  position: relative;
+}
+
+.popular-item-image {
+  width: 150px;
+  height: 150px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f7fafc;
+}
+
+.popular-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.add-popular-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #000;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.add-popular-button:hover {
+  background: #333;
+  transform: scale(1.1);
+}
+
+.popular-item-info {
+  padding: 12px 0;
+}
+
+.popular-item-info h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a202c;
+  margin-bottom: 4px;
+}
+
+.popular-item-price {
+  font-size: 14px;
+  color: #718096;
+  font-weight: 400;
 }
 
 .modal-header h2 {
@@ -61,6 +175,7 @@
   font-size: 10px;
   font-weight: 600;
   color: #333;
+  align-items: center;
 }
 
 .close-button {
@@ -69,8 +184,8 @@
   color: #333;
   cursor: pointer;
   padding: 8px;
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,7 +198,7 @@
 }
 
 .modal-title {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 500;
   color: #000000;
   margin: 0;
@@ -238,10 +353,6 @@
   font-family: 'Satoshi', sans-serif;
 }
 
-.summary-row:last-child {
-  margin-bottom: 0;
-}
-
 .total-row {
   font-size: 18px;
   font-weight: 600;
@@ -297,9 +408,5 @@
   
   .modal-footer {
     padding: 16px;
-  }
-  
-  .modal-title {
-    font-size: 24px;
   }
 }

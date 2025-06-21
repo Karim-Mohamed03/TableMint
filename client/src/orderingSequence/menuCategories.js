@@ -686,10 +686,12 @@ const MenuCategories = () => {
         isItemInStock={isItemInStock}
       />
 
+      {console.log('Menu items being passed to CartConfirmationModal:', organizedData.items)}
       <CartConfirmationModal 
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onConfirm={handleConfirmOrder}
+        menuItems={organizedData.items}
       />
 
       <style jsx>{`

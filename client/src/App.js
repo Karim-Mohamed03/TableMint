@@ -10,6 +10,7 @@ import CartPage from "./pages/CartPage";
 import SharedCartPage from "./pages/SharedCartPage";
 import SplitPaymentPage from "./pages/SplitPaymentPage";
 import TablePage from "./pages/TablePage";
+import CheckoutPage from "./pages/CheckoutPage";
 import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
 
@@ -255,6 +256,17 @@ function App() {
                     updatePaymentAmount={updatePaymentAmount}
                     createPaymentIntent={createPaymentIntent}
                     isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
+              />
+              <Route 
+                path="/checkout" 
+                element={
+                  <CheckoutPage 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
                     restaurantBranding={restaurantBranding}
                     isBrandingLoaded={isBrandingLoaded}
                   />

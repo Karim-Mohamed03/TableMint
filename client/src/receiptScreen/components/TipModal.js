@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProcessing, currency = 'GBP' }) => {
   const [selectedTip, setSelectedTip] = useState(currentTip || 0);
   const customInputRef = useRef(null);
+  const navigate = useNavigate();
   
   // Reset selected tip when modal is opened with current tip value
   useEffect(() => {
@@ -54,6 +56,13 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
   
   const handleConfirm = () => {
     onConfirm(selectedTip);
+    // Navigate to the checkout page with the necessary data
+    navigate('/checkout', {
+      state: {
+        baseAmount: Math.round(baseAmount * 100), // Convert to cents
+        tipAmount: Math.round(selectedTip * 100), // Convert to cents
+      }
+    });
     onClose();
   };
   
@@ -152,7 +161,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
             onClick={handleConfirm}
             disabled={isProcessing}
           >
-            {isProcessing ? 'Processing...' : 'Confirm and pay'}
+            {isProcessing ? 'Processing...' : 'Confirm and continue to payment'}
           </button>
         </div>
       </div>

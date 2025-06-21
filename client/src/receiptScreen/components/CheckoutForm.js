@@ -12,27 +12,33 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [returnUrl, setReturnUrl] = useState("");
 
+  // Store order_id in session storage as a backup
+  useEffect(() => {
+    if (orderId) {
+      sessionStorage.setItem("current_order_id", orderId);
+    }
+  }, [orderId]);
+
   // Create return URL with query parameters
   useEffect(() => {
     let url = "https://test-app-fawn-phi.vercel.app/complete";
     
     // Add query parameters if we have them
-    if (baseAmount || tipAmount || orderId) {
-      url += "?";
-      
-      const params = [];
-      if (baseAmount) params.push(`base_amount=${encodeURIComponent(baseAmount)}`);
-      if (tipAmount) params.push(`tip_amount=${encodeURIComponent(tipAmount)}`);
-      if (orderId) {
-        console.log("Adding order_id to return URL:", orderId);
-        params.push(`order_id=${encodeURIComponent(orderId)}`);
-      }
-      
-      url += params.join("&");
+    const params = new URLSearchParams();
+    
+    if (baseAmount) params.append("base_amount", baseAmount);
+    if (tipAmount) params.append("tip_amount", tipAmount);
+    if (orderId) {
+      console.log("Adding order_id to return URL:", orderId);
+      params.append("order_id", orderId);
     }
     
-    console.log("Generated return URL:", url);
-    setReturnUrl(url);
+    // Add payment_intent_client_secret as a placeholder - it will be replaced by Stripe
+    params.append("payment_intent_client_secret", "{PAYMENT_INTENT_CLIENT_SECRET}");
+    
+    const finalUrl = `${url}?${params.toString()}`;
+    console.log("Generated return URL:", finalUrl);
+    setReturnUrl(finalUrl);
   }, [baseAmount, tipAmount, orderId]);
 
   const handleSubmit = async (e) => {
@@ -60,8 +66,13 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
           metadata: {
             base_amount: baseAmount || 0,
             tip_amount: tipAmount || 0,
-            order_id: orderId // Add order_id to metadata as well
+            order_id: orderId // Add order_id to metadata
           }
+        },
+        metadata: {
+          order_id: orderId, // Also add to top-level metadata
+          base_amount: baseAmount || 0,
+          tip_amount: tipAmount || 0
         }
       },
     });

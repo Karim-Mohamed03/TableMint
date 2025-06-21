@@ -325,27 +325,40 @@ const CompletePageContent = () => {
 
     // Get order ID from URL parameters and log the search string for debugging
     console.log("URL search string:", window.location.search);
-    const orderIdFromUrl = new URLSearchParams(window.location.search).get("order_id");
-    console.log("Extracted order_id from URL:", orderIdFromUrl);
+    const params = new URLSearchParams(window.location.search);
+    const orderIdFromUrl = params.get("order_id");
+    const baseAmountFromUrl = params.get("base_amount");
+    const tipAmountFromUrl = params.get("tip_amount");
 
-    if (!orderIdFromUrl) {
-      console.error("No order_id found in URL parameters");
-      // Don't set error status immediately, try to get it from payment intent metadata
-    }
+    console.log("URL Parameters:", {
+      orderIdFromUrl,
+      baseAmountFromUrl,
+      tipAmountFromUrl
+    });
+
+    // Get order ID from session storage as backup
+    const storedOrderId = sessionStorage.getItem("current_order_id");
+    console.log("Stored order ID from session:", storedOrderId);
 
     stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
       if (!paymentIntent) {
         return;
       }
 
+      console.log("Payment Intent:", {
+        status: paymentIntent.status,
+        metadata: paymentIntent.metadata,
+        amount: paymentIntent.amount
+      });
+
       setStatus(paymentIntent.status);
       setIntentId(paymentIntent.id);
       setPaymentAmount(paymentIntent.amount);
 
-      // Try to get order_id from multiple sources
+      // Try to get order_id from multiple sources in order of preference
       const finalOrderId = orderIdFromUrl || 
-                         paymentIntent.metadata?.order_id || 
-                         sessionStorage.getItem('current_order_id');
+                         paymentIntent.metadata?.order_id ||
+                         storedOrderId;
       
       if (finalOrderId) {
         console.log("Using order ID:", finalOrderId, "Source:", 
@@ -365,26 +378,17 @@ const CompletePageContent = () => {
       let base = null;
       let tip = null;
 
-      // Check if we have the tip amount from URL parameters
-      if (paymentIntent.metadata?.tip_amount) {
-        // Convert the string to an integer tip amount
-        tip = parseInt(paymentIntent.metadata.tip_amount, 10);
-        base = total - tip;
-      } else if (paymentIntent.metadata?.base_amount) {
-        // If we have base amount but not tip
+      // Try to get amounts from URL first, then payment intent metadata
+      if (baseAmountFromUrl && tipAmountFromUrl) {
+        base = parseInt(baseAmountFromUrl, 10);
+        tip = parseInt(tipAmountFromUrl, 10);
+      } else if (paymentIntent.metadata?.base_amount && paymentIntent.metadata?.tip_amount) {
         base = parseInt(paymentIntent.metadata.base_amount, 10);
-        tip = total - base;
+        tip = parseInt(paymentIntent.metadata.tip_amount, 10);
       } else {
-        // Get the metadata from the payment intent if available
-        const metadata = paymentIntent.metadata || {};
-        if (metadata.base_amount && metadata.tip_amount) {
-          base = parseInt(metadata.base_amount, 10);
-          tip = parseInt(metadata.tip_amount, 10);
-        } else {
-          // Fallback: assume no tip
-          base = total;
-          tip = 0;
-        }
+        // Fallback: assume no tip
+        base = total;
+        tip = 0;
       }
 
       setBaseAmount(base);
@@ -400,6 +404,9 @@ const CompletePageContent = () => {
           tip
         );
       }
+    }).catch(error => {
+      console.error("Error retrieving payment intent:", error);
+      setStatus("error");
     });
   }, [stripe]);
 

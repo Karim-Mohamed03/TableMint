@@ -42,26 +42,6 @@ const CartConfirmationModal = ({
   const [realOrderId, setRealOrderId] = useState(null);
   const navigate = useNavigate();
 
-  const handleModalClose = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    // Don't close if tip modal is open
-    if (!showTipModal) {
-      onClose();
-    }
-  };
-
-  const handleConfirmOrder = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    setUserPaymentAmount(null);
-    setShowTipModal(true);
-  };
-
   if (!isOpen) return null;
 
   const formatCurrency = (amount) => {
@@ -120,6 +100,11 @@ const CartConfirmationModal = ({
 
   // Always show section if we have menu items and found some sides
   const showPopularSection = menuItems && menuItems.length > 0 && popularSides.length > 0;
+
+  const handleConfirmOrder = () => {
+    setUserPaymentAmount(null);
+    setShowTipModal(true);
+  };
 
   const handleTipConfirm = async (tipAmount) => {
     console.log('handleTipConfirm called with tipAmount:', tipAmount);
@@ -266,7 +251,7 @@ const CartConfirmationModal = ({
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <button className="close-button" onClick={handleModalClose}>
+          <button className="close-button" onClick={onClose}>
             <X size={24} />
           </button>
           <h1 className="modal-title">Your Order</h1>
@@ -428,10 +413,7 @@ const CartConfirmationModal = ({
         {showTipModal && (
           <TipModal
             isOpen={showTipModal}
-            onClose={() => {
-              setShowTipModal(false);
-              // Don't close the cart modal when closing tip modal
-            }}
+            onClose={() => setShowTipModal(false)}
             onConfirm={handleTipConfirm}
             currentTip={tipInCents / 100}
             baseAmount={(userPaymentAmount || Math.round(subtotal * 100)) / 100}

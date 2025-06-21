@@ -33,7 +33,7 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
       params.append("order_id", orderId);
     }
     
-    // Add payment_intent_client_secret as a placeholder - it will be replaced by Stripe
+    // Add payment_intent_client_secret placeholder
     params.append("payment_intent_client_secret", "{PAYMENT_INTENT_CLIENT_SECRET}");
     
     const finalUrl = `${url}?${params.toString()}`;
@@ -66,15 +66,10 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
           metadata: {
             base_amount: baseAmount || 0,
             tip_amount: tipAmount || 0,
-            order_id: orderId // Add order_id to metadata
+            order_id: orderId
           }
-        },
-        metadata: {
-          order_id: orderId, // Also add to top-level metadata
-          base_amount: baseAmount || 0,
-          tip_amount: tipAmount || 0
         }
-      },
+      }
     });
 
     if (error) {
@@ -89,15 +84,11 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
 
   return (
     <form id="payment-form" onSubmit={handleSubmit}>
-      <PaymentElement id="payment-element" />
-      <button 
-        disabled={isLoading || !stripe || !elements} 
-        className="pay-button"
-        type="submit"
-      >
-        {isLoading ? "Processing..." : "Pay"}
-      </button>
+      <PaymentElement />
       {message && <div className="payment-message">{message}</div>}
+      <button className="pay-button" disabled={isLoading || !stripe || !elements}>
+        {isLoading ? "Processing..." : "Pay now"}
+      </button>
     </form>
   );
 };

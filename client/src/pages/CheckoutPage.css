@@ -44,6 +44,14 @@
   width: 100%;
 }
 
+/* Style the Stripe Element wrapper */
+.StripeElement {
+  background-color: white !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .amount-breakdown {
   background-color: #ffffff;
   padding: 0;

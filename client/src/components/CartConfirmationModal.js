@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { X, Trash2, Minus, Plus, Loader } from 'lucide-react';
 import './CartConfirmationModal.css';
-import { Elements } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import TipModal from '../receiptScreen/components/TipModal';
+
 
 const CartConfirmationModal = ({ 
   isOpen, 

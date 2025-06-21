@@ -73,14 +73,17 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
   };
   
   return (
-    <div className={`modal-backdrop ${isOpen ? 'open' : ''}`} onClick={handleModalBackdropClick}>
-      <div className={`tip-modal ${isOpen ? 'open' : ''}`} onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal-content">
         <div className="modal-header">
-          <div className="header-indicator"></div>
+          <button className="close-button" onClick={onClose}>
+            <span>×</span>
+          </button>
+          <h1 className="modal-title">Add a Tip</h1>
+          <div className="header-spacer"></div>
         </div>
         
-        <div className="modal-content">
-          <div className="tip-title">Say thanks with a tip</div>
+        <div className="modal-body">
           <div className="tip-desc-label">This will be added to any discretionary service charge which goes directly to the restaurant team.</div>
           
           <div className="tip-options-grid">
@@ -133,7 +136,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           
           <div className="payment-summary">
             <div className="summary-row">
-              <span>You are paying</span>
+              <span>Total with tip</span>
               <span className="total-amount">{formatCurrency(baseAmount + selectedTip)}</span>
             </div>
           </div>
@@ -151,82 +154,89 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
       </div>
       
       <style jsx>{`
-        .modal-backdrop {
+        .modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: flex-end;
-          z-index: 1000;
-          visibility: hidden;
-          opacity: 0;
-          transition: visibility 0s linear 0.3s, opacity 0.3s;
-          pointer-events: none;
-        }
-        
-        .modal-backdrop.open {
-          visibility: visible;
-          opacity: 1;
-          transition-delay: 0s;
-          pointer-events: auto;
-        }
-        
-        .tip-modal {
+          right: 0;
+          bottom: 0;
           background-color: white;
-          width: 100%;
-          max-width: 400px;
-          border-radius: 20px 20px 0 0;
-          transform: translateY(100%);
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          max-height: 90vh;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          position: relative;
-          z-index: 1001;
-          pointer-events: auto;
-          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        .tip-modal.open {
-          transform: translateY(0);
-        }
-        
-        .modal-header {
-          padding: 12px 0 8px 0;
           display: flex;
           justify-content: center;
-        }
-        
-        .header-indicator {
-          width: 36px;
-          height: 4px;
-          background-color: #d1d1d6;
-          border-radius: 2px;
+          align-items: flex-start;
+          z-index: 1000;
+          padding: 0;
         }
         
         .modal-content {
-          padding: 0 24px;
-          flex: 1;
+          background: white;
+          width: 100%;
+          max-width: none;
+          height: 100vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         
-        .tip-title {
-          font-size: 28px;
-          font-weight: 600;
-          color: #1d1d1f;
-          margin-bottom: 8px;
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          border-bottom: none;
+          background: white;
+          top: 0;
+          z-index: 10;
+        }
+        
+        .close-button {
+          background: none;
+          border: none;
+          color: #333;
+          cursor: pointer;
+          padding: 8px;
+          width: 35px;
+          height: 35px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: background-color 0.2s;
+          font-size: 24px;
+        }
+
+        .close-button:hover {
+          background-color: #f5f5f5;
+        }
+
+        .modal-title {
+          font-size: 20px;
+          font-weight: 500;
+          color: #000000;
+          margin: 0;
+          font-family: 'Satoshi', sans-serif;
           text-align: center;
+          flex: 1;
+        }
+
+        .header-spacer {
+          width: 40px;
+        }
+        
+        .modal-body {
+          padding: 0 24px;
+          flex: 1;
+          overflow-y: auto;
         }
         
         .tip-desc-label {
           font-size: 16px;
-          color: #86868b;
+          color: #718096;
           margin-bottom: 32px;
           line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 400;
         }
         
         .tip-options-grid {
@@ -237,24 +247,26 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         }
         
         .tip-option {
-          background-color: #1d1d1f;
-          color: #2ecc71;
-          border: none;
+          background-color: white;
+          color: #000;
+          border: 1px solid #e2e8f0;
           border-radius: 12px;
           padding: 20px 16px;
           font-size: 18px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
           min-height: 64px;
           display: flex;
           align-items: center;
           justify-content: center;
+          font-family: 'Satoshi', sans-serif;
         }
         
         .tip-option.active {
-          background-color: #2ecc71;
+          background-color: #000;
           color: white;
+          border-color: #000;
         }
         
         .bottom-options {
@@ -265,21 +277,23 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         }
         
         .no-tip-button {
-          background-color: #f2f2f7;
-          color: #1d1d1f;
-          border: none;
-          border-radius: 30px;
+          background-color: white;
+          color: #000;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
           padding: 16px;
           font-size: 16px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
           min-height: 52px;
+          font-family: 'Satoshi', sans-serif;
         }
         
         .no-tip-button.active {
-          background-color: #2ecc71;
+          background-color: #000;
           color: white;
+          border-color: #000;
         }
         
         .custom-button-container {
@@ -291,22 +305,23 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         }
         
         .custom-button-container.expanded {
-          background-color: #f2f2f7;
-          border: 2px solid #2ecc71;
+          background-color: white;
+          border: 1px solid #e2e8f0;
         }
         
         .custom-button {
           width: 100%;
           height: 100%;
-          background-color: #2ecc71;
-          color: white;
-          border: none;
-          border-radius: 30px;
+          background-color: white;
+          color: #000;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
           padding: 16px;
           font-size: 16px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
+          font-family: 'Satoshi', sans-serif;
         }
         
         .custom-input-wrapper {
@@ -319,9 +334,10 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         
         .currency {
           font-size: 18px;
-          font-weight: 600;
-          color: #1d1d1f;
+          font-weight: 500;
+          color: #000;
           margin-right: 8px;
+          font-family: 'Satoshi', sans-serif;
         }
         
         .custom-tip-input {
@@ -331,17 +347,18 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           width: 100%;
           height: 100%;
           font-size: 18px;
-          font-weight: 600;
-          color: #1d1d1f;
-          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-weight: 500;
+          color: #000;
+          font-family: 'Satoshi', sans-serif;
         }
         
         .custom-tip-input::placeholder {
-          color: #86868b;
+          color: #718096;
         }
         
         .payment-summary {
           margin-bottom: 24px;
+          padding: 24px 0;
         }
         
         .summary-row {
@@ -349,7 +366,8 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           justify-content: space-between;
           align-items: center;
           font-size: 16px;
-          color: black;
+          color: #000;
+          font-family: 'Satoshi', sans-serif;
         }
         
         .total-amount {
@@ -358,20 +376,35 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         }
         
         .modal-footer {
-          padding: 0 24px 24px 24px;
+          padding: 20px 16px;
+          background: transparent;
+          position: sticky;
+          bottom: 0;
         }
         
         .confirm-button {
           width: 100%;
-          padding: 16px;
-          background-color: #2ecc71;
+          background-color: #000;
           color: white;
           border: none;
-          border-radius: 12px;
-          font-size: 18px;
+          border-radius: 25px;
+          padding: 16px 20px;
+          font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.2s;
+          font-family: 'Satoshi', sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .confirm-button:hover:not(:disabled) {
+          background-color: #333;
+        }
+        
+        .confirm-button:active:not(:disabled) {
+          transform: translateY(1px);
         }
         
         .confirm-button:disabled {
@@ -380,7 +413,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         }
         
         .confirm-button.processing {
-          background-color: #27ae60;
+          background-color: #333;
         }
         
         .tip-option:disabled,
@@ -388,6 +421,21 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         .custom-button:disabled {
           opacity: 0.7;
           cursor: not-allowed;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 480px) {
+          .modal-header {
+            padding: 16px;
+          }
+          
+          .modal-body {
+            padding: 16px;
+          }
+          
+          .modal-footer {
+            padding: 16px;
+          }
         }
       `}</style>
     </div>

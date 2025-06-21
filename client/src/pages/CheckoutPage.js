@@ -38,44 +38,51 @@ const CheckoutPage = ({
             appearance: {
               theme: 'stripe',
               variables: {
-                colorPrimary: '#000000',
+                colorPrimary: '#1d1d1f',
                 colorBackground: '#ffffff',
                 colorText: '#1d1d1f',
                 colorDanger: '#ef4444',
                 fontFamily: 'Satoshi, system-ui, sans-serif',
-                borderRadius: '12px',
+                borderRadius: '8px',
                 spacingUnit: '4px',
+                fontSizeBase: '15px'
               },
               rules: {
                 '.Input': {
                   boxShadow: 'none',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid #f2f2f2',
                   padding: '16px',
+                  backgroundColor: '#ffffff'
                 },
                 '.Input:focus': {
                   boxShadow: 'none',
-                  borderColor: '#000000',
+                  borderColor: '#1d1d1f'
+                },
+                '.Input:hover': {
+                  borderColor: '#1d1d1f'
                 },
                 '.Label': {
-                  fontWeight: '500',
+                  fontWeight: '400',
                   fontSize: '14px',
-                  color: '#86868b',
+                  color: '#86868b'
                 },
                 '.Tab': {
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid #f2f2f2',
                   boxShadow: 'none',
+                  backgroundColor: '#ffffff'
                 },
                 '.Tab:hover': {
-                  border: '1px solid #000000',
-                  color: '#000000',
+                  border: '1px solid #1d1d1f',
+                  color: '#1d1d1f',
+                  backgroundColor: '#ffffff'
                 },
                 '.Tab--selected': {
-                  backgroundColor: '#000000',
-                  color: '#ffffff',
+                  backgroundColor: '#1d1d1f',
+                  color: '#ffffff'
                 },
                 '.Error': {
                   color: '#ef4444',
-                  fontSize: '14px',
+                  fontSize: '14px'
                 }
               }
             }

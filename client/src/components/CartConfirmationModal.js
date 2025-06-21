@@ -20,6 +20,12 @@ const CartConfirmationModal = ({
   restaurantBranding,
   isBrandingLoaded
 }) => {
+  console.log('CartConfirmationModal props:', {
+    createPaymentIntent: typeof createPaymentIntent,
+    isCreatingPaymentIntent,
+    clientSecret: !!clientSecret
+  });
+
   const { items, subtotal, getItemCount, updateQuantity, removeItem, addItem } = useCart();
   const [showTipModal, setShowTipModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -103,10 +109,22 @@ const CartConfirmationModal = ({
   const orderId = generateTempOrderId();
 
   const handleTipConfirm = async (tipAmount) => {
+    console.log('handleTipConfirm called with tipAmount:', tipAmount);
+    console.log('createPaymentIntent available:', typeof createPaymentIntent);
+    
+    if (typeof createPaymentIntent !== 'function') {
+      console.error('createPaymentIntent is not a function:', createPaymentIntent);
+      setPaymentError('Payment system is not properly initialized. Please try again.');
+      return;
+    }
+
     try {
       const baseAmount = userPaymentAmount || Math.round(subtotal * 100);
+      console.log('baseAmount:', baseAmount);
       const tipInCents = tipAmount * 100;
+      console.log('tipInCents:', tipInCents);
       const finalAmount = baseAmount + tipInCents;
+      console.log('finalAmount:', finalAmount);
       
       setTipInCents(tipInCents);
       setBaseAmountInCents(baseAmount);
@@ -118,6 +136,7 @@ const CartConfirmationModal = ({
       setShowTipModal(false);
     } catch (error) {
       console.error("Error creating payment intent:", error);
+      setPaymentError('Failed to create payment. Please try again.');
     } finally {
       setPaymentProcessing(false);
     }

@@ -43,6 +43,7 @@ function App() {
 
   // Create payment intent function - will be called only when needed
   const createPaymentIntent = useCallback((amount) => {
+    console.log('createPaymentIntent called in App.js with amount:', amount);
     setIsCreatingPaymentIntent(true);
     
     return fetch("https://tablemint.onrender.com/api/payments/create-payment-intent", {
@@ -76,6 +77,7 @@ function App() {
 
   // Fetch restaurant branding when the app loads - using hardcoded order ID for now
   useEffect(() => {
+    console.log('App component mounted, createPaymentIntent is:', typeof createPaymentIntent);
     const fetchRestaurantBranding = async () => {
       try {
         // For testing purposes, we're using the order ID to fetch restaurant branding

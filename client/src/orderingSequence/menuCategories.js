@@ -209,6 +209,11 @@ const MenuCategories = ({
   restaurantBranding,
   isBrandingLoaded
 }) => {
+  console.log('MenuCategories received props:', {
+    createPaymentIntent: typeof createPaymentIntent,
+    isCreatingPaymentIntent,
+    clientSecret: !!clientSecret
+  });
   const navigate = useNavigate();
   const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem, clearCart } = useCart();
   
@@ -701,6 +706,7 @@ const MenuCategories = ({
       />
 
       {console.log('Menu items being passed to CartConfirmationModal:', organizedData.items)}
+      {console.log('createPaymentIntent type:', typeof createPaymentIntent)}
       {isModalOpen && (
         <CartConfirmationModal
           isOpen={isModalOpen}

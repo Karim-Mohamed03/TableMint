@@ -148,11 +148,31 @@ function App() {
               />
               <Route 
                 path="/QROrderPay" 
-                element={<MenuCategories />} 
+                element={
+                  <MenuCategories 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
               />
               <Route 
                 path="/menu" 
-                element={<MenuCategories />} 
+                element={
+                  <MenuCategories 
+                    stripePromise={stripePromise} 
+                    clientSecret={clientSecret}
+                    updatePaymentAmount={updatePaymentAmount}
+                    createPaymentIntent={createPaymentIntent}
+                    isCreatingPaymentIntent={isCreatingPaymentIntent}
+                    restaurantBranding={restaurantBranding}
+                    isBrandingLoaded={isBrandingLoaded}
+                  />
+                } 
               />
               <Route 
                 path="/smartMenu" 

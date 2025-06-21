@@ -701,19 +701,21 @@ const MenuCategories = ({
       />
 
       {console.log('Menu items being passed to CartConfirmationModal:', organizedData.items)}
-      <CartConfirmationModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmOrder}
-        menuItems={organizedData.items}
-        stripePromise={stripePromise}
-        clientSecret={clientSecret}
-        updatePaymentAmount={updatePaymentAmount}
-        createPaymentIntent={createPaymentIntent}
-        isCreatingPaymentIntent={isCreatingPaymentIntent}
-        restaurantBranding={restaurantBranding}
-        isBrandingLoaded={isBrandingLoaded}
-      />
+      {isModalOpen && (
+        <CartConfirmationModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onConfirm={handleConfirmOrder}
+          menuItems={getAllItems()}
+          stripePromise={stripePromise}
+          clientSecret={clientSecret}
+          updatePaymentAmount={updatePaymentAmount}
+          createPaymentIntent={createPaymentIntent}
+          isCreatingPaymentIntent={isCreatingPaymentIntent}
+          restaurantBranding={restaurantBranding}
+          isBrandingLoaded={isBrandingLoaded}
+        />
+      )}
 
       <style jsx>{`
         .menu-categories {

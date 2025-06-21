@@ -449,7 +449,7 @@ const CompletePageContent = () => {
       
 
       // Record the payment in our database
-      const response = await axios.post('http://localhost:8000/api/payments/record-philly-payment', {
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/record-philly-payment', {
         payment_id: paymentId,
         amount: amount,
         order_id: orderId,
@@ -462,7 +462,7 @@ const CompletePageContent = () => {
         setPaymentRecorded(true);
         // Show star rating modal when payment is successfully recorded
 
-        const create_payment_response = await axios.post('http://localhost:8000/api/payments/create_payment', {
+        const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
           amount: baseAmt,  // Send only the base amount (order total) to Square
           tip_money: tipAmt,  // Send tip separately
           order_id: orderId,
@@ -510,7 +510,7 @@ const CompletePageContent = () => {
     setEmailError(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/payments/send-email-receipt', {
+      const response = await axios.post('https://tablemint.onrender.com/api/payments/send-email-receipt', {
         email: email,
         payment_id: intentId,
         order_id: orderId,

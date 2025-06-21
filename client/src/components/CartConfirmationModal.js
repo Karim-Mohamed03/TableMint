@@ -127,12 +127,14 @@ const CartConfirmationModal = ({ isOpen, onClose, onConfirm, menuItems = [] }) =
                   </div>
                 ))}
               </div>
-              
-              <div className="add-more-container">
-                <button className="add-more-button" onClick={onClose}>
+
+              <button className="add-more-button" onClick={onClose}>
                   <Plus className='plus-button' size={16} />
                   Add More Items
                 </button>
+              
+              <div className="add-more-container">
+                
               </div>
 
               {/* Always show the section, we'll debug what's inside */}

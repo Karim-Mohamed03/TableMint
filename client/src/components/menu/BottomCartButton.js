@@ -26,7 +26,7 @@ const BottomCartButton = ({ itemCount, onCartClick }) => {
           background: #000000;
           color: #ffffff;
           border: none;
-          border-radius: 20px;
+          border-radius: 25px;
           padding: 12px;
           cursor: pointer;
           font-size: 16px;

@@ -34,7 +34,7 @@ const CheckoutPage = ({
           options={{
             clientSecret,
             appearance: {
-              theme: 'stripe',
+              theme: 'flat',
               variables: {
                 colorPrimary: '#1a73e8',
                 colorBackground: '#ffffff',
@@ -64,7 +64,7 @@ const CheckoutPage = ({
         </div>
         {/* Add tip amount */}
         <div className="tip-container">
-          <div className="tip-label">Tip({tipAmount / baseAmount * 100}%)</div>
+          <div className="tip-label">Tip({(tipAmount / baseAmount * 100).toFixed(2)}%)</div>
           <div className="tip-amount">£{tipAmount}</div>
         </div>
 

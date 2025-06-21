@@ -15,7 +15,10 @@ const CartConfirmationModal = ({
   stripePromise,
   clientSecret,
   updatePaymentAmount,
-  createPaymentIntent,
+  createPaymentIntent = () => {
+    console.error('createPaymentIntent function not provided');
+    return Promise.reject(new Error('Payment system not initialized'));
+  },
   isCreatingPaymentIntent,
   restaurantBranding,
   isBrandingLoaded

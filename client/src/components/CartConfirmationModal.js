@@ -104,9 +104,7 @@ const CartConfirmationModal = ({
 
   const handleTipConfirm = async (tipAmount) => {
     try {
-      setIsProcessingTip(true);
-      setPaymentError(null);
-      const baseAmount = userPaymentAmount || Math.round(subtotal * 100);
+      const baseAmount = userPaymentAmount;
       const tipInCents = tipAmount * 100;
       const finalAmount = baseAmount + tipInCents;
       
@@ -115,29 +113,13 @@ const CartConfirmationModal = ({
       setUserPaymentAmount(finalAmount);
       
       setPaymentProcessing(true);
-      
-      // Create payment intent if the function is provided
-      if (typeof createPaymentIntent === 'function') {
-        await createPaymentIntent(finalAmount);
-        setShowCheckout(true);
-      }
+      await createPaymentIntent(finalAmount);
+      setShowCheckout(true);
       setShowTipModal(false);
-      
-      // Call the parent's onConfirm if provided
-      if (typeof onConfirm === 'function') {
-        await onConfirm({
-          baseAmount,
-          tipAmount: tipInCents,
-          finalAmount,
-          orderId
-        });
-      }
     } catch (error) {
       console.error("Error creating payment intent:", error);
-      setPaymentError(error.message || "Failed to process payment. Please try again.");
     } finally {
       setPaymentProcessing(false);
-      setIsProcessingTip(false);
     }
   };
 

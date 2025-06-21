@@ -113,6 +113,11 @@ const CartConfirmationModal = ({
 
   const orderId = generateTempOrderId();
 
+  const handleConfirmOrder = () => {
+    setUserPaymentAmount(null);
+    setShowTipModal(true);
+  };
+
   const handleTipConfirm = async (tipAmount) => {
     console.log('handleTipConfirm called with tipAmount:', tipAmount);
     console.log('createPaymentIntent available:', typeof createPaymentIntent);
@@ -123,31 +128,6 @@ const CartConfirmationModal = ({
       return;
     }
 
-    try {
-      const baseAmount = userPaymentAmount || Math.round(subtotal * 100);
-      console.log('baseAmount:', baseAmount);
-      const tipInCents = tipAmount * 100;
-      console.log('tipInCents:', tipInCents);
-      const finalAmount = baseAmount + tipInCents;
-      console.log('finalAmount:', finalAmount);
-      
-      setTipInCents(tipInCents);
-      setBaseAmountInCents(baseAmount);
-      setUserPaymentAmount(finalAmount);
-      
-      setPaymentProcessing(true);
-      await createPaymentIntent(finalAmount);
-      setShowCheckout(true);
-      setShowTipModal(false);
-    } catch (error) {
-      console.error("Error creating payment intent:", error);
-      setPaymentError('Failed to create payment. Please try again.');
-    } finally {
-      setPaymentProcessing(false);
-    }
-  };
-
-  const handleConfirmOrder = async () => {
     try {
       // Step 1: Retrieve cart from sessionStorage using the correct key
       const cartData = sessionStorage.getItem("tablemint_cart");
@@ -179,10 +159,10 @@ const CartConfirmationModal = ({
 
       // Step 5: Create line items for the order
       const lineItems = parsedCart.items.map(item => ({
-        catalog_object_id: item.id, // Square expects catalog_object_id
-        quantity: item.quantity.toString(), // Convert to string as required by Square API
-        base_price_money: { // Square expects base_price_money object
-          amount: Math.round(item.price * 100), // Convert to cents
+        catalog_object_id: item.id,
+        quantity: item.quantity.toString(),
+        base_price_money: {
+          amount: Math.round(item.price * 100),
           currency: item.currency || 'GBP'
         }
       }));
@@ -210,7 +190,6 @@ const CartConfirmationModal = ({
         try {
           const tableData = JSON.parse(storedTableContext);
           tableToken = tableData.token;
-          // If we don't have restaurant_id from restaurant context, try to get it from table context
           if (!restaurantId && tableData.restaurant_id) {
             restaurantId = tableData.restaurant_id;
           }
@@ -222,10 +201,10 @@ const CartConfirmationModal = ({
       // Step 7: Prepare order data for creation
       const orderData = {
         line_items: lineItems,
-        idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Unique key to prevent duplicates
+        idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         restaurant_id: restaurantId,
         table_token: tableToken,
-        location_id: location_id, // Use effective location ID if available
+        location_id: location_id,
       };
       
       // Step 8: Create the order via API call
@@ -249,25 +228,30 @@ const CartConfirmationModal = ({
         // Also store order data for potential external payment creation later
         sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
         
-        // Clear the cart since order has been created
+        // Calculate final amount with tip
+        const baseAmount = Math.round(subtotal * 100);
+        const tipInCents = tipAmount * 100;
+        const finalAmount = baseAmount + tipInCents;
         
-        // Close modal and redirect to cart page with order ID
+        setTipInCents(tipInCents);
+        setBaseAmountInCents(baseAmount);
+        setUserPaymentAmount(finalAmount);
+        
+        // Create payment intent
+        setPaymentProcessing(true);
+        await createPaymentIntent(finalAmount);
+        setShowCheckout(true);
         setShowTipModal(false);
-        
-        // Navigate to cart page with the order ID
-        if (orderId) {
-          navigate(`/cart?order_id=${orderId}`);
-        } else {
-          navigate('/cart');
-        }
       } else {
         alert(`Failed to create order: ${responseData.error || 'Unknown error'}`);
         setShowTipModal(false);
       }
     } catch (error) {
-      console.error("Error creating order:", error);
-      alert("There was an error creating your order. Please try again.");
+      console.error("Error in handleTipConfirm:", error);
+      setPaymentError('Failed to process your order. Please try again.');
       setShowTipModal(false);
+    } finally {
+      setPaymentProcessing(false);
     }
   };
 

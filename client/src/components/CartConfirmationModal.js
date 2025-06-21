@@ -5,6 +5,7 @@ import './CartConfirmationModal.css';
 import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import TipModal from '../receiptScreen/components/TipModal';
+import { useNavigate } from 'react-router-dom';
 
 
 const CartConfirmationModal = ({ 
@@ -38,6 +39,7 @@ const CartConfirmationModal = ({
   const [baseAmountInCents, setBaseAmountInCents] = useState(null);
   const [paymentError, setPaymentError] = useState(null);
   const [isProcessingTip, setIsProcessingTip] = useState(false);
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -145,10 +147,128 @@ const CartConfirmationModal = ({
     }
   };
 
-  const handleConfirmOrder = () => {
-    setPaymentError(null);
-    setUserPaymentAmount(null);
-    setShowTipModal(true);
+  const handleConfirmOrder = async () => {
+    try {
+      // Step 1: Retrieve cart from sessionStorage using the correct key
+      const cartData = sessionStorage.getItem("tablemint_cart");
+      
+      // Step 2: Check if cart exists and is not empty
+      if (!cartData) {
+        alert("Your cart is empty. Please add items before confirming your order.");
+        setShowTipModal(false);
+        return;
+      }
+
+      // Step 3: Parse the cart data
+      let parsedCart;
+      try {
+        parsedCart = JSON.parse(cartData);
+      } catch (parseError) {
+        console.error("Error parsing cart data:", parseError);
+        alert("There was an error reading your cart. Please try again.");
+        setShowTipModal(false);
+        return;
+      }
+
+      // Step 4: Check if parsed cart has items
+      if (!parsedCart || !parsedCart.items || parsedCart.items.length === 0) {
+        alert("Your cart is empty. Please add items before confirming your order.");
+        setShowTipModal(false);
+        return;
+      }
+
+      // Step 5: Create line items for the order
+      const lineItems = parsedCart.items.map(item => ({
+        catalog_object_id: item.id, // Square expects catalog_object_id
+        quantity: item.quantity.toString(), // Convert to string as required by Square API
+        base_price_money: { // Square expects base_price_money object
+          amount: Math.round(item.price * 100), // Convert to cents
+          currency: item.currency || 'GBP'
+        }
+      }));
+
+      // Get restaurant context from session storage
+      let restaurantId = null;
+      let tableToken = null;
+      let location_id = null;
+
+      // Try to get restaurant context
+      const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+      if (storedRestaurantContext) {
+        try {
+          const restaurantData = JSON.parse(storedRestaurantContext);
+          restaurantId = restaurantData.id;
+          location_id = restaurantData.location_id;
+        } catch (e) {
+          console.error('Failed to parse restaurant context:', e);
+        }
+      }
+
+      // Try to get table context
+      const storedTableContext = sessionStorage.getItem('table_context');
+      if (storedTableContext) {
+        try {
+          const tableData = JSON.parse(storedTableContext);
+          tableToken = tableData.token;
+          // If we don't have restaurant_id from restaurant context, try to get it from table context
+          if (!restaurantId && tableData.restaurant_id) {
+            restaurantId = tableData.restaurant_id;
+          }
+        } catch (e) {
+          console.error('Failed to parse table context:', e);
+        }
+      }
+
+      // Step 7: Prepare order data for creation
+      const orderData = {
+        line_items: lineItems,
+        idempotency_key: `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Unique key to prevent duplicates
+        restaurant_id: restaurantId,
+        table_token: tableToken,
+        location_id: location_id, // Use effective location ID if available
+      };
+      
+      // Step 8: Create the order via API call
+      const response = await fetch('https://tablemint.onrender.com/api/orders/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok && responseData.success) {
+        // Store the created order ID for later use in payment
+        const orderId = responseData.order?.id;
+        if (orderId) {
+          sessionStorage.setItem("current_order_id", orderId);
+        }
+
+        // Also store order data for potential external payment creation later
+        sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
+        
+        // Clear the cart since order has been created
+        
+        // Close modal and redirect to cart page with order ID
+        setShowTipModal(false);
+        
+        // Navigate to cart page with the order ID
+        if (orderId) {
+          navigate(`/cart?order_id=${orderId}`);
+        } else {
+          navigate('/cart');
+        }
+      } else {
+        alert(`Failed to create order: ${responseData.error || 'Unknown error'}`);
+        setShowTipModal(false);
+      }
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert("There was an error creating your order. Please try again.");
+      setShowTipModal(false);
+    }
   };
 
   return (

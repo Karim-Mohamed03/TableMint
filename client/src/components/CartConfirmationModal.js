@@ -101,7 +101,11 @@ const CartConfirmationModal = ({
   // Always show section if we have menu items and found some sides
   const showPopularSection = menuItems && menuItems.length > 0 && popularSides.length > 0;
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setUserPaymentAmount(null);
     setShowTipModal(true);
   };

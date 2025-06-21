@@ -104,7 +104,7 @@ const CartConfirmationModal = ({
 
   const handleTipConfirm = async (tipAmount) => {
     try {
-      const baseAmount = userPaymentAmount;
+      const baseAmount = userPaymentAmount || Math.round(subtotal * 100);
       const tipInCents = tipAmount * 100;
       const finalAmount = baseAmount + tipInCents;
       

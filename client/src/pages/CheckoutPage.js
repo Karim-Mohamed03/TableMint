@@ -28,12 +28,9 @@ const CheckoutPage = ({
 
   return (
     <div className="checkout-page">
+      <h1 className="checkout-title">Pay securely</h1>
+      <p className="checkout-desc">All transactions are private and encrypted.</p>
       <div className="checkout-container">
-        <h1 className="checkout-title">Complete Your Payment</h1>
-        <p className="checkout-desc">Please enter your card details below to complete your order.</p>
-        
-        
-
         <Elements
           stripe={stripePromise}
           options={{
@@ -87,7 +84,10 @@ const CheckoutPage = ({
           <CheckoutForm />
         </Elements>
 
-        <div className="amount-breakdown">
+        
+      </div>
+
+      <div className="amount-breakdown">
           <div className="breakdown-row">
             <span>Subtotal</span>
             <span>£{baseAmountFormatted}</span>
@@ -101,7 +101,6 @@ const CheckoutPage = ({
             <span>£{total}</span>
           </div>
         </div>
-      </div>
     </div>
   );
 };

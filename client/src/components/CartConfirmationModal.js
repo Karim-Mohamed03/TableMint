@@ -223,6 +223,9 @@ const CartConfirmationModal = ({
         const orderId = responseData.order?.id;
         if (orderId) {
           sessionStorage.setItem("current_order_id", orderId);
+          // Update URL with order_id without navigation
+          const newUrl = window.location.pathname + `?order_id=${orderId}`;
+          window.history.replaceState({}, '', newUrl);
         }
 
         // Also store order data for potential external payment creation later

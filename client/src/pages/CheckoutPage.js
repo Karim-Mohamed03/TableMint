@@ -32,20 +32,7 @@ const CheckoutPage = ({
         <h1 className="checkout-title">Complete Your Payment</h1>
         <p className="checkout-desc">Please enter your card details below to complete your order.</p>
         
-        <div className="amount-breakdown">
-          <div className="breakdown-row">
-            <span>Subtotal</span>
-            <span>£{baseAmountFormatted}</span>
-          </div>
-          <div className="breakdown-row">
-            <span>Tip</span>
-            <span>£{tipAmountFormatted}</span>
-          </div>
-          <div className="breakdown-row total">
-            <span>Total</span>
-            <span>£{total}</span>
-          </div>
-        </div>
+        
 
         <Elements
           stripe={stripePromise}
@@ -99,6 +86,21 @@ const CheckoutPage = ({
         >
           <CheckoutForm />
         </Elements>
+
+        <div className="amount-breakdown">
+          <div className="breakdown-row">
+            <span>Subtotal</span>
+            <span>£{baseAmountFormatted}</span>
+          </div>
+          <div className="breakdown-row">
+            <span>Tip</span>
+            <span>£{tipAmountFormatted}</span>
+          </div>
+          <div className="breakdown-row total">
+            <span>Total</span>
+            <span>£{total}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

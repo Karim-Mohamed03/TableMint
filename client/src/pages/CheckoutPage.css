@@ -3,14 +3,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  /* padding: 20px; */
   background-color: #ffffff;
   font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .checkout-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   padding: 24px;
   background: white;
 }
@@ -20,6 +20,7 @@
   font-weight: 600;
   color: #1d1d1f;
   margin: 0 0 8px 0;
+  text-align: left;
 }
 
 .checkout-desc {
@@ -27,6 +28,8 @@
   color: #86868b;
   margin: 0 0 32px 0;
   line-height: 1.4;
+  text-align: left;
+  font-weight: 400;
 }
 
 .amount-breakdown {

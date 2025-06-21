@@ -4,7 +4,7 @@ import { X, Trash2, Minus, Plus, Loader } from 'lucide-react';
 import './CartConfirmationModal.css';
 import { Elements } from '@stripe/stripe-js';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
-import TipModal from './TipModal';
+import TipModal from '../receiptScreen/components/TipModal';
 
 const CartConfirmationModal = ({ 
   isOpen, 

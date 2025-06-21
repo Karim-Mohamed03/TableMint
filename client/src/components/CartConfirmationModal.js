@@ -115,9 +115,23 @@ const CartConfirmationModal = ({
       setUserPaymentAmount(finalAmount);
       
       setPaymentProcessing(true);
-      await createPaymentIntent(finalAmount);
-      setShowCheckout(true);
+      
+      // Create payment intent if the function is provided
+      if (typeof createPaymentIntent === 'function') {
+        await createPaymentIntent(finalAmount);
+        setShowCheckout(true);
+      }
       setShowTipModal(false);
+      
+      // Call the parent's onConfirm if provided
+      if (typeof onConfirm === 'function') {
+        await onConfirm({
+          baseAmount,
+          tipAmount: tipInCents,
+          finalAmount,
+          orderId
+        });
+      }
     } catch (error) {
       console.error("Error creating payment intent:", error);
       setPaymentError(error.message || "Failed to process payment. Please try again.");

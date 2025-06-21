@@ -164,7 +164,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           background-color: rgba(0, 0, 0, 0.5);
           display: flex;
           justify-content: center;
-          align-items: center;
+          align-items: flex-end;
           z-index: 1000;
           visibility: hidden;
           opacity: 0;
@@ -182,17 +182,16 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         .modal-content {
           background-color: white;
           width: 100%;
-          max-width: 500px;
-          border-radius: 12px;
-          transform: translateY(20px);
-          transition: transform 0.3s ease;
-          max-height: 90vh;
+          height: 65vh;
+          border-radius: 20px 20px 0 0;
+          transform: translateY(100%);
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
           display: flex;
           flex-direction: column;
           position: relative;
           z-index: 1001;
           pointer-events: auto;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
         }
         
         .modal-content.open {
@@ -238,6 +237,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
         .modal-body {
           padding: 20px;
           overflow-y: auto;
+          flex: 1;
         }
 
         .tip-description {

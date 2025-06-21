@@ -22,60 +22,83 @@ const CheckoutPage = ({
     );
   }
 
+  const total = ((baseAmount + tipAmount) / 100).toFixed(2);
+  const baseAmountFormatted = (baseAmount / 100).toFixed(2);
+  const tipAmountFormatted = (tipAmount / 100).toFixed(2);
+
   return (
     <div className="checkout-page">
       <div className="checkout-container">
-        <h1 className="checkout-title">Pay securely</h1>
-        <div className="checkout-desc">
-          <h3 className="checkout-desc-title">All transactions are private and encrypted.</h3>
+        <h1 className="checkout-title">Complete Your Payment</h1>
+        <p className="checkout-desc">Please enter your card details below to complete your order.</p>
+        
+        <div className="amount-breakdown">
+          <div className="breakdown-row">
+            <span>Subtotal</span>
+            <span>£{baseAmountFormatted}</span>
+          </div>
+          <div className="breakdown-row">
+            <span>Tip</span>
+            <span>£{tipAmountFormatted}</span>
+          </div>
+          <div className="breakdown-row total">
+            <span>Total</span>
+            <span>£{total}</span>
+          </div>
         </div>
+
         <Elements
           stripe={stripePromise}
           options={{
             clientSecret,
             appearance: {
-              theme: 'flat',
+              theme: 'stripe',
               variables: {
-                colorPrimary: '#1a73e8',
+                colorPrimary: '#000000',
                 colorBackground: '#ffffff',
-                colorText: '#30313d',
-                colorDanger: '#df1b41',
+                colorText: '#1d1d1f',
+                colorDanger: '#ef4444',
                 fontFamily: 'Satoshi, system-ui, sans-serif',
-                spacingUnit: '2px',
-                borderRadius: '4px',
+                borderRadius: '12px',
+                spacingUnit: '4px',
+              },
+              rules: {
+                '.Input': {
+                  boxShadow: 'none',
+                  border: '1px solid #e2e8f0',
+                  padding: '16px',
+                },
+                '.Input:focus': {
+                  boxShadow: 'none',
+                  borderColor: '#000000',
+                },
+                '.Label': {
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  color: '#86868b',
+                },
+                '.Tab': {
+                  border: '1px solid #e2e8f0',
+                  boxShadow: 'none',
+                },
+                '.Tab:hover': {
+                  border: '1px solid #000000',
+                  color: '#000000',
+                },
+                '.Tab--selected': {
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                },
+                '.Error': {
+                  color: '#ef4444',
+                  fontSize: '14px',
+                }
               }
             }
           }}
         >
-          <CheckoutForm
-            baseAmount={baseAmount}
-            tipAmount={tipAmount}
-            currency="GBP"
-            orderId={orderId}
-            restaurantBranding={restaurantBranding}
-            isBrandingLoaded={isBrandingLoaded}
-          />
+          <CheckoutForm />
         </Elements>
-
-        {/* add subtotal */}
-        <div className="subtotal-container">
-          <div className="subtotal-label">Subtotal</div>
-          <div className="subtotal-amount">£{baseAmount}</div>
-        </div>
-        {/* Add tip amount */}
-        <div className="tip-container">
-          <div className="tip-label">Tip({(tipAmount / baseAmount * 100).toFixed(2)}%)</div>
-          <div className="tip-amount">£{tipAmount}</div>
-        </div>
-
-        {/* Add horizontal line */}
-        <div className="horizontal-line"></div>
-
-        {/* Add total amount */}
-        <div className="total-container">
-          <div className="total-label">Total</div>
-          <div className="total-amount">£{baseAmount + tipAmount}</div>
-        </div>
       </div>
     </div>
   );

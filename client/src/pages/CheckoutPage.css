@@ -1,91 +1,60 @@
 .checkout-page {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
   background-color: #ffffff;
+  font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .checkout-container {
-  background: white;
-  border-radius: 16px;
-  /* box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); */
   width: 100%;
   max-width: 480px;
-  padding: 32px;
-  max-height: 90vh;
-  overflow-y: auto;
+  padding: 24px;
+  background: white;
 }
 
 .checkout-title {
   font-size: 24px;
   font-weight: 600;
-  color: #0f172a;
-  margin: 0 0 16px 0;
-  text-align: left;
-  font-family: 'Satoshi', sans-serif;
+  color: #1d1d1f;
+  margin: 0 0 8px 0;
 }
 
 .checkout-desc {
+  font-size: 16px;
+  color: #86868b;
+  margin: 0 0 32px 0;
+  line-height: 1.4;
+}
+
+.amount-breakdown {
+  background-color: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
   margin-bottom: 32px;
 }
 
-.checkout-desc-title {
-  font-size: 16px;
-  font-weight: 400;
-  color: #64748b;
-  margin: 0;
-  text-align: left;
-  font-family: 'Satoshi', sans-serif;
-}
-
-.subtotal-container,
-.tip-container,
-.total-container {
+.breakdown-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  font-family: 'Satoshi', sans-serif;
+  padding: 8px 0;
+  color: #86868b;
+  font-size: 14px;
 }
 
-.subtotal-label,
-.tip-label {
-  font-size: 16px;
-  color: #64748b;
-  font-weight: 400;
-}
-
-.subtotal-amount,
-.tip-amount {
-  font-size: 16px;
-  color: #0f172a;
-  font-weight: 500;
-}
-
-.horizontal-line {
-  height: 1px;
-  background-color: #e2e8f0;
-  margin: 16px 0;
-}
-
-.total-container {
+.breakdown-row.total {
   margin-top: 8px;
-}
-
-.total-label {
-  font-size: 18px;
-  color: #0f172a;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
   font-weight: 600;
+  color: #1d1d1f;
+  font-size: 16px;
 }
 
-.total-amount {
-  font-size: 18px;
-  color: #0f172a;
-  font-weight: 600;
-}
-
+/* Loading state */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -96,13 +65,19 @@
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f4f6;
-  border-top: 3px solid #1a73e8;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f5f5f7;
+  border-top: 3px solid #000000;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
+}
+
+.loading-container p {
+  color: #86868b;
+  font-size: 16px;
+  margin: 0;
 }
 
 @keyframes spin {
@@ -110,31 +85,54 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Form styles */
+#payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pay-button {
+  background-color: #000000;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 8px;
+  font-family: 'Satoshi', sans-serif;
+}
+
+.pay-button:hover:not(:disabled) {
+  background-color: #333333;
+}
+
+.pay-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.payment-message {
+  color: #ef4444;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 8px;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 480px) {
   .checkout-container {
-    padding: 24px;
-    border-radius: 12px;
+    padding: 16px;
   }
-
+  
   .checkout-title {
     font-size: 20px;
-    margin-bottom: 12px;
   }
-
-  .checkout-desc-title {
+  
+  .checkout-desc {
     font-size: 14px;
-  }
-
-  .subtotal-label,
-  .tip-label,
-  .subtotal-amount,
-  .tip-amount {
-    font-size: 14px;
-  }
-
-  .total-label,
-  .total-amount {
-    font-size: 16px;
   }
 } 

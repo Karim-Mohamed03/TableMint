@@ -37,11 +37,11 @@
 }
 
 .amount-breakdown {
-  background-color: #f8fafc;
+  background-color: #ffffff;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 32px;
-  border: 1px solid #e2e8f0;
+  /* border: 1px solid #e2e8f0; */
 }
 
 .breakdown-row {
@@ -100,6 +100,8 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .pay-button {

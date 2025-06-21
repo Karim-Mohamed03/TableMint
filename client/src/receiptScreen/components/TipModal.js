@@ -73,8 +73,8 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
   };
   
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className={`modal-overlay ${isOpen ? 'open' : ''}`} onClick={handleModalBackdropClick}>
+      <div className={`modal-content ${isOpen ? 'open' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <button className="close-button" onClick={onClose}>
             <span>×</span>
@@ -160,23 +160,37 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           left: 0;
           right: 0;
           bottom: 0;
-          background-color: white;
+          background-color: rgba(0, 0, 0, 0.5);
           display: flex;
           justify-content: center;
-          align-items: flex-start;
+          align-items: flex-end;
           z-index: 1000;
-          padding: 0;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .modal-overlay.open {
+          opacity: 1;
+          visibility: visible;
         }
         
         .modal-content {
           background: white;
           width: 100%;
-          max-width: none;
-          height: 100vh;
+          height: 65vh;
+          border-radius: 24px 24px 0 0;
           overflow: hidden;
           display: flex;
           flex-direction: column;
           font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          transform: translateY(100%);
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+        }
+        
+        .modal-content.open {
+          transform: translateY(0);
         }
         
         .modal-header {

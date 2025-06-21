@@ -83,9 +83,11 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           <div className="header-spacer"></div>
         </div>
 
-        <h3 className="modal-title">Say Thanks with a Tip</h3>
+        
         
         <div className="modal-body">
+
+        <h3 className="modal-title">Say Thanks with a Tip</h3>
           <div className="tip-desc-label">This will be added to any discretionary service charge which goes directly to the restaurant team.</div>
           
           <div className="tip-options-grid">

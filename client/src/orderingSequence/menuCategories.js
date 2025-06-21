@@ -193,24 +193,38 @@ const isItemSoldOutAtLocation = (item, locationId) => {
 };
 
 // Main MenuCategories component
-const MenuCategories = () => {
+const MenuCategories = ({
+  catalogData: initialCatalogData,
+  inventoryData: initialInventoryData,
+  loading: initialLoading,
+  error: initialError,
+  restaurantContext: initialRestaurantContext,
+  tableContext: initialTableContext,
+  locationId,
+  stripePromise,
+  clientSecret,
+  updatePaymentAmount,
+  createPaymentIntent,
+  isCreatingPaymentIntent,
+  restaurantBranding,
+  isBrandingLoaded
+}) => {
   const navigate = useNavigate();
-  const { locationId } = useParams();
   const { addItem, getItemCount, getItemQuantity, updateQuantity, removeItem, clearCart } = useCart();
   
   // State for menu data
-  const [catalogData, setCatalogData] = useState(null);
+  const [catalogData, setCatalogData] = useState(initialCatalogData);
   const [imageMap, setImageMap] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(initialLoading);
+  const [error, setError] = useState(initialError);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [inventoryData, setInventoryData] = useState({});
+  const [inventoryData, setInventoryData] = useState(initialInventoryData);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // State for restaurant and table context
-  const [tableContext, setTableContext] = useState(null);
-  const [restaurantContext, setRestaurantContext] = useState(null);
+  const [tableContext, setTableContext] = useState(initialTableContext);
+  const [restaurantContext, setRestaurantContext] = useState(initialRestaurantContext);
   const [effectiveLocationId, setEffectiveLocationId] = useState(null);
 
   // New state for item detail modal
@@ -692,6 +706,13 @@ const MenuCategories = () => {
         onClose={handleCloseModal}
         onConfirm={handleConfirmOrder}
         menuItems={organizedData.items}
+        stripePromise={stripePromise}
+        clientSecret={clientSecret}
+        updatePaymentAmount={updatePaymentAmount}
+        createPaymentIntent={createPaymentIntent}
+        isCreatingPaymentIntent={isCreatingPaymentIntent}
+        restaurantBranding={restaurantBranding}
+        isBrandingLoaded={isBrandingLoaded}
       />
 
       <style jsx>{`

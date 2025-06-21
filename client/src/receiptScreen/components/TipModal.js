@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
+const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProcessing }) => {
   const [selectedTip, setSelectedTip] = useState(currentTip);
   const customInputRef = useRef(null);
   
@@ -59,7 +59,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
   
   // Prevent modal backdrop clicks from closing when processing
   const handleModalBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !isProcessing) {
       onClose();
     }
   };
@@ -128,8 +128,12 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
         </div>
         
         <div className="modal-footer">
-          <button className="confirm-button" onClick={handleConfirm}>
-            Confirm and pay
+          <button 
+            className={`confirm-button ${isProcessing ? 'processing' : ''}`} 
+            onClick={handleConfirm}
+            disabled={isProcessing}
+          >
+            {isProcessing ? 'Processing...' : 'Confirm and pay'}
           </button>
         </div>
       </div>
@@ -347,19 +351,31 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm }) => {
         
         .confirm-button {
           width: 100%;
-          padding: 18px;
+          padding: 16px;
+          background-color: #2ecc71;
+          color: white;
           border: none;
           border-radius: 12px;
-          background-color: #1d1d1f;
-          color: white;
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 600;
           cursor: pointer;
-          transition: background-color 0.2s ease;
+          transition: all 0.2s ease;
         }
         
-        .confirm-button:hover {
-          background-color: #2d2d2f;
+        .confirm-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+        
+        .confirm-button.processing {
+          background-color: #27ae60;
+        }
+        
+        .tip-option:disabled,
+        .no-tip-button:disabled,
+        .custom-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
       `}</style>
     </div>

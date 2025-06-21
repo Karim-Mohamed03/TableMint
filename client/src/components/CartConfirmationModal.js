@@ -1,10 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../contexts/CartContext';
-import { X, Trash2, Minus, Plus } from 'lucide-react';
+import { X, Trash2, Minus, Plus, Loader } from 'lucide-react';
 import './CartConfirmationModal.css';
+import { Elements } from '@stripe/stripe-js';
+import CheckoutForm from './CheckoutForm';
+import TipModal from './TipModal';
 
-const CartConfirmationModal = ({ isOpen, onClose, onConfirm, menuItems = [] }) => {
+const CartConfirmationModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  menuItems = [], 
+  stripePromise,
+  clientSecret,
+  updatePaymentAmount,
+  createPaymentIntent,
+  isCreatingPaymentIntent,
+  restaurantBranding,
+  isBrandingLoaded
+}) => {
   const { items, subtotal, getItemCount, updateQuantity, removeItem, addItem } = useCart();
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [userPaymentAmount, setUserPaymentAmount] = useState(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [tipInCents, setTipInCents] = useState(0);
+  const [baseAmountInCents, setBaseAmountInCents] = useState(null);
+  const [paymentError, setPaymentError] = useState(null);
+  const [isProcessingTip, setIsProcessingTip] = useState(false);
 
   if (!isOpen) return null;
 
@@ -65,6 +88,50 @@ const CartConfirmationModal = ({ isOpen, onClose, onConfirm, menuItems = [] }) =
   // Always show section if we have menu items and found some sides
   const showPopularSection = menuItems && menuItems.length > 0 && popularSides.length > 0;
 
+  // Generate or retrieve a consistent temporary order ID
+  const generateTempOrderId = () => {
+    const storedTempId = sessionStorage.getItem("temp_order_id");
+    if (storedTempId) {
+      return storedTempId;
+    }
+    const randomId = `temp-${Math.random().toString(36).substring(2, 10)}-${Date.now().toString().slice(-6)}`;
+    sessionStorage.setItem("temp_order_id", randomId);
+    return randomId;
+  };
+
+  const orderId = generateTempOrderId();
+
+  const handleTipConfirm = async (tipAmount) => {
+    try {
+      setIsProcessingTip(true);
+      setPaymentError(null);
+      const baseAmount = userPaymentAmount || Math.round(subtotal * 100);
+      const tipInCents = tipAmount * 100;
+      const finalAmount = baseAmount + tipInCents;
+      
+      setTipInCents(tipInCents);
+      setBaseAmountInCents(baseAmount);
+      setUserPaymentAmount(finalAmount);
+      
+      setPaymentProcessing(true);
+      await createPaymentIntent(finalAmount);
+      setShowCheckout(true);
+      setShowTipModal(false);
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+      setPaymentError(error.message || "Failed to process payment. Please try again.");
+    } finally {
+      setPaymentProcessing(false);
+      setIsProcessingTip(false);
+    }
+  };
+
+  const handleConfirmOrder = () => {
+    setPaymentError(null);
+    setUserPaymentAmount(null);
+    setShowTipModal(true);
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -77,6 +144,20 @@ const CartConfirmationModal = ({ isOpen, onClose, onConfirm, menuItems = [] }) =
         </div>
         
         <div className="modal-body">
+          {paymentError && (
+            <div className="payment-error-message">
+              <p>{paymentError}</p>
+              <button onClick={() => setPaymentError(null)}>Dismiss</button>
+            </div>
+          )}
+
+          {(paymentProcessing || isCreatingPaymentIntent || isProcessingTip) && (
+            <div className="payment-processing-overlay">
+              <Loader className="spinner" size={24} />
+              <p>Processing your payment...</p>
+            </div>
+          )}
+
           {items.length === 0 ? (
             <p className="empty-cart">Your cart is empty</p>
           ) : (
@@ -204,9 +285,59 @@ const CartConfirmationModal = ({ isOpen, onClose, onConfirm, menuItems = [] }) =
         
         {items.length > 0 && (
           <div className="modal-footer">
-            <button className="confirm-button" onClick={onConfirm}>
-              Confirm Order • {formatCurrency(subtotal)}
+            <button 
+              className="confirm-button" 
+              onClick={handleConfirmOrder}
+              disabled={paymentProcessing || isCreatingPaymentIntent}
+            >
+              {paymentProcessing ? 'Processing...' : `Confirm Order • ${formatCurrency(subtotal)}`}
             </button>
+          </div>
+        )}
+
+        {showTipModal && (
+          <TipModal
+            isOpen={showTipModal}
+            onClose={() => setShowTipModal(false)}
+            onConfirm={handleTipConfirm}
+            baseAmount={(userPaymentAmount || Math.round(subtotal * 100)) / 100}
+            currency="GBP"
+            isProcessing={isProcessingTip}
+          />
+        )}
+
+        {showCheckout && clientSecret && stripePromise && (
+          <div className="checkout-overlay">
+            <div className="checkout-container">
+              <Elements 
+                stripe={stripePromise} 
+                options={{ 
+                  clientSecret,
+                  appearance: {
+                    theme: 'stripe',
+                    variables: {
+                      colorPrimary: '#1a73e8',
+                      colorBackground: '#ffffff',
+                      colorText: '#30313d',
+                      colorDanger: '#df1b41',
+                      fontFamily: 'Ideal Sans, system-ui, sans-serif',
+                      spacingUnit: '2px',
+                      borderRadius: '4px',
+                    }
+                  }
+                }}
+              >
+                <CheckoutForm 
+                  baseAmount={baseAmountInCents}
+                  tipAmount={tipInCents}
+                  currency="GBP"
+                  orderId={orderId}
+                  restaurantBranding={restaurantBranding}
+                  isBrandingLoaded={isBrandingLoaded}
+                  onError={(error) => setPaymentError(error)}
+                />
+              </Elements>
+            </div>
           </div>
         )}
       </div>

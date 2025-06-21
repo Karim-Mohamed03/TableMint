@@ -82,6 +82,8 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           <h1 className="modal-title">Add a Tip</h1>
           <div className="header-spacer"></div>
         </div>
+
+        <h3 className="modal-title">Say Thanks with a Tip</h3>
         
         <div className="modal-body">
           <div className="tip-desc-label">This will be added to any discretionary service charge which goes directly to the restaurant team.</div>
@@ -134,12 +136,12 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
             </div>
           </div>
           
-          <div className="payment-summary">
+          {/* <div className="payment-summary">
             <div className="summary-row">
               <span>Total with tip</span>
               <span className="total-amount">{formatCurrency(baseAmount + selectedTip)}</span>
             </div>
-          </div>
+          </div> */}
         </div>
         
         <div className="modal-footer">

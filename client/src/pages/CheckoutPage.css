@@ -4,13 +4,13 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background-color: #f8fafc;
+  background-color: #ffffff;
 }
 
 .checkout-container {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); */
   width: 100%;
   max-width: 480px;
   padding: 32px;
@@ -22,9 +22,68 @@
   font-size: 24px;
   font-weight: 600;
   color: #0f172a;
-  margin: 0 0 24px 0;
-  text-align: center;
+  margin: 0 0 16px 0;
+  text-align: left;
   font-family: 'Satoshi', sans-serif;
+}
+
+.checkout-desc {
+  margin-bottom: 32px;
+}
+
+.checkout-desc-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: #64748b;
+  margin: 0;
+  text-align: left;
+  font-family: 'Satoshi', sans-serif;
+}
+
+.subtotal-container,
+.tip-container,
+.total-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  font-family: 'Satoshi', sans-serif;
+}
+
+.subtotal-label,
+.tip-label {
+  font-size: 16px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.subtotal-amount,
+.tip-amount {
+  font-size: 16px;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.horizontal-line {
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 16px 0;
+}
+
+.total-container {
+  margin-top: 8px;
+}
+
+.total-label {
+  font-size: 18px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.total-amount {
+  font-size: 18px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .loading-container {
@@ -60,6 +119,22 @@
 
   .checkout-title {
     font-size: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
+  }
+
+  .checkout-desc-title {
+    font-size: 14px;
+  }
+
+  .subtotal-label,
+  .tip-label,
+  .subtotal-amount,
+  .tip-amount {
+    font-size: 14px;
+  }
+
+  .total-label,
+  .total-amount {
+    font-size: 16px;
   }
 } 

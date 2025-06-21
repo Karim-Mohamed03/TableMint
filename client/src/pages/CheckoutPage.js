@@ -25,7 +25,10 @@ const CheckoutPage = ({
   return (
     <div className="checkout-page">
       <div className="checkout-container">
-        <h1 className="checkout-title">Complete Your Payment</h1>
+        <h1 className="checkout-title">Pay securely</h1>
+        <div className="checkout-desc">
+          <h3 className="checkout-desc-title">All transactions are private and encrypted.</h3>
+        </div>
         <Elements
           stripe={stripePromise}
           options={{
@@ -53,6 +56,26 @@ const CheckoutPage = ({
             isBrandingLoaded={isBrandingLoaded}
           />
         </Elements>
+
+        {/* add subtotal */}
+        <div className="subtotal-container">
+          <div className="subtotal-label">Subtotal</div>
+          <div className="subtotal-amount">£{baseAmount}</div>
+        </div>
+        {/* Add tip amount */}
+        <div className="tip-container">
+          <div className="tip-label">Tip({tipAmount / baseAmount * 100}%)</div>
+          <div className="tip-amount">£{tipAmount}</div>
+        </div>
+
+        {/* Add horizontal line */}
+        <div className="horizontal-line"></div>
+
+        {/* Add total amount */}
+        <div className="total-container">
+          <div className="total-label">Total</div>
+          <div className="total-amount">£{baseAmount + tipAmount}</div>
+        </div>
       </div>
     </div>
   );

@@ -301,6 +301,7 @@ const CartConfirmationModal = ({
             isOpen={showTipModal}
             onClose={() => setShowTipModal(false)}
             onConfirm={handleTipConfirm}
+            currentTip={tipInCents / 100}
             baseAmount={(userPaymentAmount || Math.round(subtotal * 100)) / 100}
             currency="GBP"
             isProcessing={isProcessingTip}

@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 
-const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProcessing }) => {
-  const [selectedTip, setSelectedTip] = useState(currentTip);
+const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProcessing, currency = 'GBP' }) => {
+  const [selectedTip, setSelectedTip] = useState(currentTip || 0);
   const customInputRef = useRef(null);
   
   // Reset selected tip when modal is opened with current tip value
   useEffect(() => {
     if (isOpen) {
-      setSelectedTip(currentTip);
+      setSelectedTip(currentTip || 0);
       setCustomTip("");
       setIsCustomTip(false);
     }
@@ -15,9 +15,9 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
   
   // Predefined tip percentages
   const tipPercentages = [
-    { value: 4, label: "$4" },
-    { value: 7, label: "$7" },
-    { value: 10, label: "$10" }
+    { value: 4, label: `${currency === 'GBP' ? '£' : '$'}4` },
+    { value: 7, label: `${currency === 'GBP' ? '£' : '$'}7` },
+    { value: 10, label: `${currency === 'GBP' ? '£' : '$'}10` }
   ];
   
   // Custom tip amount
@@ -64,6 +64,14 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
     }
   };
   
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+  
   return (
     <div className={`modal-backdrop ${isOpen ? 'open' : ''}`} onClick={handleModalBackdropClick}>
       <div className={`tip-modal ${isOpen ? 'open' : ''}`} onClick={e => e.stopPropagation()}>
@@ -81,6 +89,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
                 key={option.value} 
                 className={`tip-option ${selectedTip === option.value && !isCustomTip ? "active" : ""}`} 
                 onClick={() => handleTipSelect(option.value)}
+                disabled={isProcessing}
               >
                 {option.label}
               </button>
@@ -91,6 +100,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
             <button 
               className={`no-tip-button ${selectedTip === 0 && !isCustomTip ? "active" : ""}`}
               onClick={handleNoTip}
+              disabled={isProcessing}
             >
               No Tip
             </button>
@@ -100,12 +110,13 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
                 <button 
                   className="custom-button"
                   onClick={() => setIsCustomTip(true)}
+                  disabled={isProcessing}
                 >
                   Custom
                 </button>
               ) : (
                 <div className="custom-input-wrapper">
-                  <span className="currency">$</span>
+                  <span className="currency">{currency === 'GBP' ? '£' : '$'}</span>
                   <input 
                     ref={customInputRef}
                     type="text" 
@@ -113,6 +124,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
                     onChange={handleCustomTipChange}
                     placeholder="0.00"
                     className="custom-tip-input"
+                    disabled={isProcessing}
                   />
                 </div>
               )}
@@ -122,7 +134,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
           <div className="payment-summary">
             <div className="summary-row">
               <span>You are paying</span>
-              <span className="total-amount">${(baseAmount + selectedTip).toFixed(2)}</span>
+              <span className="total-amount">{formatCurrency(baseAmount + selectedTip)}</span>
             </div>
           </div>
         </div>

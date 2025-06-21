@@ -24,10 +24,10 @@ const CheckoutPage = ({
     );
   }
 
-  const total = ((baseAmount + tipAmount) / 100).toFixed(2);
+  // const total = ((baseAmount + tipAmount) / 100).toFixed(2);
   const baseAmountFormatted = (baseAmount / 100).toFixed(2);
   const tipAmountFormatted = (tipAmount / 100).toFixed(2);
-  const instantPaymentFee = 0.99;
+  // const instantPaymentFee = 0.99;
 
   return (
     <div style={{
@@ -331,14 +331,7 @@ const CheckoutPage = ({
             fontSize: '14px',
             color: '#1d1d1f'
           }}>
-            <span>Instant payment fees</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>£{instantPaymentFee.toFixed(2)}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+      
           </div>
           <div style={{
             display: 'flex',
@@ -352,7 +345,7 @@ const CheckoutPage = ({
             marginTop: '8px'
           }}>
             <span>Total</span>
-            <span>£{(parseFloat(total) + instantPaymentFee).toFixed(2)}</span>
+            <span>£{(baseAmountFormatted + tipAmountFormatted).toFixed(2)}</span>
           </div>
         </div>
 

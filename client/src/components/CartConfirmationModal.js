@@ -3,7 +3,7 @@ import { useCart } from '../contexts/CartContext';
 import { X, Trash2, Minus, Plus, Loader } from 'lucide-react';
 import './CartConfirmationModal.css';
 import { Elements } from '@stripe/stripe-js';
-import CheckoutForm from './CheckoutForm';
+import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import TipModal from './TipModal';
 
 const CartConfirmationModal = ({ 

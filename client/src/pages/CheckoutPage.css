@@ -432,17 +432,27 @@
 .StripeElement {
   background-color: white !important;
   border: 1px solid #e5e5e7 !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   padding: 16px !important;
   margin-bottom: 16px !important;
+  transition: all 0.2s ease !important;
 }
 
-.StripeElement:focus {
+.StripeElement--focus {
   border-color: #1d1d1f !important;
+  box-shadow: none !important;
 }
 
 .StripeElement--invalid {
   border-color: #ef4444 !important;
+}
+
+.StripeElement--webkit-autofill {
+  background-color: white !important;
+}
+
+#payment-form {
+  margin-bottom: 16px;
 }
 
 .payment-message {

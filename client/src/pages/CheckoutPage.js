@@ -1,130 +1,17 @@
-// import React from 'react';
-// import { Elements } from "@stripe/react-stripe-js";
-// import { useLocation } from 'react-router-dom';
-// import CheckoutForm from '../receiptScreen/components/CheckoutForm';
-// import './CheckoutPage.css';
-
-// const CheckoutPage = ({
-//   stripePromise,
-//   clientSecret,
-//   restaurantBranding,
-//   isBrandingLoaded
-// }) => {
-//   const location = useLocation();
-//   const { baseAmount, tipAmount, orderId } = location.state || {};
-
-//   if (!clientSecret || !stripePromise) {
-//     return (
-//       <div className="loading-container">
-//         <div className="loading-spinner"></div>
-//         <p>Preparing payment form...</p>
-//       </div>
-//     );
-//   }
-
-//   const total = ((baseAmount + tipAmount) / 100).toFixed(2);
-//   const baseAmountFormatted = (baseAmount / 100).toFixed(2);
-//   const tipAmountFormatted = (tipAmount / 100).toFixed(2);
-
-//   return (
-//     <div className="checkout-page">
-//       <h1 className="checkout-title">Pay securely</h1>
-//       <p className="checkout-desc">All transactions are private and encrypted.</p>
-//       <div className="checkout-container">
-//         <Elements
-//           stripe={stripePromise}
-//           options={{
-//             clientSecret,
-//             appearance: {
-//               theme: 'stripe',
-//               variables: {
-//                 colorPrimary: '#1d1d1f',
-//                 colorBackground: '#ffffff',
-//                 colorText: '#1d1d1f',
-//                 colorDanger: '#ef4444',
-//                 fontFamily: 'Satoshi, system-ui, sans-serif',
-//                 borderRadius: '8px',
-//                 spacingUnit: '4px',
-//                 fontSizeBase: '15px'
-//               },
-//               rules: {
-//                 '.Input': {
-//                   boxShadow: 'none',
-//                   border: '1px solid #f2f2f2',
-//                   padding: '16px',
-//                   backgroundColor: '#ffffff'
-//                 },
-//                 '.Input:focus': {
-//                   boxShadow: 'none',
-//                   borderColor: '#1d1d1f'
-//                 },
-//                 '.Input:hover': {
-//                   borderColor: '#1d1d1f'
-//                 },
-//                 '.Label': {
-//                   fontWeight: '400',
-//                   fontSize: '14px',
-//                   color: '#86868b'
-//                 },
-//                 '.Tab': {
-//                   border: '1px solid #f2f2f2',
-//                   boxShadow: 'none',
-//                   backgroundColor: '#ffffff'
-//                 },
-//                 '.Tab:hover': {
-//                   border: '1px solid #1d1d1f',
-//                   color: '#1d1d1f',
-//                   backgroundColor: '#ffffff'
-//                 },
-//                 '.Tab--selected': {
-//                   backgroundColor: '#1d1d1f',
-//                   color: '#ffffff'
-//                 },
-//                 '.Error': {
-//                   color: '#ef4444',
-//                   fontSize: '14px'
-//                 }
-//               }
-//             }
-//           }}
-//         >
-//           <CheckoutForm />
-//         </Elements>
-
-        
-//       </div>
-
-//       <div className="amount-breakdown">
-//           <div className="breakdown-row">
-//             <span>Subtotal</span>
-//             <span>£{baseAmountFormatted}</span>
-//           </div>
-//           <div className="breakdown-row">
-//             <span>Tip</span>
-//             <span>£{tipAmountFormatted}</span>
-//           </div>
-//           <div className="breakdown-row total">
-//             <span>Total</span>
-//             <span>£{total}</span>
-//           </div>
-//         </div>
-//     </div>
-//   );
-// };
-
-// export default CheckoutPage; 
-
 import React, { useState } from 'react';
+import { Elements } from "@stripe/react-stripe-js";
+import { useLocation } from 'react-router-dom';
+import CheckoutForm from '../receiptScreen/components/CheckoutForm';
+import './CheckoutPage.css';
 
 const CheckoutPage = ({
   stripePromise,
   clientSecret,
   restaurantBranding,
-  isBrandingLoaded,
-  baseAmount = 3175,
-  tipAmount = 300,
-  orderId
+  isBrandingLoaded
 }) => {
+  const location = useLocation();
+  const { baseAmount, tipAmount, orderId } = location.state || {};
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('apple-pay');
   const [showPromoCode, setShowPromoCode] = useState(false);
 
@@ -469,6 +356,71 @@ const CheckoutPage = ({
           </div>
         </div>
 
+        {/* Payment Section */}
+        <Elements
+          stripe={stripePromise}
+          options={{
+            clientSecret,
+            appearance: {
+              theme: 'stripe',
+              variables: {
+                colorPrimary: '#1d1d1f',
+                colorBackground: '#ffffff',
+                colorText: '#1d1d1f',
+                colorDanger: '#ef4444',
+                fontFamily: 'Satoshi, system-ui, sans-serif',
+                borderRadius: '8px',
+                spacingUnit: '4px',
+                fontSizeBase: '15px'
+              },
+              rules: {
+                '.Input': {
+                  boxShadow: 'none',
+                  border: '1px solid #e5e5e7',
+                  padding: '16px',
+                  backgroundColor: '#ffffff'
+                },
+                '.Input:focus': {
+                  boxShadow: 'none',
+                  borderColor: '#1d1d1f'
+                },
+                '.Input:hover': {
+                  borderColor: '#1d1d1f'
+                },
+                '.Label': {
+                  fontWeight: '400',
+                  fontSize: '14px',
+                  color: '#86868b'
+                },
+                '.Tab': {
+                  border: '1px solid #e5e5e7',
+                  boxShadow: 'none',
+                  backgroundColor: '#ffffff'
+                },
+                '.Tab:hover': {
+                  border: '1px solid #1d1d1f',
+                  color: '#1d1d1f',
+                  backgroundColor: '#ffffff'
+                },
+                '.Tab--selected': {
+                  backgroundColor: '#1d1d1f',
+                  color: '#ffffff'
+                },
+                '.Error': {
+                  color: '#ef4444',
+                  fontSize: '14px'
+                }
+              }
+            }
+          }}
+        >
+          {selectedPaymentMethod === 'credit-card' && (
+            <div style={{ marginBottom: '16px' }}>
+              <CheckoutForm />
+            </div>
+          )}
+        </Elements>
+
         {/* Payment Button */}
         {selectedPaymentMethod === 'apple-pay' ? (
           <button style={{
@@ -497,92 +449,7 @@ const CheckoutPage = ({
             }}>Pay</div>
             <span>Pay with Apple Pay</span>
           </button>
-        ) : (
-          <div>
-            <div style={{
-              border: '1px solid #e5e5e7',
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '16px',
-              backgroundColor: '#ffffff'
-            }}>
-              <div style={{ fontSize: '14px', color: '#86868b', marginBottom: '8px' }}>
-                Card number
-              </div>
-              <input 
-                type="text" 
-                placeholder="1234 5678 9012 3456"
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '16px',
-                  color: '#1d1d1f'
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-              <div style={{
-                flex: '1',
-                border: '1px solid #e5e5e7',
-                borderRadius: '8px',
-                padding: '16px',
-                backgroundColor: '#ffffff'
-              }}>
-                <div style={{ fontSize: '14px', color: '#86868b', marginBottom: '8px' }}>
-                  MM/YY
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="12/34"
-                  style={{
-                    width: '100%',
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '16px',
-                    color: '#1d1d1f'
-                  }}
-                />
-              </div>
-              <div style={{
-                flex: '1',
-                border: '1px solid #e5e5e7',
-                borderRadius: '8px',
-                padding: '16px',
-                backgroundColor: '#ffffff'
-              }}>
-                <div style={{ fontSize: '14px', color: '#86868b', marginBottom: '8px' }}>
-                  CVC
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="123"
-                  style={{
-                    width: '100%',
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '16px',
-                    color: '#1d1d1f'
-                  }}
-                />
-              </div>
-            </div>
-            <button style={{
-              width: '100%',
-              backgroundColor: '#1d1d1f',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '16px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}>
-              Pay £{(parseFloat(total) + instantPaymentFee).toFixed(2)}
-            </button>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

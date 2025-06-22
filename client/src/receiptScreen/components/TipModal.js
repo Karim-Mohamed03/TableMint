@@ -60,7 +60,7 @@ const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProces
     // Navigate to the checkout page with the necessary data
     navigate('/checkout', {
       state: {
-        baseAmount: Math.round(baseAmount * 100), // Convert to cents
+        baseAmount: Math.round(baseAmount), // Convert to cents
         tipAmount: tipInCents, // Already in cents
       }
     });

@@ -782,7 +782,7 @@ const CompletePageContent = () => {
             <div className="action-buttons">
               <button 
                 className="primary-button"
-                onClick={handleEmailReceipt}
+                onClick={sendEmailReceipt}
                 disabled={!email || isLoading}
               >
                 Send receipt

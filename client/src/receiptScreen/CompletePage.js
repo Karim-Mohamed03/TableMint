@@ -686,7 +686,12 @@ const CompletePageContent = () => {
         </div>
 
         <h2 className="status-title">
-          {paymentStatus === 'success' && 'Payment successful'}
+          {paymentStatus === 'success' && (
+            <div className="status-title-container">
+              <SuccessIcon />
+              <span>Payment successful</span>
+            </div>
+          )}
           {paymentStatus === 'error' && 'Payment failed'}
           {paymentStatus === 'processing' && 'Processing payment'}
         </h2>

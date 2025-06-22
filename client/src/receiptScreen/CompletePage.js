@@ -380,7 +380,7 @@ const CompletePageContent = () => {
 
     // Get order ID and cart items from session storage
     const storedOrderId = sessionStorage.getItem("current_order_id");
-    const storedCartItems = sessionStorage.getItem("cart_items");
+    const storedCartItems = sessionStorage.getItem("tablemint_cart");
     console.log("Stored order ID from session:", storedOrderId);
     console.log("Stored cart items from session:", storedCartItems);
 

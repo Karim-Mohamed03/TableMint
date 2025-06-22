@@ -272,7 +272,7 @@ const ExternalLinkIcon = () => (
 
 const STATUS_CONTENT_MAP = {
   succeeded: {
-    title: "Payment Successful",
+    title: "Enjoy your meal!",
     message: "Your payment was processed successfully.",
     icon: <SuccessIcon />,
   },
@@ -688,8 +688,7 @@ const CompletePageContent = () => {
         <h2 className="status-title">
           {paymentStatus === 'success' && (
             <div className="status-title-container">
-              <SuccessIcon />
-              <span>Payment successful</span>
+              <span>Enjoy your meal!</span>
             </div>
           )}
           {paymentStatus === 'error' && 'Payment failed'}

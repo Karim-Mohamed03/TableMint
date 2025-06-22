@@ -352,6 +352,17 @@ const CompletePageContent = () => {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orderItems, setOrderItems] = useState([]);
 
+  // Add useEffect to show rating modal when payment is successful
+  useEffect(() => {
+    if (paymentStatus === 'success') {
+      // Add a small delay to ensure the success state is fully rendered
+      const timer = setTimeout(() => {
+        setShowRatingModal(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus]);
+
   useEffect(() => {
     if (!stripe) {
       return;
@@ -740,21 +751,13 @@ const CompletePageContent = () => {
 
         <div className="action-buttons">
           {paymentStatus === 'success' && (
-            <>
-              <button 
-                className="primary-button"
-                onClick={() => setShowRatingModal(true)}
-              >
-                Rate your experience
-              </button>
-              <button
-                className="secondary-button"
-                onClick={() => setShowEmailInput(true)}
-              >
-                <span>Get email receipt</span>
-                <ExternalLinkIcon />
-              </button>
-            </>
+            <button
+              className="secondary-button"
+              onClick={() => setShowEmailInput(true)}
+            >
+              <span>Get email receipt</span>
+              <ExternalLinkIcon />
+            </button>
           )}
           
           {paymentStatus === 'error' && (

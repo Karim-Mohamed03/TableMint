@@ -239,10 +239,13 @@ body {
     padding: 16px;
     border: 1px solid #e5e5e7;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 16px !important;
     font-family: inherit;
     margin-bottom: 12px;
     box-sizing: border-box;
+    -webkit-text-size-adjust: 100%;
+    transform-origin: left top;
+    touch-action: manipulation;
 }
   
 .email-input:focus {

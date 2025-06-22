@@ -310,16 +310,16 @@ const OrderDetails = ({ items, isOpen }) => {
         <div key={index} className="order-item">
           {item.image && (
             <div className="item-image">
-              <img src={item.image} alt={item.name} />
+              <img src={item.image} alt={item.name || item.item_name} />
             </div>
           )}
           <div className="item-info">
-            <h3 className="item-name">{item.name}</h3>
-            <p className="item-description">{item.description}</p>
+            <h3 className="item-name">{item.name || item.item_name}</h3>
+            <p className="item-description">{item.description || item.item_description}</p>
             <p className="item-quantity">Quantity: {item.quantity}</p>
           </div>
           <div className="item-price">
-            {formatCurrency(item.price)}
+            {formatCurrency(item.price || item.unit_price)}
           </div>
         </div>
       ))}
@@ -378,20 +378,37 @@ const CompletePageContent = () => {
       tipAmountFromUrl
     });
 
-    // Get order ID from session storage as backup
+    // Get order ID and cart items from session storage
     const storedOrderId = sessionStorage.getItem("current_order_id");
+    const storedCartItems = sessionStorage.getItem("cart_items");
     console.log("Stored order ID from session:", storedOrderId);
+    console.log("Stored cart items from session:", storedCartItems);
 
-    // Fetch order items if we have an order ID
+    // Try to get cart items from session storage first
+    try {
+      if (storedCartItems) {
+        const parsedCartItems = JSON.parse(storedCartItems);
+        console.log("Parsed cart items:", parsedCartItems);
+        if (Array.isArray(parsedCartItems) && parsedCartItems.length > 0) {
+          setOrderItems(parsedCartItems);
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing stored cart items:", error);
+    }
+
+    // If no items in session storage, try to fetch from API
     const finalOrderId = orderIdFromUrl || storedOrderId;
-    if (finalOrderId) {
+    if (finalOrderId && (!storedCartItems || !JSON.parse(storedCartItems)?.length)) {
       console.log("Fetching order items for order ID:", finalOrderId);
-      // Update the API endpoint to match your backend route
       axios.get(`https://tablemint.onrender.com/api/orders/${finalOrderId}`)
         .then(response => {
           console.log("Order items response:", response.data);
           if (response.data && response.data.items) {
             setOrderItems(response.data.items);
+          } else if (response.data && response.data.order_items) {
+            // Try alternative property name
+            setOrderItems(response.data.order_items);
           } else {
             console.error("No items found in response:", response.data);
           }
@@ -710,11 +727,11 @@ const CompletePageContent = () => {
                 setShowOrderDetails(!showOrderDetails);
               }}
             >
-              <span>Order Details</span>
+              <span>Order Details {orderItems.length > 0 ? `(${orderItems.length})` : ''}</span>
               <RightArrowIcon />
             </button>
             {showOrderDetails && orderItems.length > 0 ? (
-              <OrderDetails items={orderItems} isOpen={showOrderDetails} />
+              <OrderDetails items={orderItems} isOpen={true} />
             ) : showOrderDetails && (
               <div className="order-details-container">
                 <div className="order-item">

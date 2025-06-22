@@ -222,7 +222,7 @@ const CartConfirmationModal = ({
         
         // Calculate final amount with tip
         const baseAmount = Math.round(subtotal * 100);
-        const tipInCents = tipAmount * 100;
+        const tipInCents = tipAmount;
         const finalAmount = baseAmount + tipInCents;
         
         setTipInCents(tipInCents);

@@ -300,29 +300,40 @@ const RightArrowIcon = () => (
   </svg>
 );
 
-// Order Details Component
+// Update the OrderDetails component to handle the tablemint_cart format
 const OrderDetails = ({ items, isOpen }) => {
   if (!isOpen) return null;
 
   return (
     <div className="order-details-container">
-      {items.map((item, index) => (
-        <div key={index} className="order-item">
-          {item.image && (
-            <div className="item-image">
-              <img src={item.image} alt={item.name || item.item_name} />
+      {items.map((item, index) => {
+        // Get the description and image from item_data if available
+        const description = item.item_data?.description || '';
+        const image = item.item_data?.image_url || item.image;
+        
+        return (
+          <div key={index} className="order-item">
+            {image && (
+              <div className="item-image">
+                <img src={image} alt={item.name} />
+              </div>
+            )}
+            <div className="item-info">
+              <h3 className="item-name">{item.name}</h3>
+              {description && (
+                <p className="item-description">{description}</p>
+              )}
+              <p className="item-quantity">Quantity: {item.quantity}</p>
+              {item.promoDiscount > 0 && (
+                <p className="item-discount">Discount: {formatCurrency(item.promoDiscount)}</p>
+              )}
             </div>
-          )}
-          <div className="item-info">
-            <h3 className="item-name">{item.name || item.item_name}</h3>
-            <p className="item-description">{item.description || item.item_description}</p>
-            <p className="item-quantity">Quantity: {item.quantity}</p>
+            <div className="item-price">
+              {formatCurrency(item.price)}
+            </div>
           </div>
-          <div className="item-price">
-            {formatCurrency(item.price || item.unit_price)}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -365,57 +376,23 @@ const CompletePageContent = () => {
       return;
     }
 
-    // Get order ID from URL parameters and log the search string for debugging
-    console.log("URL search string:", window.location.search);
-    const params = new URLSearchParams(window.location.search);
-    const orderIdFromUrl = params.get("order_id");
-    const baseAmountFromUrl = params.get("base_amount");
-    const tipAmountFromUrl = params.get("tip_amount");
-
-    console.log("URL Parameters:", {
-      orderIdFromUrl,
-      baseAmountFromUrl,
-      tipAmountFromUrl
-    });
-
     // Get order ID and cart items from session storage
     const storedOrderId = sessionStorage.getItem("current_order_id");
     const storedCartItems = sessionStorage.getItem("tablemint_cart");
     console.log("Stored order ID from session:", storedOrderId);
     console.log("Stored cart items from session:", storedCartItems);
 
-    // Try to get cart items from session storage first
+    // Try to get cart items from session storage
     try {
       if (storedCartItems) {
-        const parsedCartItems = JSON.parse(storedCartItems);
-        console.log("Parsed cart items:", parsedCartItems);
-        if (Array.isArray(parsedCartItems) && parsedCartItems.length > 0) {
-          setOrderItems(parsedCartItems);
+        const parsedCart = JSON.parse(storedCartItems);
+        console.log("Parsed cart:", parsedCart);
+        if (parsedCart && Array.isArray(parsedCart.items)) {
+          setOrderItems(parsedCart.items);
         }
       }
     } catch (error) {
       console.error("Error parsing stored cart items:", error);
-    }
-
-    // If no items in session storage, try to fetch from API
-    const finalOrderId = orderIdFromUrl || storedOrderId;
-    if (finalOrderId && (!storedCartItems || !JSON.parse(storedCartItems)?.length)) {
-      console.log("Fetching order items for order ID:", finalOrderId);
-      axios.get(`https://tablemint.onrender.com/api/orders/${finalOrderId}`)
-        .then(response => {
-          console.log("Order items response:", response.data);
-          if (response.data && response.data.items) {
-            setOrderItems(response.data.items);
-          } else if (response.data && response.data.order_items) {
-            // Try alternative property name
-            setOrderItems(response.data.order_items);
-          } else {
-            console.error("No items found in response:", response.data);
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching order items:", error);
-        });
     }
 
     stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
@@ -438,11 +415,9 @@ const CompletePageContent = () => {
         setPaymentStatus('success');
         // Set payment details for display
         setPaymentDetails({
-          orderId: orderIdFromUrl || 
-                 paymentIntent.metadata?.order_id ||
-                 storedOrderId,
-          amount: baseAmountFromUrl / 100,
-          tipAmount: tipAmountFromUrl / 100,
+          orderId: storedOrderId,
+          amount: baseAmount,
+          tipAmount: tipAmount,
           totalAmount: paymentIntent.amount
         });
       } else if (paymentIntent.status === 'processing') {
@@ -452,14 +427,10 @@ const CompletePageContent = () => {
       }
 
       // Try to get order_id from multiple sources in order of preference
-      const finalOrderId = orderIdFromUrl || 
-                         paymentIntent.metadata?.order_id ||
-                         storedOrderId;
+      const finalOrderId = storedOrderId;
       
       if (finalOrderId) {
         console.log("Using order ID:", finalOrderId, "Source:", 
-          orderIdFromUrl ? "URL" : 
-          paymentIntent.metadata?.order_id ? "Payment Intent Metadata" : 
           "Session Storage"
         );
         setOrderId(finalOrderId);
@@ -471,13 +442,13 @@ const CompletePageContent = () => {
 
       // Calculate base and tip amounts correctly
       let total = paymentIntent.amount;
-      let base = baseAmountFromUrl / 100;
-      let tip = tipAmountFromUrl / 100;
+      let base = baseAmount;
+      let tip = tipAmount;
 
       // Try to get amounts from URL first, then payment intent metadata
-      if (baseAmountFromUrl && tipAmountFromUrl) {
-        base = parseInt(baseAmountFromUrl, 10);
-        // tip = parseInt(tipAmountFromUrl, 10);
+      if (baseAmount && tipAmount) {
+        base = parseInt(baseAmount, 10);
+        // tip = parseInt(tipAmount, 10);
       } else if (paymentIntent.metadata?.base_amount && paymentIntent.metadata?.tip_amount) {
         base = parseInt(paymentIntent.metadata.base_amount, 10);
         // tip = parseInt(paymentIntent.metadata.tip_amount, 10);

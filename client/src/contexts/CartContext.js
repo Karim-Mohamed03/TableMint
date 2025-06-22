@@ -53,19 +53,6 @@ const loadFromStorage = () => {
   }
 };
 
-// Format currency for display
-const formatCurrency = (amount, currency = 'GBP') => {
-  if (!amount && amount !== 0) return '£0.00';
-  
-  const formatter = new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-  });
-  
-  return formatter.format(amount / 100);
-};
-
 // Cart reducer
 const cartReducer = (state, action) => {
   console.group(`🔄 Cart Action: ${action.type}`);

@@ -150,7 +150,7 @@ const CartConfirmationModal = ({
         catalog_object_id: item.id,
         quantity: item.quantity.toString(),
         base_price_money: {
-          amount: Math.round(item.price * 100),
+          amount: Math.round(item.price),
           currency: item.currency || 'GBP'
         }
       }));

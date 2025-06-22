@@ -361,6 +361,24 @@ const CompletePageContent = () => {
       setIntentId(paymentIntent.id);
       setPaymentAmount(paymentIntent.amount);
 
+      // Update paymentStatus based on payment intent status
+      if (paymentIntent.status === 'succeeded') {
+        setPaymentStatus('success');
+        // Set payment details for display
+        setPaymentDetails({
+          orderId: orderIdFromUrl || 
+                 paymentIntent.metadata?.order_id ||
+                 storedOrderId,
+          amount: baseAmountFromUrl / 100,
+          tipAmount: tipAmountFromUrl / 100,
+          totalAmount: paymentIntent.amount
+        });
+      } else if (paymentIntent.status === 'processing') {
+        setPaymentStatus('processing');
+      } else if (paymentIntent.status === 'requires_payment_method' || paymentIntent.status === 'requires_action') {
+        setPaymentStatus('error');
+      }
+
       // Try to get order_id from multiple sources in order of preference
       const finalOrderId = orderIdFromUrl || 
                          paymentIntent.metadata?.order_id ||

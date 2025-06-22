@@ -444,8 +444,8 @@ const CartConfirmationModal = ({
                 }}
               >
                 <CheckoutForm 
-                  baseAmount={baseAmountInCents}
-                  tipAmount={tipInCents}
+                  baseAmount={baseAmountInCents/100}
+                  tipAmount={tipInCents/100}
                   currency="GBP"
                   orderId={realOrderId}
                   restaurantBranding={restaurantBranding}

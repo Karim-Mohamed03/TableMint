@@ -382,6 +382,25 @@ const CompletePageContent = () => {
     const storedOrderId = sessionStorage.getItem("current_order_id");
     console.log("Stored order ID from session:", storedOrderId);
 
+    // Fetch order items if we have an order ID
+    const finalOrderId = orderIdFromUrl || storedOrderId;
+    if (finalOrderId) {
+      console.log("Fetching order items for order ID:", finalOrderId);
+      // Update the API endpoint to match your backend route
+      axios.get(`https://tablemint.onrender.com/api/orders/${finalOrderId}`)
+        .then(response => {
+          console.log("Order items response:", response.data);
+          if (response.data && response.data.items) {
+            setOrderItems(response.data.items);
+          } else {
+            console.error("No items found in response:", response.data);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching order items:", error);
+        });
+    }
+
     stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
       if (!paymentIntent) {
         return;
@@ -464,25 +483,16 @@ const CompletePageContent = () => {
           tip
         );
       }
-
-      // Add this inside the existing useEffect that handles the payment intent
-      if (orderId) {
-        // Fetch order details
-        axios.get(`https://tablemint.onrender.com/api/orders/${orderId}/items`)
-          .then(response => {
-            if (response.data.success) {
-              setOrderItems(response.data.items);
-            }
-          })
-          .catch(error => {
-            console.error("Error fetching order items:", error);
-          });
-      }
     }).catch(error => {
       console.error("Error retrieving payment intent:", error);
       setStatus("error");
     });
   }, [stripe]);
+
+  // Add a debug log when orderItems changes
+  useEffect(() => {
+    console.log("Current order items:", orderItems);
+  }, [orderItems]);
 
   // Orders are now created only in the confirm modal, not after payment
 
@@ -694,12 +704,24 @@ const CompletePageContent = () => {
             </div>
             <button 
               className={`order-details-button ${showOrderDetails ? 'active' : ''}`}
-              onClick={() => setShowOrderDetails(!showOrderDetails)}
+              onClick={() => {
+                console.log("Order details button clicked");
+                console.log("Current order items:", orderItems);
+                setShowOrderDetails(!showOrderDetails);
+              }}
             >
               <span>Order Details</span>
               <RightArrowIcon />
             </button>
-            <OrderDetails items={orderItems} isOpen={showOrderDetails} />
+            {showOrderDetails && orderItems.length > 0 ? (
+              <OrderDetails items={orderItems} isOpen={showOrderDetails} />
+            ) : showOrderDetails && (
+              <div className="order-details-container">
+                <div className="order-item">
+                  <p>No items found in this order.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

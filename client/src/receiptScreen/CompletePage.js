@@ -309,6 +309,11 @@ const CompletePageContent = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('processing');
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!stripe) {
@@ -558,6 +563,13 @@ const CompletePageContent = () => {
     setShowEmailInput(true);
   };
 
+  const handleRetry = () => {
+    // Reset the payment status and try the payment again
+    setPaymentStatus('processing');
+    setError(null);
+    // You would typically call your payment processing function here
+  };
+
   const statusContent = STATUS_CONTENT_MAP[status] || STATUS_CONTENT_MAP.default;
 
   // Format currency display
@@ -569,90 +581,123 @@ const CompletePageContent = () => {
     }).format(amount / 100);
   };
 
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Processing your payment...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="complete-container">
-      <div className="status-card">
+    <div className="complete-page">
+      <div className="complete-header">
+        <h1 className="checkout-title">Payment Status</h1>
+      </div>
+
+      <div className="complete-container">
         <div className="status-icon">
-          {statusContent.icon}
+          {paymentStatus === 'success' && <SuccessIcon />}
+          {paymentStatus === 'error' && <ErrorIcon />}
+          {paymentStatus === 'processing' && <ProcessingIcon />}
         </div>
 
-        <h1 className="status-title">{statusContent.title}</h1>
-        <p className="status-message">{statusContent.message}</p>
+        <h2 className="status-title">
+          {paymentStatus === 'success' && 'Payment successful'}
+          {paymentStatus === 'error' && 'Payment failed'}
+          {paymentStatus === 'processing' && 'Processing payment'}
+        </h2>
+        
+        <p className="status-message">
+          {paymentStatus === 'success' && 'Your payment has been processed successfully.'}
+          {paymentStatus === 'error' && 'There was an error processing your payment. Please try again.'}
+          {paymentStatus === 'processing' && 'Please wait while we process your payment.'}
+        </p>
 
-        {intentId && (
+        {paymentDetails && (
           <div className="payment-details">
-
             <div className="detail-row">
-              <span className="detail-label">Status</span>
-              <span className="detail-value status-badge">{status}</span>
+              <span className="detail-label">Order ID</span>
+              <span className="detail-value">{paymentDetails.orderId}</span>
             </div>
-            {status === 'succeeded' && (
-              <>
-                <div className="detail-row">
-                  <span className="detail-label">Total Amount</span>
-                  <span className="detail-value">{formatCurrency(paymentAmount)}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Base Amount</span>
-                  <span className="detail-value">{formatCurrency(baseAmount)}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Tip Amount</span>
-                  <span className="detail-value">{formatCurrency(tipAmount)}</span>
-                </div>
-
-              </>
-            )}
+            <div className="detail-row">
+              <span className="detail-label">Amount</span>
+              <span className="detail-value">£{formatCurrency(paymentDetails.amount)}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Tips</span>
+              <span className="detail-value">£{formatCurrency(paymentDetails.tipAmount)}</span>
+            </div>
+            <div className="detail-row total">
+              <span className="detail-label">Total</span>
+              <span className="detail-value">£{formatCurrency(paymentDetails.totalAmount)}</span>
+            </div>
           </div>
         )}
 
         <div className="action-buttons">
-          {intentId && status === 'succeeded' && (
-            <button
-              className="secondary-button"
-              onClick={handleEmailReceipt}
-              disabled={emailSent}
+          {paymentStatus === 'success' && (
+            <>
+              <button 
+                className="primary-button"
+                onClick={() => setShowRatingModal(true)}
+              >
+                Rate your experience
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => setShowEmailInput(true)}
+              >
+                <span>Get email receipt</span>
+                <ExternalLinkIcon />
+              </button>
+            </>
+          )}
+          
+          {paymentStatus === 'error' && (
+            <button 
+              className="primary-button"
+              onClick={handleRetry}
             >
-              {emailSent ? 'Receipt Sent' : 'Email Receipt'}
+              Try again
             </button>
           )}
-
-          <a href="/" className="primary-button">
-            Return to Home
-          </a>
         </div>
 
         {showEmailInput && (
           <div className="email-input-section">
             <input
               type="email"
-              placeholder="Enter your email address"
+              className="email-input"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={emailSending}
-              className="email-input"
             />
-            <div className="email-buttons">
+            <div className="action-buttons">
+              <button 
+                className="primary-button"
+                onClick={handleEmailReceipt}
+                disabled={!email || isLoading}
+              >
+                Send receipt
+              </button>
               <button
+                className="secondary-button"
                 onClick={() => setShowEmailInput(false)}
-                className="cancel-button"
-                disabled={emailSending}
               >
                 Cancel
               </button>
-              <button
-                onClick={sendEmailReceipt}
-                disabled={emailSending || !email}
-                className="send-button"
-              >
-                {emailSending ? 'Sending...' : 'Send Receipt'}
-              </button>
             </div>
-            {emailError && <p className="email-error">{emailError}</p>}
+            {error && <div className="email-error">{error}</div>}
           </div>
         )}
       </div>
-      <StarRatingModal isOpen={isRatingModalOpen} onClose={() => setIsRatingModalOpen(false)} />
+
+      <StarRatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+      />
     </div>
   );
 };

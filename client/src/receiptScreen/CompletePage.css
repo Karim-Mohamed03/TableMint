@@ -22,76 +22,90 @@ body {
     -webkit-font-smoothing: antialiased;
 }
   
-.complete-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.complete-page {
     min-height: 100vh;
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
   
-.status-card {
-    background-color: var(--card-background);
-    border-radius: 16px;
-    padding: 40px 32px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
-    max-width: 480px;
+.complete-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 16px 20px;
+}
+  
+.complete-container {
+    padding: 24px 20px;
     width: 100%;
-    text-align: center;
+    box-sizing: border-box;
 }
   
 .status-icon {
-    margin: 0 auto 24px;
-    width: 64px;
-    height: 64px;
+    margin: 0 0 24px;
+    width: 48px;
+    height: 48px;
     display: flex;
     justify-content: center;
     align-items: center;
 }
   
 .status-title {
-    margin: 0 0 8px 0;
     font-size: 24px;
     font-weight: 600;
+    color: #1d1d1f;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+    text-align: left;
 }
   
 .status-message {
+    font-size: 15px;
+    color: #86868b;
     margin: 0 0 32px 0;
-    color: var(--secondary-text);
-    font-size: 16px;
+    line-height: 1.4;
+    font-weight: 400;
+    text-align: left;
 }
   
 .payment-details {
-    background-color: var(--background-color);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 32px;
-    text-align: left;
+    margin-bottom: 24px;
+    background-color: white;
 }
   
 .detail-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 8px 0;
+    font-size: 14px;
+    color: #1d1d1f;
 }
   
-.detail-row:not(:last-child) {
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 12px;
-    margin-bottom: 12px;
+.detail-row.total {
+    padding: 12px 0 0 0;
+    font-size: 16px;
+    font-weight: 600;
+    border-top: 1px solid #f2f2f2;
+    margin-top: 8px;
 }
   
 .detail-label {
-    color: var(--secondary-text);
     font-size: 14px;
+    font-weight: 400;
+    color: #86868b;
 }
   
 .detail-value {
-    font-weight: 500;
     font-size: 14px;
-    max-width: 70%;
-    text-align: right;
-    word-break: break-all;
+    color: #1d1d1f;
 }
   
 .status-badge {
@@ -107,64 +121,91 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-top: 32px;
 }
   
 .primary-button {
-    background-color: black;
+    width: 100%;
+    background-color: #1d1d1f;
     color: white;
     border: none;
     border-radius: 12px;
-    padding: 14px 20px;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    text-decoration: none;
-}
-  
-.primary-button:hover {
-    background-color: #2ecc71;
-}
-  
-.secondary-button {
-    background-color: transparent;
-    color: black;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 13px 20px;
+    padding: 16px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-family: inherit;
     text-decoration: none;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     gap: 8px;
 }
   
-.secondary-button:hover {
-    background-color: rgba(0, 113, 227, 0.05);
-    border-color: var(--primary-color);
+.primary-button:hover:not(:disabled) {
+    background-color: #000;
 }
   
+.primary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+  
+.secondary-button {
+    width: 100%;
+    background-color: white;
+    color: #1d1d1f;
+    border: 1px solid #e5e5e7;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+  
+.secondary-button:hover:not(:disabled) {
+    border-color: #1d1d1f;
+}
+  
+.secondary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+  
+/* Loading state */
 .loading-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    color: var(--secondary-text);
+    padding: 32px;
+    background-color: #ffffff;
 }
   
 .loading-spinner {
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    border-top: 3px solid var(--primary-color);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f2f2f2;
+    border-top: 2px solid #1d1d1f;
     border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
     margin-bottom: 16px;
+}
+  
+.loading-container p {
+    color: #1d1d1f;
+    font-size: 15px;
+    margin: 0;
+    font-weight: 400;
 }
   
 @keyframes spin {
@@ -172,44 +213,36 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Email input section styles */
+/* Email input section */
 .email-input-section {
-    margin-top: 24px;
-    padding: 20px;
-    background-color: var(--background-color);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
+    margin-top: 32px;
 }
-
+  
 .email-input {
     width: 100%;
-    padding: 14px 16px;
-    border: 1px solid var(--border-color);
+    padding: 16px;
+    border: 1px solid #e5e5e7;
     border-radius: 8px;
-    font-size: 16px;
-    font-family: var(--font-family);
-    margin-bottom: 16px;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
     box-sizing: border-box;
-    transition: border-color 0.2s ease;
 }
-
+  
 .email-input:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+    border-color: #1d1d1f;
 }
-
-.email-input:disabled {
-    background-color: #f8f9fa;
-    color: var(--secondary-text);
-    cursor: not-allowed;
+  
+.email-input::placeholder {
+    color: #c7c7cc;
 }
-
+  
 .email-buttons {
     display: flex;
     gap: 12px;
 }
-
+  
 .cancel-button {
     flex: 1;
     background-color: transparent;
@@ -222,17 +255,17 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
+  
 .cancel-button:hover:not(:disabled) {
     background-color: #f8f9fa;
     border-color: var(--secondary-text);
 }
-
+  
 .cancel-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
-
+  
 .send-button {
     flex: 1;
     background-color: var(--primary-color);
@@ -245,19 +278,57 @@ body {
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
-
+  
 .send-button:hover:not(:disabled) {
     background-color: #0062c2;
 }
-
+  
 .send-button:disabled {
     background-color: #b0b0b6;
     cursor: not-allowed;
 }
-
+  
 .email-error {
-    margin: 12px 0 0 0;
-    color: var(--error-color);
+    color: #ef4444;
     font-size: 14px;
-    text-align: center;
+    text-align: left;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background-color: #fef2f2;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    .complete-header {
+        padding: 12px 16px;
+    }
+    
+    .complete-container {
+        padding: 20px 16px;
+    }
+    
+    .status-title {
+        font-size: 22px;
+    }
+    
+    .status-message {
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+    
+    .detail-row {
+        font-size: 13px;
+    }
+    
+    .detail-row.total {
+        font-size: 15px;
+    }
+    
+    .primary-button,
+    .secondary-button {
+        padding: 15px;
+        font-size: 15px;
+    }
 }

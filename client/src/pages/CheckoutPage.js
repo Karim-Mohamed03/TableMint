@@ -39,7 +39,7 @@ const CheckoutPage = ({
       padding: '0',
       maxWidth: '480px',
       margin: '0 auto',
-      boxSizing: 'border-box'
+      // boxSizing: 'border-box'
     }}>
       {/* Header */}
       <div style={{

@@ -633,11 +633,11 @@ const CompletePageContent = () => {
             </div>
             <div className="detail-row">
               <span className="detail-label">Amount</span>
-              <span className="detail-value">{formatCurrency(paymentDetails.amount)}</span>
+              <span className="detail-value">{formatCurrency(paymentDetails.amount * 100)}</span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Tips</span>
-              <span className="detail-value">{formatCurrency(paymentDetails.tipAmount)}</span>
+              <span className="detail-value">{formatCurrency(paymentDetails.tipAmount * 100)}</span>
             </div>
             <div className="detail-row total">
               <span className="detail-label">Total</span>

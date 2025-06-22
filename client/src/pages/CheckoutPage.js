@@ -415,7 +415,11 @@ const CheckoutPage = ({
         >
           {selectedPaymentMethod === 'credit-card' && (
             <div style={{ marginBottom: '8px' }}>
-              <CheckoutForm />
+              <CheckoutForm 
+                baseAmount={baseAmount}
+                tipAmount={tipAmount}
+                orderId={orderId}
+              />
             </div>
           )}
         </Elements>

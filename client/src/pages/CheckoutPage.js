@@ -297,8 +297,6 @@ const CheckoutPage = ({
 
         {/* Order Summary */}
         <div style={{
-          borderTop: '1px solid #f2f2f2',
-          borderBottom: '1px solid #f2f2f2',
           padding: '16px 0',
           marginBottom: '24px'
         }}>

@@ -24,10 +24,9 @@ const CheckoutPage = ({
     );
   }
 
-  // const total = ((baseAmount + tipAmount) / 100).toFixed(2);
   const baseAmountFormatted = (baseAmount / 100).toFixed(2);
   const tipAmountFormatted = (tipAmount / 100).toFixed(2);
-  // const instantPaymentFee = 0.99;
+  const total = ((baseAmount + tipAmount) / 100).toFixed(2);
 
   return (
     <div style={{
@@ -345,7 +344,7 @@ const CheckoutPage = ({
             marginTop: '8px'
           }}>
             <span>Total</span>
-            <span>£{(baseAmountFormatted + tipAmountFormatted).toFixed(2)}</span>
+            <span>£{total}</span>
           </div>
         </div>
 

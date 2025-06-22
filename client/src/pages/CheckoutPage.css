@@ -133,6 +133,25 @@
   background-color: #f0f4ff;
 }
 
+.subtotal-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #86868b;
+}
+
+.tips-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #86868b;
+}
+
+.total-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #86868b;
+}
+
+
 .card-icon.apple-pay-small {
   font-weight: 500;
   color: #000;
@@ -230,8 +249,6 @@
 }
 
 .amount-breakdown {
-  border-top: 1px solid #f2f2f2;
-  /* border-bottom: 1px solid #f2f2f2; */
   padding: 16px 0;
   margin-bottom: 24px;
   background-color: white;

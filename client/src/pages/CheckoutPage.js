@@ -26,7 +26,7 @@ const CheckoutPage = ({
 
   const baseAmountFormatted = (baseAmount / 100).toFixed(2);
   const tipAmountFormatted = (tipAmount / 100).toFixed(2);
-  const total = ((baseAmount + tipAmount) / 100).toFixed(2);
+  const total = (baseAmountFormatted + tipAmountFormatted);
 
   return (
     <div style={{
@@ -46,8 +46,7 @@ const CheckoutPage = ({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        padding: '16px 20px',
-        borderBottom: '1px solid #f2f2f2'
+        padding: '16px 20px'
       }}>
         <button style={{
           position: 'absolute',
@@ -77,14 +76,16 @@ const CheckoutPage = ({
           fontWeight: '600',
           color: '#1d1d1f',
           margin: '0 0 8px 0',
-          letterSpacing: '-0.5px'
+          letterSpacing: '-0.5px',
+          textAlign: 'left'
         }}>Pay securely</h2>
         <p style={{
           fontSize: '15px',
           color: '#86868b',
           margin: '0 0 32px 0',
           lineHeight: '1.4',
-          fontWeight: '400'
+          fontWeight: '400',
+          textAlign: 'left'
         }}>All transactions are private and encrypted.</p>
 
         {/* Payment Methods */}
@@ -308,7 +309,7 @@ const CheckoutPage = ({
             fontSize: '14px',
             color: '#1d1d1f'
           }}>
-            <span>Subtotal</span>
+            <span className='subtotal-label'>Subtotal</span>
             <span>£{baseAmountFormatted}</span>
           </div>
           <div style={{
@@ -319,7 +320,7 @@ const CheckoutPage = ({
             fontSize: '14px',
             color: '#1d1d1f'
           }}>
-            <span>Tips</span>
+            <span className='tips-label'>Tips</span>
             <span>£{tipAmountFormatted}</span>
           </div>
           <div style={{
@@ -343,7 +344,7 @@ const CheckoutPage = ({
             borderTop: '1px solid #f2f2f2',
             marginTop: '8px'
           }}>
-            <span>Total</span>
+            <span className='total-label'>Total</span>
             <span>£{total}</span>
           </div>
         </div>

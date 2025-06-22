@@ -293,6 +293,40 @@ const STATUS_CONTENT_MAP = {
   }
 };
 
+// Right Arrow Icon Component
+const RightArrowIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Order Details Component
+const OrderDetails = ({ items, isOpen }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="order-details-container">
+      {items.map((item, index) => (
+        <div key={index} className="order-item">
+          {item.image && (
+            <div className="item-image">
+              <img src={item.image} alt={item.name} />
+            </div>
+          )}
+          <div className="item-info">
+            <h3 className="item-name">{item.name}</h3>
+            <p className="item-description">{item.description}</p>
+            <p className="item-quantity">Quantity: {item.quantity}</p>
+          </div>
+          <div className="item-price">
+            {formatCurrency(item.price)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Create a component that will be wrapped by Elements
 const CompletePageContent = () => {
   const stripe = useStripe();
@@ -315,6 +349,8 @@ const CompletePageContent = () => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
 
   useEffect(() => {
     if (!stripe) {
@@ -427,6 +463,20 @@ const CompletePageContent = () => {
           base,
           tip
         );
+      }
+
+      // Add this inside the existing useEffect that handles the payment intent
+      if (orderId) {
+        // Fetch order details
+        axios.get(`https://tablemint.onrender.com/api/orders/${orderId}/items`)
+          .then(response => {
+            if (response.data.success) {
+              setOrderItems(response.data.items);
+            }
+          })
+          .catch(error => {
+            console.error("Error fetching order items:", error);
+          });
       }
     }).catch(error => {
       console.error("Error retrieving payment intent:", error);
@@ -603,7 +653,6 @@ const CompletePageContent = () => {
   return (
     <div className="complete-page">
       <div className="complete-header">
-        <h1 className="checkout-title">Payment Status</h1>
       </div>
 
       <div className="complete-container">
@@ -643,6 +692,14 @@ const CompletePageContent = () => {
               <span className="detail-label">Total</span>
               <span className="detail-value">{formatCurrency(paymentDetails.totalAmount)}</span>
             </div>
+            <button 
+              className={`order-details-button ${showOrderDetails ? 'active' : ''}`}
+              onClick={() => setShowOrderDetails(!showOrderDetails)}
+            >
+              <span>Order Details</span>
+              <RightArrowIcon />
+            </button>
+            <OrderDetails items={orderItems} isOpen={showOrderDetails} />
           </div>
         )}
 

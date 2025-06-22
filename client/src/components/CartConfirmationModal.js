@@ -221,7 +221,7 @@ const CartConfirmationModal = ({
         sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
         
         // Calculate final amount with tip
-        const baseAmount = Math.round(subtotal * 100);
+        const baseAmount = subtotal;
         const tipInCents = tipAmount;
         const finalAmount = baseAmount + tipInCents;
         

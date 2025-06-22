@@ -1,27 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { formatCurrency } from '../../utils/formatters';
 
-const TipModal = ({ isOpen, onClose, currentTip = 0, baseAmount, onConfirm, isProcessing, currency = 'GBP' }) => {
-  // baseAmount should be in cents, currentTip should be in cents
-  const [selectedTip, setSelectedTip] = useState(currentTip);
+const TipModal = ({ isOpen, onClose, currentTip, baseAmount, onConfirm, isProcessing, currency = 'GBP' }) => {
+  const [selectedTip, setSelectedTip] = useState(currentTip || 0);
   const customInputRef = useRef(null);
   const navigate = useNavigate();
   
   // Reset selected tip when modal is opened with current tip value
   useEffect(() => {
     if (isOpen) {
-      setSelectedTip(currentTip);
+      setSelectedTip(currentTip || 0);
       setCustomTip("");
       setIsCustomTip(false);
     }
   }, [isOpen, currentTip]);
   
-  // Predefined tip amounts in cents/pence
-  const tipOptions = [
-    { value: 400, label: `${formatCurrency(400)}` },
-    { value: 700, label: `${formatCurrency(700)}` },
-    { value: 1000, label: `${formatCurrency(1000)}` }
+  // Predefined tip percentages
+  const tipPercentages = [
+    { value: 4, label: `${currency === 'GBP' ? '£' : '$'}4` },
+    { value: 7, label: `${currency === 'GBP' ? '£' : '$'}7` },
+    { value: 10, label: `${currency === 'GBP' ? '£' : '$'}10` }
   ];
   
   // Custom tip amount
@@ -45,8 +43,7 @@ const TipModal = ({ isOpen, onClose, currentTip = 0, baseAmount, onConfirm, isPr
     if (value === "" || (/^\d+(\.\d{0,2})?$/.test(value) && parseFloat(value) >= 0)) {
       setCustomTip(value);
       if (value !== "") {
-        // Convert decimal input to cents
-        setSelectedTip(Math.round(parseFloat(value) * 100));
+        setSelectedTip(parseFloat(value));
       }
     }
   };
@@ -58,7 +55,15 @@ const TipModal = ({ isOpen, onClose, currentTip = 0, baseAmount, onConfirm, isPr
   };
   
   const handleConfirm = () => {
-    onConfirm(selectedTip); // selectedTip is already in cents
+    const tipInCents = Math.round(selectedTip * 100); // Convert to cents here
+    onConfirm(tipInCents); // Pass the amount in cents to parent
+    // Navigate to the checkout page with the necessary data
+    navigate('/checkout', {
+      state: {
+        baseAmount: Math.round(baseAmount * 100), // Convert to cents
+        tipAmount: tipInCents, // Already in cents
+      }
+    });
     onClose();
   };
   
@@ -67,6 +72,14 @@ const TipModal = ({ isOpen, onClose, currentTip = 0, baseAmount, onConfirm, isPr
     if (e.target === e.currentTarget && !isProcessing) {
       onClose();
     }
+  };
+  
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
   };
   
   return (
@@ -79,13 +92,16 @@ const TipModal = ({ isOpen, onClose, currentTip = 0, baseAmount, onConfirm, isPr
           <h1 className="modal-title">Add a Tip</h1>
           <div className="header-spacer"></div>
         </div>
+
+        
         
         <div className="modal-body">
-          <h3 className="modal-title">Say Thanks with a Tip</h3>
+
+        <h3 className="modal-title">Say Thanks with a Tip</h3>
           <div className="tip-desc-label">This will be added to any discretionary service charge which goes directly to the restaurant team.</div>
           
           <div className="tip-options-grid">
-            {tipOptions.map((option) => (
+            {tipPercentages.map((option) => (
               <button 
                 key={option.value} 
                 className={`tip-option ${selectedTip === option.value && !isCustomTip ? "active" : ""}`} 
@@ -132,12 +148,12 @@ const TipModal = ({ isOpen, onClose, currentTip = 0, baseAmount, onConfirm, isPr
             </div>
           </div>
           
-          <div className="payment-summary">
+          {/* <div className="payment-summary">
             <div className="summary-row">
               <span>Total with tip</span>
               <span className="total-amount">{formatCurrency(baseAmount + selectedTip)}</span>
             </div>
-          </div>
+          </div> */}
         </div>
         
         <div className="modal-footer">

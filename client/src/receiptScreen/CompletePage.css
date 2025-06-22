@@ -121,6 +121,7 @@ body {
 .detail-value {
     font-size: 14px;
     color: #1d1d1f;
+    font-weight: 600;
 }
   
 .status-badge {

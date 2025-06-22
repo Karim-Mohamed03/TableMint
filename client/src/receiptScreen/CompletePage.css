@@ -37,9 +37,10 @@ body {
 .complete-header {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: left;
     position: relative;
     padding: 16px 20px;
+    text-align: left;
 }
   
 .complete-container {

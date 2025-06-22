@@ -407,7 +407,7 @@ const CheckoutPage = ({
           }}
         >
           {selectedPaymentMethod === 'credit-card' && (
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '8px' }}>
               <CheckoutForm />
             </div>
           )}

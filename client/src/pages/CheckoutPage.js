@@ -23,10 +23,11 @@ const CheckoutPage = ({
       </div>
     );
   }
-
+  const baseAmountF = baseAmount/100;
+  const tipAmountF = tipAmount/100;
   const baseAmountFormatted = (baseAmount / 100).toFixed(2);
   const tipAmountFormatted = (tipAmount / 100).toFixed(2);
-  const total = (baseAmountFormatted + tipAmountFormatted);
+  const total = ((baseAmountF + tipAmountF) / 100).toFixed(2);
 
   return (
     <div style={{

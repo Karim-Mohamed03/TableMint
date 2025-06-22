@@ -365,6 +365,19 @@ const CompletePageContent = () => {
       return;
     }
 
+    // Get cart items from session storage
+    const cartData = sessionStorage.getItem('tablemint_cart');
+    if (cartData) {
+      try {
+        const parsedCart = JSON.parse(cartData);
+        if (parsedCart && parsedCart.items) {
+          setOrderItems(parsedCart.items);
+        }
+      } catch (error) {
+        console.error("Error parsing cart data:", error);
+      }
+    }
+
     // Get order ID from URL parameters and log the search string for debugging
     console.log("URL search string:", window.location.search);
     const params = new URLSearchParams(window.location.search);
@@ -704,11 +717,7 @@ const CompletePageContent = () => {
             </div>
             <button 
               className={`order-details-button ${showOrderDetails ? 'active' : ''}`}
-              onClick={() => {
-                console.log("Order details button clicked");
-                console.log("Current order items:", orderItems);
-                setShowOrderDetails(!showOrderDetails);
-              }}
+              onClick={() => setShowOrderDetails(!showOrderDetails)}
             >
               <span>Order Details</span>
               <RightArrowIcon />

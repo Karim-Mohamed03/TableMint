@@ -488,7 +488,7 @@ const CompletePageContent = () => {
         // Show star rating modal when payment is successfully recorded
 
         const create_payment_response = await axios.post('https://tablemint.onrender.com/api/payments/create_payment', {
-          amount: amount,  // Send only the base amount (order total) to Square
+          amount: baseAmt / 100,  // Send only the base amount (order total) to Square
           tip_money: tipAmt,  // Send tip separately
           order_id: orderId,
           source_id: 'EXTERNAL',

@@ -17,7 +17,15 @@ const CartPage = ({
   restaurantBranding,
   isBrandingLoaded
 }) => {
-  const { items: cartItems, subtotal, tax, total } = useCart();
+  const { 
+    items: cartItems, 
+    subtotal, 
+    tax, 
+    total, 
+    updateQuantity, 
+    removeItem,
+    formatCurrency 
+  } = useCart();
   
   // Order details state for when order_id is provided
   const [orderDetails, setOrderDetails] = useState(null);
@@ -224,21 +232,6 @@ const CartPage = ({
     setShowTipModal(!showTipModal);
   };
 
-
-
-  // Format currency for display
-  const formatCurrency = (amount, currency = 'GBP') => {
-    if (!amount && amount !== 0) return '£0.00';
-    
-    const formatter = new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    });
-    
-    return formatter.format(amount / 100);
-  };
-
   // Determine if we're showing order details or cart items
   const showingOrderDetails = orderDetails && orderDetails.line_items;
   const displayItems = showingOrderDetails ? orderDetails.line_items : cartItems;
@@ -311,12 +304,12 @@ const CartPage = ({
                         <div className="cart-item-details">
                           <h3 className="cart-item-name">{item.name}</h3>
                           <p className="cart-item-unit-price">
-                            {formatCurrency(item.base_price_money?.amount, item.base_price_money?.currency)} each
+                            {formatCurrency(item.base_price_money?.amount)} each
                           </p>
                         </div>
                         <div className="cart-item-total">
                           <p className="cart-item-total-price">
-                            {formatCurrency(item.total_money?.amount, item.total_money?.currency)}
+                            {formatCurrency(item.total_money?.amount)}
                           </p>
                         </div>
                       </div>
@@ -344,12 +337,12 @@ const CartPage = ({
                             </p>
                           )}
                           <p className="cart-item-unit-price">
-                            £{item.price.toFixed(2)} each
+                            {formatCurrency(item.price)} each
                           </p>
                         </div>
                         <div className="cart-item-total">
                           <p className="cart-item-total-price">
-                            £{(item.price * item.quantity).toFixed(2)}
+                            {formatCurrency(item.price * item.quantity)}
                           </p>
                         </div>
                       </div>
@@ -367,23 +360,23 @@ const CartPage = ({
                   // For order details, just show the total
                   <div className="cart-final-total">
                     <span>Total</span>
-                    <span>{formatCurrency(calculateOrderTotal().total, calculateOrderTotal().currency)}</span>
+                    <span>{formatCurrency(calculateOrderTotal().total)}</span>
                   </div>
                 ) : (
                   // For cart items, show subtotal, tax, and total
                   <>
                     <div className="cart-total-row subtotal">
                       <span>Subtotal</span>
-                      <span>£{subtotal.toFixed(2)}</span>
+                      <span>{formatCurrency(subtotal)}</span>
                     </div>
                     <div className="cart-total-row tax">
                       <span>Tax</span>
-                      <span>£{tax.toFixed(2)}</span>
+                      <span>{formatCurrency(tax)}</span>
                     </div>
                     <div className="cart-total-divider"></div>
                     <div className="cart-final-total">
                       <span>Total</span>
-                      <span>£{total.toFixed(2)}</span>
+                      <span>{formatCurrency(total)}</span>
                     </div>
                   </>
                 )}

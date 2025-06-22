@@ -34,8 +34,8 @@ const ItemDetailModal = ({
       id: variation?.id || item.id,
       name: itemData?.name || 'Unknown Item',
       description: itemData?.description,
-      price: price?.amount ? price.amount / 100 : 0,
-      currency: price?.currency || 'USD',
+      price: price?.amount || 0,
+      currency: price?.currency || 'GBP',
       quantity: quantity,
       item_data: {
         ...itemData,

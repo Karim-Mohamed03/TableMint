@@ -52,6 +52,19 @@ const loadFromStorage = () => {
   }
 };
 
+// Format currency for display
+const formatCurrency = (amount, currency = 'GBP') => {
+  if (!amount && amount !== 0) return '£0.00';
+  
+  const formatter = new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+  });
+  
+  return formatter.format(amount / 100);
+};
+
 // Cart reducer
 const cartReducer = (state, action) => {
   console.group(`🔄 Cart Action: ${action.type}`);
@@ -226,12 +239,12 @@ export const CartProvider = ({ children }) => {
   
   // Calculate totals
   const subtotal = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const promoDiscountAmount = subtotal * (state.promoDiscount / 100);
+  const promoDiscountAmount = Math.round(subtotal * (state.promoDiscount / 100));
   const discountedSubtotal = subtotal - promoDiscountAmount;
   
   // Constants for restaurant (no delivery, 2% tax)
   const taxRate = 0.02; // 2% tax
-  const tax = discountedSubtotal * taxRate;
+  const tax = Math.round(discountedSubtotal * taxRate);
   const total = discountedSubtotal + tax;
   
   // Get cart item count
@@ -274,7 +287,8 @@ export const CartProvider = ({ children }) => {
     // Helper functions
     getItemCount,
     isInCart,
-    getItemQuantity
+    getItemQuantity,
+    formatCurrency
   };
   
   return (

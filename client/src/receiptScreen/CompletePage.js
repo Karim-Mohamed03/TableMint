@@ -315,6 +315,19 @@ const CompletePageContent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Format currency for display
+  const formatCurrency = (amount, currency = 'GBP') => {
+    if (!amount && amount !== 0) return '£0.00';
+    
+    const formatter = new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    });
+    
+    return formatter.format(amount / 100);
+  };
+
   useEffect(() => {
     if (!stripe) {
       return;
@@ -572,15 +585,6 @@ const CompletePageContent = () => {
 
   const statusContent = STATUS_CONTENT_MAP[status] || STATUS_CONTENT_MAP.default;
 
-  // Format currency display
-  const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return 'N/A';
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP'
-    }).format(amount / 100);
-  };
-
   if (isLoading) {
     return (
       <div className="loading-container">
@@ -623,15 +627,15 @@ const CompletePageContent = () => {
             </div>
             <div className="detail-row">
               <span className="detail-label">Amount</span>
-              <span className="detail-value">£{formatCurrency(paymentDetails.amount)}</span>
+              <span className="detail-value">{formatCurrency(paymentDetails.amount)}</span>
             </div>
             <div className="detail-row">
               <span className="detail-label">Tips</span>
-              <span className="detail-value">£{formatCurrency(paymentDetails.tipAmount)}</span>
+              <span className="detail-value">{formatCurrency(paymentDetails.tipAmount)}</span>
             </div>
             <div className="detail-row total">
               <span className="detail-label">Total</span>
-              <span className="detail-value">£{formatCurrency(paymentDetails.totalAmount)}</span>
+              <span className="detail-value">{formatCurrency(paymentDetails.totalAmount)}</span>
             </div>
           </div>
         )}

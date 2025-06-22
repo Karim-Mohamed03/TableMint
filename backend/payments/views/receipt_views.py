@@ -21,6 +21,7 @@ def send_email_receipt(request):
             base_amount = data.get('base_amount')
             tip_amount = data.get('tip_amount')
             status = data.get('status')
+            order_items = data.get('items', [])  # Get items directly from request data
             
             # Validate required fields
             if not email or not payment_id:
@@ -28,15 +29,6 @@ def send_email_receipt(request):
                     'success': False,
                     'error': 'Email and payment ID are required'
                 }, status=400)
-            
-            # Get order items if order_id is available
-            order_items = None
-            if order_id:
-                try:
-                    order = Order.objects.get(id=order_id)
-                    order_items = order.items.all()
-                except Order.DoesNotExist:
-                    pass  # Continue without order items
             
             # Generate PDF receipt
             pdf_content = generate_pdf_receipt({

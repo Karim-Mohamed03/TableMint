@@ -644,7 +644,8 @@ const CompletePageContent = () => {
         total_amount: paymentAmount,
         base_amount: baseAmount,
         tip_amount: tipAmount,
-        status: status
+        status: status,
+        items: orderItems // Include order items in the request
       });
 
       if (response.data.success) {

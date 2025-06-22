@@ -368,6 +368,7 @@ body {
   background: transparent;
   overflow: hidden;
   animation: slideDown 0.3s ease-out;
+  text-align: left;
 }
 
 @keyframes slideDown {

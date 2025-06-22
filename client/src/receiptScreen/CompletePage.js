@@ -381,15 +381,15 @@ const CompletePageContent = () => {
       // Calculate base and tip amounts correctly
       let total = paymentIntent.amount;
       let base = null;
-      let tip = null;
+      let tip = (tipAmountFromUrl /100).toFixed(2);
 
       // Try to get amounts from URL first, then payment intent metadata
       if (baseAmountFromUrl && tipAmountFromUrl) {
         base = parseInt(baseAmountFromUrl, 10);
-        tip = parseInt(tipAmountFromUrl, 10);
+        // tip = parseInt(tipAmountFromUrl, 10);
       } else if (paymentIntent.metadata?.base_amount && paymentIntent.metadata?.tip_amount) {
         base = parseInt(paymentIntent.metadata.base_amount, 10);
-        tip = parseInt(paymentIntent.metadata.tip_amount, 10);
+        // tip = parseInt(paymentIntent.metadata.tip_amount, 10);
       } else {
         // Fallback: assume no tip
         base = total;

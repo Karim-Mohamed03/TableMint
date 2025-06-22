@@ -400,6 +400,10 @@ const CompletePageContent = () => {
         return;
       }
 
+      let total = paymentIntent.amount;
+      let base = baseAmount;
+      let tip = tipAmount;
+
       console.log("Payment Intent:", {
         status: paymentIntent.status,
         metadata: paymentIntent.metadata,
@@ -441,9 +445,7 @@ const CompletePageContent = () => {
       }
 
       // Calculate base and tip amounts correctly
-      let total = paymentIntent.amount;
-      let base = baseAmount;
-      let tip = tipAmount;
+      
 
       // Try to get amounts from URL first, then payment intent metadata
       if (baseAmount && tipAmount) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Elements } from "@stripe/react-stripe-js";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import './CheckoutPage.css';
 
@@ -11,9 +11,14 @@ const CheckoutPage = ({
   isBrandingLoaded
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { baseAmount, tipAmount, orderId } = location.state || {};
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('apple-pay');
   const [showPromoCode, setShowPromoCode] = useState(false);
+
+  const handleBack = () => {
+    navigate('/cart-confirmation');
+  };
 
   if (!clientSecret || !stripePromise) {
     return (
@@ -24,10 +29,9 @@ const CheckoutPage = ({
     );
   }
   const baseAmountF = baseAmount/100;
-  const tipAmountF = tipAmount/100;
   const baseAmountFormatted = (baseAmountF / 100).toFixed(2);
-  const tipAmountFormatted = (tipAmountF / 100).toFixed(2);
-  const total = ((baseAmountF + tipAmountF) / 100).toFixed(2);
+  const tipAmountFormatted = (tipAmount / 100).toFixed(2);
+  const total = ((baseAmountF + tipAmount) / 100).toFixed(2);
 
   return (
     <div style={{
@@ -49,15 +53,18 @@ const CheckoutPage = ({
         position: 'relative',
         padding: '16px 20px'
       }}>
-        <button style={{
-          position: 'absolute',
-          left: '20px',
-          background: 'none',
-          border: 'none',
-          padding: '8px',
-          cursor: 'pointer',
-          color: '#1d1d1f'
-        }}>
+        <button 
+          onClick={handleBack}
+          style={{
+            position: 'absolute',
+            left: '20px',
+            background: 'none',
+            border: 'none',
+            padding: '8px',
+            cursor: 'pointer',
+            color: '#1d1d1f'
+          }}
+        >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>

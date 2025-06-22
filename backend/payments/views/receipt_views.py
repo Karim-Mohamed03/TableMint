@@ -1,14 +1,14 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.conf import settings
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 import json
+from .pdf_receipt import generate_pdf_receipt
+from orders.models import Order
 
 @csrf_exempt
 def send_email_receipt(request):
-    """Send email receipt to customer with payment details."""
+    """Send email receipt to customer with payment details and PDF attachment."""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -29,62 +29,47 @@ def send_email_receipt(request):
                     'error': 'Email and payment ID are required'
                 }, status=400)
             
-            # Format currency amounts
-            def format_currency(amount):
-                if amount is None:
-                    return '£0.00'
-                return f"£{amount / 100:.2f}"
+            # Get order items if order_id is available
+            order_items = None
+            if order_id:
+                try:
+                    order = Order.objects.get(id=order_id)
+                    order_items = order.items.all()
+                except Order.DoesNotExist:
+                    pass  # Continue without order items
             
-            # Prepare email content
-            subject = f"Receipt for Payment {payment_id[:8]}..."
-            
-            # Create email context
-            context = {
+            # Generate PDF receipt
+            pdf_content = generate_pdf_receipt({
                 'payment_id': payment_id,
                 'order_id': order_id,
-                'total_amount': format_currency(total_amount),
-                'base_amount': format_currency(base_amount),
-                'tip_amount': format_currency(tip_amount),
-                'status': status.title() if status else 'Completed',
-                'restaurant_name': 'Marwan\'s Philly Cheesesteak'
-            }
+                'total_amount': total_amount,
+                'base_amount': base_amount,
+                'tip_amount': tip_amount,
+                'status': status
+            }, order_items)
             
-            # Create email body with better formatting
-            email_body = f"""Dear Customer,
-
-            Thank you for your payment at {context['restaurant_name']}!
-
-            PAYMENT RECEIPT
-            ===============
-
-            Payment Details:
-            • Payment ID: {context['payment_id']}
-            • Order ID: {context['order_id']}
-            • Status: {context['status']}
-
-            Amount Breakdown:
-            • Base Amount: {context['base_amount']}
-            • Tip Amount: {context['tip_amount']}
-            • Total Amount: {context['total_amount']}
-
-            We appreciate your business and hope you enjoyed your meal!
-
-            Best regards,
-            The {context['restaurant_name']} Team
-
-            ---
-            This is an automated receipt. Please do not reply to this email.
-            """
+            # Prepare email
+            subject = f"Receipt for Payment {payment_id[:8]}..."
+            message = "Thank you for your payment! Please find your receipt attached."
+            
+            # Create email with PDF attachment
+            email_message = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email="tablemint01@gmail.com",
+                to=[email]
+            )
+            
+            # Attach PDF
+            email_message.attach(
+                f'receipt_{payment_id[:8]}.pdf',
+                pdf_content,
+                'application/pdf'
+            )
             
             # Send email
             try:
-                send_mail(
-                    subject=subject,
-                    message=email_body,
-                    from_email="tablemint01@gmail.com",
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
+                email_message.send(fail_silently=False)
                 
                 return JsonResponse({
                     'success': True,

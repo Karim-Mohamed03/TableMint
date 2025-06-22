@@ -381,7 +381,7 @@ const CompletePageContent = () => {
 
       // Calculate base and tip amounts correctly
       let total = paymentIntent.amount;
-      let base = null;
+      let base = baseAmountFromUrl / 100;
       let tip = tipAmountFromUrl / 100;
 
       // Try to get amounts from URL first, then payment intent metadata

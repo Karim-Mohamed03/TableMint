@@ -6,6 +6,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import TipModal from '../receiptScreen/components/TipModal';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '../utils/formatters';
 
 
 const CartConfirmationModal = ({ 
@@ -43,13 +44,6 @@ const CartConfirmationModal = ({
   const navigate = useNavigate();
 
   if (!isOpen) return null;
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP'
-    }).format(amount / 100);
-  };
 
   const handleQuantityChange = (item, delta) => {
     const newQuantity = item.quantity + delta;
@@ -150,7 +144,7 @@ const CartConfirmationModal = ({
         catalog_object_id: item.id,
         quantity: item.quantity.toString(),
         base_price_money: {
-          amount: Math.round(item.price * 100),
+          amount: item.price, // Price should already be in cents
           currency: item.currency || 'GBP'
         }
       }));
@@ -221,11 +215,10 @@ const CartConfirmationModal = ({
         sessionStorage.setItem("pending_square_order", JSON.stringify(orderData));
         
         // Calculate final amount with tip
-        const baseAmount = subtotal;
-        const tipInCents = tipAmount;
-        const finalAmount = baseAmount + tipInCents;
+        const baseAmount = Math.round(subtotal * 100); // Convert to cents
+        const finalAmount = baseAmount + tipAmount; // tipAmount is already in cents
         
-        setTipInCents(tipInCents);
+        setTipInCents(tipAmount);
         setBaseAmountInCents(baseAmount);
         setUserPaymentAmount(finalAmount);
         
@@ -415,8 +408,8 @@ const CartConfirmationModal = ({
             isOpen={showTipModal}
             onClose={() => setShowTipModal(false)}
             onConfirm={handleTipConfirm}
-            currentTip={tipInCents / 100}
-            baseAmount={(userPaymentAmount || Math.round(subtotal * 100)) / 100}
+            currentTip={tipInCents}
+            baseAmount={Math.round(subtotal * 100)} // Convert to cents
             currency="GBP"
             isProcessing={isProcessingTip}
           />

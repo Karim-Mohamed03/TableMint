@@ -182,7 +182,7 @@ export default function PaymentPage({
   const handleTipConfirm = async (tipAmount) => {
     try {
       const baseAmount = userPaymentAmount || calculateOrderTotal().total;
-      const tipInCents = tipAmount * 100;
+      const tipInCents = tipAmount;
       const finalAmount = baseAmount + tipInCents;
       
       setTipInCents(tipInCents);

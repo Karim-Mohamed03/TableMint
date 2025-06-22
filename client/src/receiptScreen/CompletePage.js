@@ -3,6 +3,7 @@ import { Elements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import axios from "axios";
 import "./CompletePage.css";
+import { formatCurrency } from '../utils/formatters';
 
 const stripePromise = loadStripe("pk_test_51RaEPK4cqToPgSHS8ngSIwFZBod0famsu6BB0erJlCgBFVcYlO2pq2YFxFX2Ux0qp5IENkciYVzsGk7KxjaWb9xN00KTY0Xift", {
   stripeAccount: 'acct_1Rab3QQBvc6fFqZ8'  // Connected account ID
@@ -314,19 +315,6 @@ const CompletePageContent = () => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Format currency for display
-  const formatCurrency = (amount, currency = 'GBP') => {
-    if (!amount && amount !== 0) return '£0.00';
-    
-    const formatter = new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    });
-    
-    return formatter.format(amount / 100);
-  };
 
   useEffect(() => {
     if (!stripe) {

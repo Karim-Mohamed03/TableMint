@@ -5,6 +5,7 @@ import { useCart } from '../contexts/CartContext';
 import TipModal from '../receiptScreen/components/TipModal';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import axios from 'axios';
+import { formatCurrency } from '../utils/formatters';
 
 import './CartPage.css';
 
@@ -24,7 +25,6 @@ const CartPage = ({
     total, 
     updateQuantity, 
     removeItem,
-    formatCurrency 
   } = useCart();
   
   // Order details state for when order_id is provided

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { formatCurrency } from '../utils/formatters';
 
 // Cart action types
 const CART_ACTIONS = {

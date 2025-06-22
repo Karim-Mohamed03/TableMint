@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../../contexts/CartContext';
+import { formatCurrency } from '../../utils/formatters';
 
 const ItemDetailModal = ({ 
   isOpen, 
   onClose, 
   item, 
-  formatCurrency, 
   isItemInStock 
 }) => {
   const [quantity, setQuantity] = useState(1);
@@ -83,7 +83,7 @@ const ItemDetailModal = ({
           )}
 
           <div className="detail-price">
-            {formatCurrency(price?.amount, price?.currency)}
+            {formatCurrency(price?.amount)}
           </div>
 
           {/* Nutrition Info */}
@@ -120,7 +120,7 @@ const ItemDetailModal = ({
               disabled={!inStock}
               onClick={handleAddToCart}
             >
-              {inStock ? `Add to cart • ${formatCurrency(price?.amount * quantity, price?.currency)}` : 'Out of Stock'}
+              {inStock ? `Add to cart • ${formatCurrency(price?.amount * quantity)}` : 'Out of Stock'}
             </button>
           </div>
         </div>

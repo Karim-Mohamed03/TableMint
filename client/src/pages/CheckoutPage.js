@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Elements } from "@stripe/react-stripe-js";
+import { Elements, ExpressCheckoutElement } from "@stripe/react-stripe-js";
 import { useLocation, useNavigate } from 'react-router-dom';
 import CheckoutForm from '../receiptScreen/components/CheckoutForm';
 import './CheckoutPage.css';
@@ -415,7 +415,7 @@ const CheckoutPage = ({
         >
           {selectedPaymentMethod === 'credit-card' && (
             <div style={{ marginBottom: '8px' }}>
-              <CheckoutForm 
+              <ExpressCheckoutElement 
                 baseAmount={baseAmount}
                 tipAmount={tipAmount}
                 orderId={orderId}

@@ -14,9 +14,11 @@ import CheckoutPage from "./pages/CheckoutPage";
 import { CartProvider } from "./contexts/CartContext";
 import axios from "axios";
 
-const stripePromise = loadStripe("pk_test_51RaEPK4cqToPgSHS8ngSIwFZBod0famsu6BB0erJlCgBFVcYlO2pq2YFxFX2Ux0qp5IENkciYVzsGk7KxjaWb9xN00KTY0Xift", {
-  stripeAccount: 'acct_1Rab3QQBvc6fFqZ8'  // Connected account ID
-});
+// const stripePromise = loadStripe("pk_test_51RaEPK4cqToPgSHS8ngSIwFZBod0famsu6BB0erJlCgBFVcYlO2pq2YFxFX2Ux0qp5IENkciYVzsGk7KxjaWb9xN00KTY0Xift", {
+//   stripeAccount: 'acct_1Rab3QQBvc6fFqZ8'  // Connected account ID
+// });
+
+const stripePromise = loadStripe("pk_test_51RaEPK4cqToPgSHS8ngSIwFZBod0famsu6BB0erJlCgBFVcYlO2pq2YFxFX2Ux0qp5IENkciYVzsGk7KxjaWb9xN00KTY0Xift");
 
 function App() {
   const [clientSecret, setClientSecret] = useState("");

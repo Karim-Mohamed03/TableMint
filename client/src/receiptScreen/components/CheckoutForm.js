@@ -198,7 +198,7 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
               paymentRequest,
               style: {
                 paymentRequestButton: {
-                  type: "applePay", // Can use "default" to support other wallets too
+                  type: "default", // Can use "default" to support other wallets too
                   theme: "dark",
                   height: "44px",
                 },

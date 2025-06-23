@@ -217,6 +217,33 @@ const isItemSoldOutAtLocation = (item, locationId) => {
   return false;
 };
 
+// Add this after the helper functions and before the MenuCategories component
+const logSoldOutItems = (items, inventoryData, locationId) => {
+  const soldOutItems = items.filter(item => {
+    const isSoldOut = isItemSoldOutAtLocation(item, locationId);
+    const inventory = inventoryData[item.id];
+    const isOutOfStock = inventory && (inventory.quantity <= 0 || inventory.state === 'SOLD_OUT');
+    return isSoldOut || isOutOfStock;
+  });
+
+  if (soldOutItems.length > 0) {
+    console.log('=== SOLD OUT ITEMS ===');
+    console.log('Location ID:', locationId);
+    console.log('Timestamp:', new Date().toISOString());
+    soldOutItems.forEach(item => {
+      const inventory = inventoryData[item.id];
+      console.log({
+        name: item.item_data?.name,
+        id: item.id,
+        soldOutInPOS: isItemSoldOutAtLocation(item, locationId),
+        inventoryCount: inventory?.quantity || 0,
+        inventoryState: inventory?.state || 'UNKNOWN'
+      });
+    });
+    console.log('====================');
+  }
+};
+
 // Main MenuCategories component
 const MenuCategories = ({
   catalogData: initialCatalogData,
@@ -416,6 +443,15 @@ const MenuCategories = ({
       fetchData();
     }
   }, [effectiveLocationId, restaurantContext]); // Add dependencies for restaurant-specific data
+
+  // Inside MenuCategories component, add this effect after the inventory data is loaded
+  // Add after the inventory data fetch in the useEffect
+  useEffect(() => {
+    if (!loading && !error && catalogData && inventoryData) {
+      const items = getAllItems();
+      logSoldOutItems(items, inventoryData, effectiveLocationId);
+    }
+  }, [loading, error, catalogData, inventoryData, effectiveLocationId]);
 
   // Handle adding item to cart
   const handleAddToCart = (item) => {

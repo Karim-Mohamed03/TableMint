@@ -98,6 +98,7 @@
 import { useState, useEffect } from "react";
 import {
   PaymentElement,
+  ExpressCheckoutElement,
   PaymentRequestButtonElement,
   useStripe,
   useElements,
@@ -208,7 +209,7 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
         </div>
       )}
 
-      <PaymentElement />
+      <ExpressCheckoutElement />
       {message && <div className="payment-message">{message}</div>}
       <button
         className="pay-button"

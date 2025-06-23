@@ -1024,7 +1024,7 @@ def get_inventory_by_location(request, location_id):
         - table_token (alternative to restaurant_id): Table token to look up restaurant through
     """
     try:
-        cursor = request.GET.get('cursor')
+        # cursor = request.GET.get('cursor')
         restaurant_id = request.GET.get('restaurant_id')
         table_token = request.GET.get('table_token')
         
@@ -1091,7 +1091,7 @@ def get_inventory_by_location(request, location_id):
         result = pos_service.batch_retrieve_inventory_counts(
             catalog_object_ids=catalog_object_ids,
             location_ids=[location_id],
-            cursor=cursor
+            # cursor=cursor
         )
         
         # Return the result

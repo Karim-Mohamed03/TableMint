@@ -72,9 +72,17 @@ def generate_pdf_receipt(payment_data, order_items=None):
         # Create the items table
         table_data = [['Item', 'Quantity', 'Unit Price', 'Total']]
         for item in order_items:
-            unit_price = item.get('base_price_money', {}).get('amount', 0)
-            quantity = item.get('quantity', 1)
+            # Get the price from base_price_money or total_money
+            unit_price = (
+                item.get('base_price_money', {}).get('amount') or 
+                item.get('total_money', {}).get('amount', 0)
+            )
+            if isinstance(unit_price, str):
+                unit_price = float(unit_price)
+            
+            quantity = int(item.get('quantity', 1))
             total = unit_price * quantity
+            
             table_data.append([
                 item.get('name', 'Unknown Item'),
                 str(quantity),
@@ -95,31 +103,35 @@ def generate_pdf_receipt(payment_data, order_items=None):
             ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 12),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align item names
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),  # Right align numbers
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('RIGHTPADDING', (0, 0), (-1, -1), 10)
         ]))
         elements.append(items_table)
         elements.append(Spacer(1, 20))
 
-    # Add payment summary
+    # Add payment summary with right-aligned amounts
     payment_summary = [
         ['Base Amount:', format_currency(payment_data.get('base_amount'))],
         ['Tip Amount:', format_currency(payment_data.get('tip_amount'))],
         ['Total Amount:', format_currency(payment_data.get('total_amount'))]
     ]
     
-    summary_table = Table(payment_summary, colWidths=[200, 100])
+    # Create table with more space for right-aligned amounts
+    summary_table = Table(payment_summary, colWidths=[300, 150])
     summary_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align labels
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right align amounts
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 12),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),  # Bold the total row
+        ('FONTSIZE', (0, -1), (-1, -1), 12),  # Slightly larger total
         ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10)
+        ('RIGHTPADDING', (1, 0), (1, -1), 20),  # More padding for amounts
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6)
     ]))
     elements.append(summary_table)
 

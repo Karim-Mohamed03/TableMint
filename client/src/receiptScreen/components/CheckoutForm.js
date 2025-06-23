@@ -209,7 +209,7 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
         </div>
       )}
 
-      <ExpressCheckoutElement />
+      <PaymentElement />
       {message && <div className="payment-message">{message}</div>}
       <button
         className="pay-button"

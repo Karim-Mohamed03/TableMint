@@ -82,6 +82,31 @@ const getItemInventory = async (catalogObjectId, locationId = null) => {
     url.searchParams.append('catalog_object_id', catalogObjectId);
     if (locationId) url.searchParams.append('location_ids', locationId);
 
+    // Get restaurant context from sessionStorage
+    const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+    const storedTableContext = sessionStorage.getItem('table_context');
+    
+    // Add either restaurant_id or table_token to the request
+    if (storedRestaurantContext) {
+      try {
+        const restaurantData = JSON.parse(storedRestaurantContext);
+        if (restaurantData.id) {
+          url.searchParams.append('restaurant_id', restaurantData.id);
+        }
+      } catch (e) {
+        console.error('Failed to parse restaurant context:', e);
+      }
+    } else if (storedTableContext) {
+      try {
+        const tableData = JSON.parse(storedTableContext);
+        if (tableData.token) {
+          url.searchParams.append('table_token', tableData.token);
+        }
+      } catch (e) {
+        console.error('Failed to parse table context:', e);
+      }
+    }
+
     const response = await fetch(url.toString(), { method: 'GET' });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 

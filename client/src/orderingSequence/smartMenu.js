@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
 
-// Import the utility functions from menuCategories
-import { getCatalogData, getInventoryData, processCatalogWithImages } from './menuCategories';
 // Import the ItemDetailModal component from the new menu folder location
 import ItemDetailModal from '../components/menu/ItemDetailModal';
 
@@ -17,98 +17,85 @@ const SmartMenu = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showItemModal, setShowItemModal] = useState(false);
 
-  // Fetch catalog data on component mount
+  const { restaurantId } = useParams();
+  
+  // Fetch menu data on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMenu = async () => {
       setLoading(true);
       setError(null);
       
-      // Get restaurant context for menu filtering
+      // Get restaurant context for restaurant ID
       const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
       let restaurantContext = null;
-      if (storedRestaurantContext) {
-        try {
+      
+      try {
+        if (storedRestaurantContext) {
           restaurantContext = JSON.parse(storedRestaurantContext);
-        } catch (e) {
-          console.error('Failed to parse restaurant context:', e);
-        }
-      }
-      
-      // Get active menu ID from restaurant context or URL parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlMenuId = urlParams.get('menu_id');
-      const menuIdToUse = urlMenuId || restaurantContext?.active_menu;
-      
-      // Fetch catalog data with menu filtering
-      const catalogResponse = await getCatalogData(null, menuIdToUse);
-      
-      if (catalogResponse && catalogResponse.success) {
-        setCatalogData(catalogResponse.objects);
-        
-        if (catalogResponse.imageMap) {
-          setImageMap(catalogResponse.imageMap);
         }
         
-        // Extract item variation IDs for inventory check
-        const items = catalogResponse.objects.filter(obj => obj.type === 'ITEM');
-        const itemVariationMap = [];
+        const restaurantIdToUse = restaurantId || (restaurantContext?.id);
         
-        items.forEach((item) => {
-          if (item.item_data?.variations && item.item_data.variations.length > 0) {
-            const variation = item.item_data.variations[0];
-            itemVariationMap.push({
-              itemId: item.id,
-              variationId: variation.id
-            });
-          }
-        });
+        if (!restaurantIdToUse) {
+          throw new Error('Restaurant ID not found');
+        }
         
-        if (itemVariationMap.length > 0) {
-          setInventoryLoading(true);
-          const inventoryResponse = await getInventoryData(itemVariationMap);
+        // Fetch published menu from the API
+        const response = await axios.get(
+          `https://tablemint.onrender.com/api/restaurants/${restaurantIdToUse}/published-menu/`
+        );
+        
+        if (response.data.success && response.data.menu) {
+          const { menu_data } = response.data.menu;
           
-          if (inventoryResponse && inventoryResponse.success) {
-            const inventoryMap = {};
-            inventoryResponse.counts.forEach((count) => {
-              const itemVariation = itemVariationMap.find(mapping => mapping.variationId === count.catalog_object_id);
-              if (itemVariation) {
-                inventoryMap[itemVariation.itemId] = {
-                  quantity: parseInt(count.quantity || '0'),
-                  state: count.state,
-                  location_id: count.location_id
-                };
-              }
-            });
-            setInventoryData(inventoryMap);
+          // Set the menu data
+          setCatalogData(menu_data);
+          
+          // Set the first category as selected by default if available
+          if (menu_data.categories && menu_data.categories.length > 0) {
+            setSelectedCategory(menu_data.categories[0].name);
           }
-          setInventoryLoading(false);
+        } else {
+          throw new Error(response.data.error || 'Failed to load menu');
         }
-      } else {
-        setError('Failed to load menu items');
+      } catch (err) {
+        console.error('Error fetching menu:', err);
+        setError(err.response?.data?.error || 'Failed to load menu. Please try again.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+    
+    fetchMenu();
+  }, [restaurantId]);
 
-    fetchData();
-  }, []);
-
-  // Parse and organize catalog data
-  const organizedData = React.useMemo(() => {
-    if (!catalogData) return { categories: [], items: [] };
-
-    const categories = catalogData.filter(obj => obj.type === 'CATEGORY');
-    const items = catalogData.filter(obj => obj.type === 'ITEM');
-
-    return { categories, items };
-  }, [catalogData]);
+  // Get current category items
+  const currentCategoryItems = React.useMemo(() => {
+    if (!catalogData?.categories) return [];
+    
+    if (selectedCategory === 'all') {
+      // Flatten all items from all categories
+      return catalogData.categories.flatMap(category => category.items || []);
+    }
+    
+    // Find the selected category and return its items
+    const category = catalogData.categories.find(cat => cat.name === selectedCategory);
+    return category?.items || [];
+  }, [catalogData, selectedCategory]);
 
   // Format currency
   const formatCurrency = (amount, currency = 'GBP') => {
-    if (!amount) return '£0.00';
+    if (amount === undefined || amount === null) return '';
+    
+    // If amount is a string, try to convert it to a number
+    const amountNum = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
+    if (isNaN(amountNum)) return '';
+    
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: currency
-    }).format(amount / 100);
+    }).format(amountNum);
   };
 
   // Check if item is in stock
@@ -118,16 +105,30 @@ const SmartMenu = () => {
     return inventory.quantity > 0 && inventory.state !== 'SOLD_OUT';
   };
 
-  // Filter items by category
-  const getFilteredItems = () => {
-    if (selectedCategory === 'all') {
-      return organizedData.items;
+  // Get style configuration with defaults
+  const styleConfig = React.useMemo(() => {
+    if (!catalogData?.style_config) {
+      return {
+        fonts: {
+          body: { sizes: { mobile: 'text-sm', desktop: 'text-base' }, family: 'sans-serif' },
+          price: 'font-sans',
+          heading: { sizes: { mobile: 'text-xl', desktop: 'text-2xl' }, family: 'sans-serif', weight: 'medium' }
+        },
+        colors: {
+          text: '#000000',
+          price: '#000000',
+          heading: '#000000',
+          background: '#ffffff',
+          description: '#666666'
+        },
+        spacing: {
+          itemSpacing: 'mb-8',
+          sectionSpacing: 'mb-12'
+        }
+      };
     }
-    
-    return organizedData.items.filter(item => 
-      item.item_data?.categories?.some(cat => cat.id === selectedCategory)
-    );
-  };
+    return catalogData.style_config;
+  }, [catalogData]);
 
   // Handle item selection
   const handleItemClick = (item) => {
@@ -178,73 +179,98 @@ const SmartMenu = () => {
       </div>
 
       {/* Category Filter */}
-      <div className="category-filter">
-        <button 
-          className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-          onClick={() => setSelectedCategory('all')}
-        >
-          All
-        </button>
-        {organizedData.categories.map(category => (
+      <div className="category-filter overflow-x-auto whitespace-nowrap py-2 px-4 bg-gray-100">
+        {catalogData?.categories?.map((category) => (
           <button
-            key={category.id}
-            className={`category-btn ${selectedCategory === category.id ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category.id)}
+            key={category.name}
+            className={`inline-block px-4 py-2 mx-1 rounded-full text-sm font-medium ${
+              selectedCategory === category.name
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-200'
+            }`}
+            onClick={() => setSelectedCategory(category.name)}
           >
-            {category.category_data?.name || 'Unknown Category'}
+            {category.name}
           </button>
         ))}
       </div>
 
       {/* Menu Items */}
-      <div className="menu-items-container">
-        {getFilteredItems().map(item => {
-          const itemData = item.item_data;
-          const variation = itemData?.variations?.[0];
-          const price = variation?.item_variation_data?.price_money;
-          const inStock = isItemInStock(item.id);
-
-          return (
-            <div key={item.id} className="menu-item-card" onClick={() => handleItemClick(item)}>
-              <div className="item-content">
-                <h3 className="item-name">{itemData?.name || 'Unknown Item'}</h3>
-                <div className="item-price-calories">
-                  <span className="item-price">{formatCurrency(price?.amount, price?.currency)}</span>
-                  {itemData?.food_and_beverage_details?.calorie_count && (
-                    <span className="item-calories">{itemData.food_and_beverage_details.calorie_count} Kcal</span>
+      <div className="p-4" style={{ backgroundColor: styleConfig.colors?.background || '#ffffff' }}>
+        {/* Category Name */}
+        {selectedCategory !== 'all' && (
+          <h2 
+            className="text-2xl font-medium mb-6"
+            style={{ 
+              color: styleConfig.colors?.heading || '#000000',
+              fontFamily: styleConfig.fonts?.heading?.family || 'sans-serif',
+              fontWeight: styleConfig.fonts?.heading?.weight || '500'
+            }}
+          >
+            {selectedCategory}
+          </h2>
+        )}
+        
+        {/* Items Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {currentCategoryItems.map((item, index) => (
+            <div 
+              key={index}
+              className={`bg-white rounded-lg overflow-hidden shadow-md ${styleConfig.spacing?.itemSpacing || 'mb-8'} cursor-pointer hover:shadow-lg transition-shadow`}
+              onClick={() => handleItemClick(item)}
+            >
+              <div className="flex">
+                {item.image && (
+                  <div className="w-1/3">
+                    <img 
+                      src={item.image} 
+                      alt={item.name}
+                      className="w-full h-32 object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.classList.add('hidden');
+                        e.target.parentElement.nextElementSibling?.classList.remove('w-2/3');
+                        e.target.parentElement.nextElementSibling?.classList.add('w-full');
+                      }}
+                    />
+                  </div>
+                )}
+                <div className={`p-4 ${item.image ? 'w-2/3' : 'w-full'}`}>
+                  <div className="flex justify-between items-start">
+                    <h3 
+                      className="text-lg font-medium"
+                      style={{ color: styleConfig.colors?.heading || '#000000' }}
+                    >
+                      {item.name}
+                    </h3>
+                    {item.price && (
+                      <span 
+                        className="font-medium"
+                        style={{ color: styleConfig.colors?.price || '#000000' }}
+                      >
+                        {formatCurrency(item.price, catalogData.currency || 'GBP')}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p 
+                      className="mt-2 text-sm"
+                      style={{ color: styleConfig.colors?.description || '#666666' }}
+                    >
+                      {item.description}
+                    </p>
                   )}
                 </div>
               </div>
-              
-              <div className="item-image-container">
-                {itemData?.primaryImage ? (
-                  <img 
-                    src={itemData.primaryImage.url} 
-                    alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
-                    className="item-image"
-                    onError={(e) => e.target.style.display = 'none'}
-                  />
-                ) : (
-                  <div className="no-image-placeholder">
-                    <span>No Image</span>
-                  </div>
-                )}
-                
-                {!inStock && (
-                  <div className="out-of-stock-overlay">
-                    <span>Out of Stock</span>
-                  </div>
-                )}
-              </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
-
+      
       {/* No items message */}
-      {getFilteredItems().length === 0 && (
-        <div className="no-items">
-          <p>No items found in this category</p>
+      {currentCategoryItems.length === 0 && (
+        <div className="no-items p-8 text-center">
+          <p className="text-gray-500">No items found in this category</p>
         </div>
       )}
 

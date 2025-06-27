@@ -4,12 +4,45 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import Restaurant
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from .models import Restaurant, RestaurantMenuTemplate
 import os
 from django.conf import settings
 from django.urls import reverse
 
 # Create your views here.
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_published_menu(request, restaurant_id):
+    """
+    Get the published menu template for a restaurant
+    """
+    try:
+        menu_template = RestaurantMenuTemplate.get_published_menu(restaurant_id)
+        if not menu_template:
+            return Response({
+                'success': False,
+                'error': 'No published menu found for this restaurant'
+            }, status=404)
+            
+        return Response({
+            'success': True,
+            'menu': {
+                'id': str(menu_template.id),
+                'name': menu_template.name,
+                'menu_data': menu_template.menu_data,
+                'restaurant_id': str(menu_template.restaurant_id)
+            }
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 # API endpoint to get restaurant details including branding
 @api_view(['GET'])

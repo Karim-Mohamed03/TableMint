@@ -68,3 +68,37 @@ class RestaurantLocation(models.Model):
             except Exception:
                 return None
         return None
+
+
+class RestaurantMenuTemplate(models.Model):
+    """
+    Model for restaurant_menu_templates table
+    Stores menu templates for restaurants
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    menu_data = models.JSONField()
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, db_column='restaurant_id')
+    template = models.ForeignKey('menu_templates.MenuTemplate', on_delete=models.CASCADE, db_column='template_id')
+    
+    class Meta:
+        managed = False  # Don't let Django manage this table's schema
+        db_table = 'restaurant_menu_templates'
+    
+    def __str__(self):
+        return f"{self.name} - {self.restaurant.name if self.restaurant else 'No Restaurant'}"
+    
+    @classmethod
+    def get_published_menu(cls, restaurant_id):
+        """Get the published menu for a restaurant"""
+        try:
+            return cls.objects.filter(
+                restaurant_id=restaurant_id,
+                is_published=True
+            ).order_by('-updated_at').first()
+        except Exception as e:
+            print(f"Error getting published menu: {str(e)}")
+            return None

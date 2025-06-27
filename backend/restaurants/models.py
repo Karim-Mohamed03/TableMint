@@ -82,7 +82,7 @@ class RestaurantMenuTemplate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, db_column='restaurant_id')
-    template = models.ForeignKey('menu_templates.MenuTemplate', on_delete=models.CASCADE, db_column='template_id')
+    template_id = models.UUIDField(null=True, blank=True)  # Optional reference to template
     
     class Meta:
         managed = False  # Don't let Django manage this table's schema

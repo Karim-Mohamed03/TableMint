@@ -86,33 +86,19 @@ def get_table_context(request, token):
         from restaurants.models import Restaurant
         # Use filter instead of get_object_or_404 to avoid Http404 exception
         table = Table.objects.filter(token=token, is_active=True).first()
-        
+        restaurant = Restaurant.objects.filter(id=table.restaurant_id).first()
+        print("table", table)
+        print("restaurant", restaurant)
+        print("herer")
+        active_subscription = restaurant.active_subscription
+        print(active_subscription)        
+
         if not table:
             logger.warning(f"Table not found for token: {token}")
             return JsonResponse({
                 'success': False,
                 'error': 'Table not found'
             }, status=404)
-            
-        # Get restaurant and handle case where it might not exist
-        restaurant = Restaurant.objects.filter(id=table.restaurant_id).first()
-        if not restaurant:
-            logger.warning(f"Restaurant not found for table {token}")
-            return JsonResponse({
-                'success': False,
-                'error': 'Restaurant not found for this table'
-            }, status=404)
-            
-        # Get active subscription - it must be set
-        if not hasattr(restaurant, 'active_subscription') or not restaurant.active_subscription:
-            logger.error(f"No active subscription found for restaurant {restaurant.id}")
-            return JsonResponse({
-                'success': False,
-                'error': 'No active subscription found for this restaurant'
-            }, status=400)
-            
-        active_subscription = restaurant.active_subscription
-        logger.info(f"Active subscription for table {token}: {active_subscription}")
         
         response_data = {
             'success': True,

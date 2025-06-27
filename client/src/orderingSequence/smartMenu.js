@@ -173,38 +173,45 @@ const SmartMenu = () => {
       <div className="menu-header">
         <div className="header-content">
           <button className="menu-toggle">☰</button>
-          <div className="delivery-info">100a Eating Rd • 24 mins</div>
-          <button className="search-button">🔍</button>
+          <h1 className="restaurant-name">
+            {catalogData?.restaurant_name || 'Restaurant Menu'}
+          </h1>
+          <div className="header-actions">
+            <button className="search-button">🔍</button>
+          </div>
+        </div>
+        <div className="delivery-info">
+          {catalogData?.delivery_info || 'Open Now • Delivery • Pickup'}
         </div>
       </div>
 
-      {/* Category Filter */}
-      <div className="category-filter overflow-x-auto whitespace-nowrap py-2 px-4 bg-gray-100">
-        {catalogData?.categories?.map((category) => (
-          <button
-            key={category.name}
-            className={`inline-block px-4 py-2 mx-1 rounded-full text-sm font-medium ${
-              selectedCategory === category.name
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-200'
-            }`}
-            onClick={() => setSelectedCategory(category.name)}
-          >
-            {category.name}
-          </button>
-        ))}
+      {/* Category Filter - Horizontal Scrollable */}
+      <div className="category-scroll-container">
+        <div className="category-scroll">
+          {catalogData?.categories?.map((category) => (
+            <button
+              key={category.name}
+              className={`category-tab ${
+                selectedCategory === category.name ? 'active' : ''
+              }`}
+              onClick={() => setSelectedCategory(category.name)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Menu Items */}
-      <div className="p-4" style={{ backgroundColor: styleConfig.colors?.background || '#ffffff' }}>
+      {/* Menu Content */}
+      <div className="menu-content" style={{ backgroundColor: styleConfig.colors?.background || '#ffffff' }}>
         {/* Category Name */}
         {selectedCategory !== 'all' && (
           <h2 
-            className="text-2xl font-medium mb-6"
+            className="category-title"
             style={{ 
               color: styleConfig.colors?.heading || '#000000',
               fontFamily: styleConfig.fonts?.heading?.family || 'sans-serif',
-              fontWeight: styleConfig.fonts?.heading?.weight || '500'
+              fontWeight: styleConfig.fonts?.heading?.weight || '600'
             }}
           >
             {selectedCategory}
@@ -212,40 +219,38 @@ const SmartMenu = () => {
         )}
         
         {/* Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="menu-grid">
           {currentCategoryItems.map((item, index) => (
             <div 
               key={index}
-              className={`bg-white rounded-lg overflow-hidden shadow-md ${styleConfig.spacing?.itemSpacing || 'mb-8'} cursor-pointer hover:shadow-lg transition-shadow`}
+              className="menu-item"
               onClick={() => handleItemClick(item)}
             >
-              <div className="flex">
+              <div className="item-content">
                 {item.image && (
-                  <div className="w-1/3">
+                  <div className="item-image-container">
                     <img 
                       src={item.image} 
                       alt={item.name}
-                      className="w-full h-32 object-cover"
+                      className="item-image"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.parentElement.classList.add('hidden');
-                        e.target.parentElement.nextElementSibling?.classList.remove('w-2/3');
-                        e.target.parentElement.nextElementSibling?.classList.add('w-full');
                       }}
                     />
                   </div>
                 )}
-                <div className={`p-4 ${item.image ? 'w-2/3' : 'w-full'}`}>
-                  <div className="flex justify-between items-start">
+                <div className="item-details">
+                  <div className="item-header">
                     <h3 
-                      className="text-lg font-medium"
+                      className="item-name"
                       style={{ color: styleConfig.colors?.heading || '#000000' }}
                     >
                       {item.name}
                     </h3>
                     {item.price && (
                       <span 
-                        className="font-medium"
+                        className="item-price"
                         style={{ color: styleConfig.colors?.price || '#000000' }}
                       >
                         {formatCurrency(item.price, catalogData.currency || 'GBP')}
@@ -254,7 +259,7 @@ const SmartMenu = () => {
                   </div>
                   {item.description && (
                     <p 
-                      className="mt-2 text-sm"
+                      className="item-description"
                       style={{ color: styleConfig.colors?.description || '#666666' }}
                     >
                       {item.description}
@@ -291,8 +296,15 @@ const SmartMenu = () => {
           margin: 0;
           padding: 0;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background: #f8f9fa;
+          background: #ffffff;
           min-height: 100vh;
+          color: #333;
+        }
+
+        .item-content {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
         }
 
         .loading-container {
@@ -348,14 +360,13 @@ const SmartMenu = () => {
         }
 
         .menu-header {
-          background: white;
+          background: #ffffff;
           padding: 16px;
-          display: flex;
-          align-items: center;
           position: sticky;
           top: 0;
           z-index: 100;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          border-bottom: 1px solid #f0f0f0;
         }
 
         .header-content {
@@ -363,34 +374,77 @@ const SmartMenu = () => {
           justify-content: space-between;
           align-items: center;
           width: 100%;
+          margin-bottom: 8px;
+        }
+
+        .restaurant-name {
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0;
+          flex-grow: 1;
+          text-align: center;
+          padding: 0 40px;
         }
 
         .menu-toggle, .search-button {
           background: none;
           border: none;
-          font-size: 18px;
+          font-size: 20px;
           cursor: pointer;
-          color: #2d3748;
+          color: #333;
           padding: 8px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+        }
+
+        .menu-toggle:hover, .search-button:hover {
+          background-color: #f5f5f5;
         }
 
         .delivery-info {
-          background: #2d3748;
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 500;
+          color: #666;
+          font-size: 13px;
+          text-align: center;
+          padding: 4px 0;
         }
 
-        .category-filter {
-          display: flex;
-          gap: 8px;
-          padding: 16px;
+        /* Category Scroll */
+        .category-scroll-container {
+          width: 100%;
           overflow-x: auto;
-          background: white;
-          margin-bottom: 16px;
           -webkit-overflow-scrolling: touch;
+          background: white;
+          border-bottom: 1px solid #f0f0f0;
+          padding: 12px 0;
+        }
+
+        .category-scroll {
+          display: flex;
+          gap: 12px;
+          padding: 0 16px;
+          width: max-content;
+        }
+
+        .category-tab {
+          padding: 8px 16px;
+          border: 1px solid #e0e0e0;
+          border-radius: 20px;
+          background: #f8f8f8;
+          color: #555;
+          font-size: 14px;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .category-tab.active {
+          background: #333;
+          color: white;
+          border-color: #333;
         }
 
         .category-filter::-webkit-scrollbar {
@@ -419,97 +473,68 @@ const SmartMenu = () => {
           color: white;
         }
 
-        .menu-items-container {
-          padding: 0 16px 16px;
+        .item-details {
+          padding: 16px;
+          flex-grow: 1;
           display: flex;
           flex-direction: column;
-          gap: 16px;
         }
 
-        .menu-item-card {
-          background: white;
-          flex-direction: column;
-          gap: 8px;
+        .item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 8px;
         }
 
         .item-name {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
-          color: #2d3748;
           margin: 0;
-          line-height: 1.3;
-        }
-
-        .item-price-calories {
-          display: flex;
-          align-items: center;
-          gap: 16px;
+          flex: 1;
         }
 
         .item-price {
           font-size: 16px;
-          font-weight: 700;
-          color: #2d3748;
+          font-weight: 600;
+          margin-left: 12px;
+          white-space: nowrap;
         }
 
-        .item-calories {
-          color: #718096;
+        .item-description {
           font-size: 14px;
+          color: #666;
+          margin: 0;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .item-image-container {
-          width: 80px;
-          height: 80px;
-          border-radius: 12px;
-          overflow: hidden;
-          background: #f7fafc;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           position: relative;
-          flex-shrink: 0;
-          margin-left: 16px;
+          width: 100%;
+          padding-top: 56.25%; /* 16:9 Aspect Ratio */
+          overflow: hidden;
+          background: #f8f8f8;
         }
 
         .item-image {
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
 
-        .no-image-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f7fafc;
-          color: #a0aec0;
-          font-size: 12px;
-        }
-
-        .out-of-stock-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: 500;
-          font-size: 12px;
-        }
-
         .no-items {
           text-align: center;
-          padding: 60px 20px;
-          color: #718096;
-          background: white;
-          margin: 16px;
-          border-radius: 16px;
+          padding: 40px 20px;
+          color: #999;
+          font-size: 15px;
         }
 
         /* Larger screens */

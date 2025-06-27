@@ -1,23 +1,25 @@
 from django.db import models
+import uuid
 
 class Restaurant(models.Model):
     # Match the actual Supabase database schema
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.TextField(null=True, blank=True)
     location_id = models.TextField(null=True, blank=True)
     access_token = models.TextField(null=True, blank=True)
     refresh_token = models.TextField(null=True, blank=True)
     token_expires = models.DateTimeField(null=True, blank=True)
-    currency = models.TextField(null=True, blank=True)
-    timezone = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+    currency = models.TextField(null=True, blank=True, default='GBP')
+    timezone = models.TextField(null=True, blank=True, default='Europe/London')
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
     integration_name = models.TextField(null=True, blank=True)
-    is_connected = models.BooleanField(null=True, blank=True)
-    active_menu = models.TextField(null=True, blank=True)  # This field exists!
+    is_connected = models.BooleanField(null=True, blank=True, default=False)
+    active_menu = models.TextField(null=True, blank=True)
     stripe_account_id = models.TextField(null=True, blank=True)
     stripe_is_connected = models.BooleanField(default=False)
     stripe_onboarding_completed = models.BooleanField(default=False)
+    active_subscription = models.TextField(null=True, blank=True)
     
     class Meta:
         managed = False  # Don't let Django manage this table's schema

@@ -42,7 +42,8 @@ const TablePage = () => {
           sessionStorage.setItem('table_context', JSON.stringify({
             token: table.token,
             label: table.label,
-            restaurant_id: table.restaurant_id
+            restaurant_id: table.restaurant_id,
+            active_subscription: table.active_subscription
           }));
           
           // Store restaurant context if available
@@ -75,8 +76,9 @@ const TablePage = () => {
             }
           }
           
-          // Redirect to menu with context
-          const redirectUrl = `/QROrderPay?${params.toString()}`;
+          // Determine the base route based on subscription type
+          const baseRoute = table.active_subscription === 'smart_menu' ? '/smart-menu' : '/QROrderPay';
+          const redirectUrl = `${baseRoute}?${params.toString()}`;
           console.log('Redirecting to:', redirectUrl);
           navigate(redirectUrl);
           

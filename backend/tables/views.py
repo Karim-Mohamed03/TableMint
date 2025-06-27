@@ -83,8 +83,11 @@ def get_table_context(request, token):
     URL: /api/tables/context/{token}/
     """
     try:
+        from restaurants.models import Restaurant
         # Use filter instead of get_object_or_404 to avoid Http404 exception
         table = Table.objects.filter(token=token, is_active=True).first()
+        restaurant = Restaurant.objects.filter(id=table.restaurant_id).first()
+        active_subscription = restaurant.active_subscription
         
         if not table:
             logger.warning(f"Table not found for token: {token}")
@@ -98,7 +101,8 @@ def get_table_context(request, token):
             'table': {
                 'token': table.token,
                 'label': table.table_label,
-                'restaurant_id': str(table.restaurant_id) if table.restaurant_id else None
+                'restaurant_id': str(table.restaurant_id) if table.restaurant_id else None,
+                'active_subscription': active_subscription
             }
         }
         

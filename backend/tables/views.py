@@ -84,9 +84,13 @@ def get_table_context(request, token):
     """
     try:
         from restaurants.models import Restaurant
+        from restaurants.models import RestaurantLocation
         # Use filter instead of get_object_or_404 to avoid Http404 exception
         table = Table.objects.filter(token=token, is_active=True).first()
-        restaurant = Restaurant.objects.filter(id=table.restaurant_id).first()
+
+        restaurant_location = RestaurantLocation.objects.filter(id=table.restaurant_id).first()
+
+        restaurant = Restaurant.objects.filter(id=restaurant_location.rest_id).first()
         print("table", table)
         print("restaurant", restaurant)
         print("herer")

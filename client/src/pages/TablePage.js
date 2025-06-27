@@ -77,7 +77,7 @@ const TablePage = () => {
           }
           
           // Determine the base route based on subscription type
-          const baseRoute = table.active_subscription === 'smart_menu' ? '/smart-menu' : '/QROrderPay';
+          const baseRoute = table.active_subscription === 'smart_menu' ? '/smartMenu' : '/QROrderPay';
           const redirectUrl = `${baseRoute}?${params.toString()}`;
           console.log('Redirecting to:', redirectUrl);
           navigate(redirectUrl);

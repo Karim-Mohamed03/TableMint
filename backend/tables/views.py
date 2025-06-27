@@ -87,7 +87,9 @@ def get_table_context(request, token):
         # Use filter instead of get_object_or_404 to avoid Http404 exception
         table = Table.objects.filter(token=token, is_active=True).first()
         restaurant = Restaurant.objects.filter(id=table.restaurant_id).first()
+        print("herer")
         active_subscription = restaurant.active_subscription
+        print(active_subscription)
         
         if not table:
             logger.warning(f"Table not found for token: {token}")

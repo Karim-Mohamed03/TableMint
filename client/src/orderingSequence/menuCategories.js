@@ -14,7 +14,7 @@ import ItemDetailModal from '../components/menu/ItemDetailModal';
 // Helper functions for catalog and inventory data
 const getCatalogData = async (locationId = null, menuId = null) => {
   try {
-    const url = new URL('https://tablemint.onrender.com/api/pos/catalog/');
+    const url = new URL('http://localhost:8000/api/pos/catalog/');
     if (locationId) url.searchParams.append('location_id', locationId);
     if (menuId) url.searchParams.append('menu_id', menuId);
     
@@ -78,7 +78,7 @@ const processCatalogWithImages = (catalogObjects) => {
 
 const getItemInventory = async (catalogObjectId, locationId = null) => {
   try {
-    const url = new URL('https://tablemint.onrender.com/api/orders/inventory/');
+    const url = new URL('http://localhost:8000/api/orders/inventory/');
     url.searchParams.append('catalog_object_id', catalogObjectId);
     if (locationId) url.searchParams.append('location_ids', locationId);
 
@@ -165,7 +165,7 @@ const getInventoryData = async (itemVariationMap, locationId = null) => {
 // Helper function to fetch available locations
 const getLocations = async () => {
   try {
-    const response = await fetch('https://tablemint.onrender.com/api/pos/locations/', {
+    const response = await fetch('http://localhost:8000/api/pos/locations/', {
       method: 'GET',
     });
 
@@ -619,7 +619,7 @@ const MenuCategories = ({
       };
       
       // Step 8: Create the order via API call
-      const response = await fetch('https://tablemint.onrender.com/api/orders/create/', {
+      const response = await fetch('http://localhost:8000/api/orders/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -23,7 +23,7 @@ ALLOWED_HOSTS = [
     '7219-2001-630-e4-4220-aca5-abd2-1b5b-4014.ngrok-free.app',
     '36d9-2001-630-e4-4220-a113-a478-33bd-909f.ngrok-free.app',
     'b14b-109-175-156-36.ngrok-free.app',
-    'tablemint.onrender.com'
+    'localhost:8000'
 ]
 
 

@@ -42,7 +42,7 @@ const SmartMenu = () => {
         
         // Fetch published menu from the API
         const response = await axios.get(
-          `https://tablemint.onrender.com/api/restaurants/${restaurantIdToUse}/published-menu/`
+          `http://localhost:8000/api/restaurants/${restaurantIdToUse}/published-menu/`
         );
         
         if (response.data.success && response.data.menu) {

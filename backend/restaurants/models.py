@@ -20,6 +20,7 @@ class Restaurant(models.Model):
     stripe_is_connected = models.BooleanField(default=False)
     stripe_onboarding_completed = models.BooleanField(default=False)
     active_subscription = models.TextField(null=True, blank=True)
+    active_template = models.TextField(null=True, blank=True, default='Modern Minimalist')
     
     class Meta:
         managed = False  # Don't let Django manage this table's schema

@@ -17,13 +17,13 @@ const SmartMenu = () => {
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [inventoryData, setInventoryData] = useState({});
-  const [inventoryLoading, setInventoryLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showItemModal, setShowItemModal] = useState(false);
   const [restaurantContext, setRestaurantContext] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [inventoryData, setInventoryData] = useState({});
   const [effectiveLocationId, setEffectiveLocationId] = useState(null);
+  const [activeTemplate, setActiveTemplate] = useState('Modern Minimalist');
   const categoryFilterRef = React.useRef(null);
 
   // We'll use restaurant context instead of the URL param for consistency
@@ -96,7 +96,6 @@ const SmartMenu = () => {
           });
           
           if (itemVariationMap.length > 0) {
-            setInventoryLoading(true);
             
             // Fetch inventory data
             const inventoryResponse = await getInventoryData(itemVariationMap, locationIdToUse);
@@ -118,7 +117,6 @@ const SmartMenu = () => {
               });
               setInventoryData(inventoryMap);
             }
-            setInventoryLoading(false);
           }
         } else {
           throw new Error('Failed to load catalog data');
@@ -233,33 +231,16 @@ const SmartMenu = () => {
     return inventory.quantity > 0 && inventory.state !== 'SOLD_OUT';
   };
 
-  // Get the active template from restaurant data or default to 'Modern Minimalist'
-  const activeTemplate = catalogData?.restaurant_data?.active_template || 'Modern Minimalist';
-
-  // Get style configuration with defaults
-  const styleConfig = React.useMemo(() => {
-    if (!catalogData?.style_config) {
-      return {
-        fonts: {
-          body: { sizes: { mobile: 'text-sm', desktop: 'text-base' }, family: 'sans-serif' },
-          price: 'font-sans',
-          heading: { sizes: { mobile: 'text-xl', desktop: 'text-2xl' }, family: 'sans-serif', weight: 'medium' }
-        },
-        colors: {
-          text: '#000000',
-          price: '#000000',
-          heading: '#000000',
-          background: '#ffffff',
-          description: '#666666'
-        },
-        spacing: {
-          itemSpacing: 'mb-8',
-          sectionSpacing: 'mb-12'
-        }
-      };
+  // Fetch active template from session storage on component mount
+  useEffect(() => {
+    const restaurantContext = JSON.parse(sessionStorage.getItem('restaurant_context') || '{}');
+    if (restaurantContext?.active_template) {
+      setActiveTemplate(restaurantContext.active_template);
     }
-    return catalogData.style_config;
-  }, [catalogData]);
+  }, []); // Empty dependency array means this runs once on mount
+
+
+  console.log('Active template:', activeTemplate);
 
   // Handle item selection
   const handleItemClick = (item) => {
@@ -298,43 +279,40 @@ const SmartMenu = () => {
     );
   }
 
-  const backgroundColor = styleConfig.colors?.background || '#ffffff';
-  
+  // Error state
+  if (error) {
+    return (
+      <div className="smart-menu">
+        <div className="error-container">
+          <p className="error-message">{error}</p>
+          <button onClick={() => window.location.reload()} className="retry-button">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
-    <div className="smart-menu" style={{ backgroundColor }}>
+    <div className="smart-menu">
       {/* Header */}
       <div className="menu-header-container">
-        <div 
-          className="menu-header" 
-          style={{ 
-            backgroundColor: styleConfig.colors?.background || '#ffffff',
-          }}
-        >
+        <div className="menu-header">
           <div className="header-content">
             <div className="header-text">
-              <h1 style={{ color: styleConfig.colors?.heading || '#000000' }}>
-                {catalogData?.restaurant_name || 'Restaurant Menu'}
+              <h1>
+                {restaurantContext?.name || 'Restaurant Menu'}
               </h1>
-              <p style={{ color: styleConfig.colors?.description || '#555555' }}>
-                Choose from our delicious selection
-              </p>
+              <p>Choose from our delicious selection</p>
             </div>
           </div>
         </div>
         
         {/* Category Navigation */}
-        <div 
-          ref={categoryFilterRef}
-          className="category-navigation"
-          style={{ 
-            backgroundColor: styleConfig.colors?.background || '#ffffff',
-          }}
-        >
+        <div ref={categoryFilterRef} className="category-navigation">
           <button 
             className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-            style={{ 
-              color: styleConfig.colors?.heading || '#000000',
-            }}
             onClick={() => setSelectedCategory('all')}
           >
             All Items
@@ -343,9 +321,6 @@ const SmartMenu = () => {
             <button
               key={category.id}
               className={`category-btn ${selectedCategory === category.name ? 'active' : ''}`}
-              style={{ 
-                color: styleConfig.colors?.heading || '#000000',
-              }}
               onClick={() => setSelectedCategory(category.name)}
             >
               {category.name}
@@ -355,49 +330,35 @@ const SmartMenu = () => {
       </div>
 
       {/* Menu Content */}
-      <div className="menu-content" style={{ backgroundColor: styleConfig.colors?.background || '#ffffff' }}>
+      <div className="menu-content">
         {/* Category Name */}
         {selectedCategory !== 'all' && (
-          <h2 
-            className="category-title"
-            style={{ 
-              color: styleConfig.colors?.heading || '#000000',
-              fontFamily: styleConfig.fonts?.heading?.family || 'sans-serif',
-              fontWeight: styleConfig.fonts?.heading?.weight || '600'
-            }}
-          >
+          <h2 className="category-title">
             {selectedCategory}
           </h2>
         )}
         
         {/* Items List */}
         <div className="menu-items-list">
-          {currentCategoryItems.map((item, index) => {
-            // Determine which template to use based on active_template
-            const activeTemplateName = restaurantContext?.active_template || 'Modern Minimalist';
-            const TemplateComponent = activeTemplateName === 'Classic Elegant' ? ClassicElegantItem : ModernMinimalistItem;
+          {currentCategoryItems.map((item) => {
+            const TemplateComponent = activeTemplate === 'Classic Elegant' ? ClassicElegantItem : ModernMinimalistItem;
             
-            console.log('Rendering item:', {
-              itemId: item.id,
-              name: item.name || item.item_data?.name,
-              price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount,
+            const itemData = {
+              ...item,
+              name: item.name || item.item_data?.name || 'Unnamed Item',
+              price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount || 0,
+              description: item.description || item.item_data?.description,
               image: item.image || (item.item_data?.image_ids?.[0] ? imageMap[item.item_data.image_ids[0]]?.url : null)
-            });
+            };
             
             return (
               <div 
-                key={item.id || index}
+                key={item.id}
                 className="menu-item"
                 onClick={() => handleItemClick(item)}
               >
                 <TemplateComponent 
-                  item={{
-                    ...item,
-                    name: item.name || item.item_data?.name || 'Unnamed Item',
-                    price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount || 0,
-                    description: item.description || item.item_data?.description,
-                    image: item.image || (item.item_data?.image_ids?.[0] ? imageMap[item.item_data.image_ids[0]]?.url : null)
-                  }}
+                  item={itemData}
                   formatCurrency={(amount, currency) => formatCurrency(amount, currency || restaurantContext?.currency || 'GBP')}
                   onItemClick={handleItemClick}
                   isAvailable={item.isAvailable}

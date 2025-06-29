@@ -46,15 +46,19 @@ def get_published_menu(request, restaurant_id):
 
 # API endpoint to get restaurant details including branding
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_restaurant_config(request, restaurant_id):
     """
     Get restaurant configuration including branding details
     """
     try:
-        restaurant = get_object_or_404(Restaurant, id=restaurant_id, is_active=True)
+        restaurant = get_object_or_404(Restaurant, id=str(restaurant_id), is_active=True)
+        branding_config = restaurant.branding_config()
+        branding_config['active_template'] = restaurant.active_template or 'Modern Minimalist'
+        
         return Response({
             'success': True,
-            'restaurant': restaurant.branding_config()
+            'restaurant': branding_config
         })
     except Exception as e:
         return Response({

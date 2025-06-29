@@ -57,7 +57,8 @@ const TablePage = () => {
               timezone: restaurant.timezone,
               integration_name: restaurant.integration_name,
               access_token: restaurant.access_token, // Encrypted/handled securely on backend
-              branding: restaurant.branding
+              branding: restaurant.branding,
+              active_template: restaurant.active_template
             }));
           }
           

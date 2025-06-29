@@ -78,7 +78,8 @@ class Table(models.Model):
                 'currency': restaurant.currency or 'GBP',
                 'timezone': restaurant.timezone or 'Europe/London',
                 'integration_name': restaurant.integration_name,
-                'branding': restaurant.branding_config()
+                'branding': restaurant.branding_config(),
+                'active_template': restaurant.active_template
             }
         elif restaurant_location:
             # Have location but no restaurant (shouldn't happen but handle gracefully)

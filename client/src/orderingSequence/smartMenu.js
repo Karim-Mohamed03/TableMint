@@ -20,7 +20,7 @@ const SmartMenu = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showItemModal, setShowItemModal] = useState(false);
   const [restaurantContext, setRestaurantContext] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('all');
   const [inventoryData, setInventoryData] = useState({});
   const [effectiveLocationId, setEffectiveLocationId] = useState(null);
   const [activeTemplate, setActiveTemplate] = useState('Modern Minimalist');
@@ -133,8 +133,8 @@ const SmartMenu = () => {
   }, [effectiveLocationId, restaurantContext]);
 
   // Get categories and items from catalog data
-  const { categories, items } = useMemo(() => {
-    if (!catalogData) return { categories: [], items: [] };
+  const { categories, items, categoriesWithItems } = useMemo(() => {
+    if (!catalogData) return { categories: [], items: [], categoriesWithItems: [] };
     
     // Filter out only category and item objects
     const allCategories = catalogData.filter(obj => obj.type === 'CATEGORY');
@@ -149,10 +149,14 @@ const SmartMenu = () => {
       const isAvailable = !itemInventory || 
                        (itemInventory.quantity > 0 && itemInventory.state !== 'SOLD_OUT');
       
+      // Get category IDs from item data or use empty array if none
+      const categoryIds = item.item_data?.categories?.map(cat => cat.id) || 
+                         (item.item_data?.category_id ? [item.item_data.category_id] : []);
+      
       console.log('Processing item:', {
         id: item.id,
         name: item.item_data?.name,
-        categoryId: item.item_data?.category_id,
+        categoryIds: categoryIds,
         inventory: itemInventory,
         variations: item.item_data?.variations
       });
@@ -161,50 +165,57 @@ const SmartMenu = () => {
         ...item,
         name: item.item_data?.name,
         isAvailable,
-        inventory: itemInventory
+        inventory: itemInventory,
+        categoryIds: categoryIds
       };
     });
     
-    // Group items by category
-    const categoriesWithItems = allCategories.map(category => {
+    // Create a map of category ID to category object
+    const categoryMap = {};
+    allCategories.forEach(category => {
       const categoryName = category.category_data?.name || 'Uncategorized';
-      const categoryItems = processedItems.filter(item => 
-        item.item_data?.category_id === category.id
-      );
-      
-      console.log(`Category ${categoryName} (${category.id}) has ${categoryItems.length} items`);
-      
-      return {
+      categoryMap[category.id] = {
         ...category,
         name: categoryName,
-        items: categoryItems
+        items: []
       };
     });
+    
+    // Add items to their respective categories
+    processedItems.forEach(item => {
+      if (item.categoryIds && item.categoryIds.length > 0) {
+        item.categoryIds.forEach(categoryId => {
+          if (categoryMap[categoryId]) {
+            categoryMap[categoryId].items.push(item);
+          }
+        });
+      } else {
+        // If no category, add to 'Uncategorized'
+        if (!categoryMap['uncategorized']) {
+          categoryMap['uncategorized'] = {
+            id: 'uncategorized',
+            type: 'CATEGORY',
+            name: 'Uncategorized',
+            items: []
+          };
+        }
+        categoryMap['uncategorized'].items.push(item);
+      }
+    });
+    
+    // Convert category map to array and filter out empty categories
+    const categoriesWithItems = Object.values(categoryMap).filter(
+      category => category.items && category.items.length > 0
+    );
     
     console.log('Processed categories with items:', categoriesWithItems);
     
     return {
-      categories: categoriesWithItems,
-      items: processedItems
+      categories: allCategories,
+      items: processedItems,
+      categoriesWithItems
     };
   }, [catalogData, inventoryData]);
-  
-  // Get current category items
-  const currentCategoryItems = useMemo(() => {
-    if (selectedCategory === 'all') {
-      console.log('Showing all items:', items);
-      return items;
-    }
-    
-    // Find the selected category and return its items
-    const category = categories.find(cat => cat.name === selectedCategory);
-    console.log('Selected category items:', {
-      selectedCategory,
-      foundCategory: category,
-      allCategories: categories.map(c => c.name)
-    });
-    return category?.items || [];
-  }, [categories, items, selectedCategory]);
 
   // Format currency
   const formatCurrency = (amount, currency = 'GBP') => {
@@ -239,6 +250,32 @@ const SmartMenu = () => {
     }
   }, []); // Empty dependency array means this runs once on mount
 
+  // Smooth scroll to category
+  const scrollToCategory = (categoryName) => {
+    setActiveCategory(categoryName);
+    
+    if (categoryName === 'all') {
+      // Scroll to top
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      return;
+    }
+
+    // Find the category element and scroll to it
+    const categoryElement = document.getElementById(`category-${categoryName.replace(/\s+/g, '-').toLowerCase()}`);
+    if (categoryElement) {
+      const headerOffset = 180; // Account for fixed header
+      const elementPosition = categoryElement.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   console.log('Active template:', activeTemplate);
 
@@ -279,21 +316,6 @@ const SmartMenu = () => {
     );
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="smart-menu">
-        <div className="error-container">
-          <p className="error-message">{error}</p>
-          <button onClick={() => window.location.reload()} className="retry-button">
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-
   return (
     <div className="smart-menu">
       {/* Header */}
@@ -312,16 +334,16 @@ const SmartMenu = () => {
         {/* Category Navigation */}
         <div ref={categoryFilterRef} className="category-navigation">
           <button 
-            className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('all')}
+            className={`category-btn ${activeCategory === 'all' ? 'active' : ''}`}
+            onClick={() => scrollToCategory('all')}
           >
             All Items
           </button>
-          {categories?.map((category) => (
+          {categoriesWithItems?.map((category) => (
             <button
               key={category.id}
-              className={`category-btn ${selectedCategory === category.name ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(category.name)}
+              className={`category-btn ${activeCategory === category.name ? 'active' : ''}`}
+              onClick={() => scrollToCategory(category.name)}
             >
               {category.name}
             </button>
@@ -329,52 +351,56 @@ const SmartMenu = () => {
         </div>
       </div>
 
-      {/* Menu Content */}
+      {/* Menu Content - All Categories */}
       <div className="menu-content">
-        {/* Category Name */}
-        {selectedCategory !== 'all' && (
-          <h2 className="category-title">
-            {selectedCategory}
-          </h2>
-        )}
-        
-        {/* Items List */}
-        <div className="menu-items-list">
-          {currentCategoryItems.map((item) => {
-            const TemplateComponent = activeTemplate === 'Classic Elegant' ? ClassicElegantItem : ModernMinimalistItem;
+        {categoriesWithItems?.map((category) => (
+          <div 
+            key={category.id} 
+            id={`category-${category.name.replace(/\s+/g, '-').toLowerCase()}`}
+            className="category-section"
+          >
+            <h2 className="category-title">
+              {category.name}
+            </h2>
             
-            const itemData = {
-              ...item,
-              name: item.name || item.item_data?.name || 'Unnamed Item',
-              price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount || 0,
-              description: item.description || item.item_data?.description,
-              image: item.image || (item.item_data?.image_ids?.[0] ? imageMap[item.item_data.image_ids[0]]?.url : null)
-            };
-            
-            return (
-              <div 
-                key={item.id}
-                className="menu-item"
-                onClick={() => handleItemClick(item)}
-              >
-                <TemplateComponent 
-                  item={itemData}
-                  formatCurrency={(amount, currency) => formatCurrency(amount, currency || restaurantContext?.currency || 'GBP')}
-                  onItemClick={handleItemClick}
-                  isAvailable={item.isAvailable}
-                />
+            <div className="menu-items-list">
+              {category.items.map((item) => {
+                const TemplateComponent = activeTemplate === 'Classic Elegant' ? ClassicElegantItem : ModernMinimalistItem;
+                
+                const itemData = {
+                  ...item,
+                  name: item.name || item.item_data?.name || 'Unnamed Item',
+                  price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount || 0,
+                  description: item.description || item.item_data?.description,
+                  image: item.image || (item.item_data?.image_ids?.[0] ? imageMap[item.item_data.image_ids[0]]?.url : null)
+                };
+                
+                return (
+                  <div 
+                    key={item.id}
+                    className="menu-item"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <TemplateComponent 
+                      item={itemData}
+                      formatCurrency={(amount, currency) => formatCurrency(amount, currency || restaurantContext?.currency || 'GBP')}
+                      onItemClick={handleItemClick}
+                      isAvailable={item.isAvailable}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* No items message for empty categories */}
+            {category.items.length === 0 && (
+              <div className="no-items">
+                <p>No items found in this category</p>
               </div>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        ))}
       </div>
-      
-      {/* No items message */}
-      {currentCategoryItems.length === 0 && (
-        <div className="no-items p-8 text-center">
-          <p className="text-gray-500">No items found in this category</p>
-        </div>
-      )}
 
       {/* Item Detail Modal */}
       {showItemModal && selectedItem && (
@@ -522,7 +548,7 @@ const SmartMenu = () => {
           gap: 0;
           padding: 0;
           overflow-x: auto;
-          background: styleConfig.colors?.background || '#ffffff';
+          background: #ffffff;
           -webkit-overflow-scrolling: touch;
           min-height: 56px;
           width: 100%;
@@ -575,12 +601,21 @@ const SmartMenu = () => {
           text-align: left;
         }
 
+        .category-section {
+          margin-bottom: 40px;
+        }
+
+        .category-section:last-child {
+          margin-bottom: 20px;
+        }
+
         .category-title {
           font-size: 24px;
           font-weight: 600;
           margin: 0 0 20px 0;
           padding: 0;
           text-align: left;
+          scroll-margin-top: 200px; /* For smooth scroll positioning */
         }
 
         /* Menu Items List */

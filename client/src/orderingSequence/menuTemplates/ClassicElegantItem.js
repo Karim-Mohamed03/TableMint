@@ -47,7 +47,7 @@ const ClassicElegantItem = ({ item }) => {
       {item.price !== undefined && (
         <div className="ml-4">
           <span className="text-gray-900 font-medium whitespace-nowrap text-base">
-            {formatPrice(item.price * 100)}
+            {formatPrice(item.price)}
           </span>
         </div>
       )}

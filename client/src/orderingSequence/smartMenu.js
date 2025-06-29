@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
 // Import the ItemDetailModal component from the new menu folder location
 import ItemDetailModal from '../components/menu/ItemDetailModal';
+
+// Import menu template components
+import ModernMinimalistItem from './menuTemplates/ModernMinimalistItem';
+import ClassicElegantItem from './menuTemplates/ClassicElegantItem';
+
+// Import utility functions from menuCategories
+import { getCatalogData, processCatalogWithImages, getInventoryData } from './menuCategories';
 
 // Smart Menu component - Menu display only, no cart functionality
 const SmartMenu = () => {
@@ -16,86 +22,208 @@ const SmartMenu = () => {
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showItemModal, setShowItemModal] = useState(false);
+  const [restaurantContext, setRestaurantContext] = useState(null);
+  const [effectiveLocationId, setEffectiveLocationId] = useState(null);
+  const categoryFilterRef = React.useRef(null);
 
-  const { restaurantId } = useParams();
+  // We'll use restaurant context instead of the URL param for consistency
+  useParams(); // Keep this for potential future use
   
-  // Fetch menu data on component mount
+  // Load context from sessionStorage and URL parameters
   useEffect(() => {
-    const fetchMenu = async () => {
+    // Get restaurant context from sessionStorage
+    const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
+    if (storedRestaurantContext) {
+      try {
+        const restaurantData = JSON.parse(storedRestaurantContext);
+        setRestaurantContext(restaurantData);
+      } catch (e) {
+        console.error('Failed to parse restaurant context:', e);
+      }
+    }
+
+    // Determine effective location ID from URL parameters or restaurant context
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlLocationId = urlParams.get('location_id');
+    
+    // Priority: URL param > restaurant context
+    const finalLocationId = urlLocationId || 
+                           (storedRestaurantContext ? JSON.parse(storedRestaurantContext).location_id : null);
+    
+    setEffectiveLocationId(finalLocationId);
+  }, []);
+
+  // Fetch catalog data when location is available
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!effectiveLocationId && !restaurantContext) return;
+      
       setLoading(true);
       setError(null);
       
-      // Get restaurant context for restaurant ID
-      const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
-      let restaurantContext = null;
-      
       try {
-        if (storedRestaurantContext) {
-          restaurantContext = JSON.parse(storedRestaurantContext);
-        }
+        // Use restaurant-specific location ID if available
+        const locationIdToUse = effectiveLocationId || restaurantContext?.location_id;
         
-        const restaurantIdToUse = restaurantId || (restaurantContext?.id);
+        // Get active menu ID from restaurant context or URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlMenuId = urlParams.get('menu_id');
+        const menuIdToUse = urlMenuId || restaurantContext?.active_menu;
         
-        if (!restaurantIdToUse) {
-          throw new Error('Restaurant ID not found');
-        }
+        // Fetch catalog data with location_id and menu_id
+        const catalogResponse = await getCatalogData(locationIdToUse, menuIdToUse);
         
-        // Fetch published menu from the API
-        const response = await axios.get(
-          `https://tablemint.onrender.com/api/restaurants/${restaurantIdToUse}/published-menu/`
-        );
-        
-        if (response.data.success && response.data.menu) {
-          const { menu_data } = response.data.menu;
+        if (catalogResponse && catalogResponse.success) {
+          // Process the catalog data to include images
+          const processedData = processCatalogWithImages(catalogResponse.objects);
           
-          // Set the menu data
-          setCatalogData(menu_data);
+          // Set the catalog data and image map
+          setCatalogData(processedData.objects);
+          setImageMap(processedData.imageMap);
           
-          // Set the first category as selected by default if available
-          if (menu_data.categories && menu_data.categories.length > 0) {
-            setSelectedCategory(menu_data.categories[0].name);
+          // Extract item variation IDs for inventory check
+          const items = processedData.objects.filter(obj => obj.type === 'ITEM');
+          const itemVariationMap = [];
+          
+          items.forEach((item) => {
+            if (item.item_data?.variations && item.item_data.variations.length > 0) {
+              const variation = item.item_data.variations[0];
+              itemVariationMap.push({
+                itemId: item.id,
+                variationId: variation.id
+              });
+            }
+          });
+          
+          if (itemVariationMap.length > 0) {
+            setInventoryLoading(true);
+            
+            // Fetch inventory data
+            const inventoryResponse = await getInventoryData(itemVariationMap, locationIdToUse);
+            
+            if (inventoryResponse && inventoryResponse.success) {
+              // Convert inventory array to object for easier lookup
+              const inventoryMap = {};
+              inventoryResponse.counts.forEach((count) => {
+                const itemVariation = itemVariationMap.find(
+                  mapping => mapping.variationId === count.catalog_object_id
+                );
+                if (itemVariation) {
+                  inventoryMap[itemVariation.itemId] = {
+                    quantity: parseInt(count.quantity || '0'),
+                    state: count.state,
+                    location_id: count.location_id
+                  };
+                }
+              });
+              setInventoryData(inventoryMap);
+            }
+            setInventoryLoading(false);
           }
         } else {
-          throw new Error(response.data.error || 'Failed to load menu');
+          throw new Error('Failed to load catalog data');
         }
       } catch (err) {
-        console.error('Error fetching menu:', err);
-        setError(err.response?.data?.error || 'Failed to load menu. Please try again.');
+        console.error('Error fetching catalog:', err);
+        setError('Failed to load menu. Please try again.');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchMenu();
-  }, [restaurantId]);
+    fetchData();
+  }, [effectiveLocationId, restaurantContext]);
 
-  // Get current category items
-  const currentCategoryItems = React.useMemo(() => {
-    if (!catalogData?.categories) return [];
+  // Get categories and items from catalog data
+  const { categories, items } = useMemo(() => {
+    if (!catalogData) return { categories: [], items: [] };
     
+    // Filter out only category and item objects
+    const allCategories = catalogData.filter(obj => obj.type === 'CATEGORY');
+    const allItems = catalogData.filter(obj => obj.type === 'ITEM');
+    
+    console.log('All categories from catalog:', allCategories);
+    console.log('All items from catalog:', allItems);
+    
+    // Process items to include images and inventory data
+    const processedItems = allItems.map(item => {
+      const itemInventory = inventoryData[item.id];
+      const isAvailable = !itemInventory || 
+                       (itemInventory.quantity > 0 && itemInventory.state !== 'SOLD_OUT');
+      
+      console.log('Processing item:', {
+        id: item.id,
+        name: item.item_data?.name,
+        categoryId: item.item_data?.category_id,
+        inventory: itemInventory,
+        variations: item.item_data?.variations
+      });
+      
+      return {
+        ...item,
+        name: item.item_data?.name,
+        isAvailable,
+        inventory: itemInventory
+      };
+    });
+    
+    // Group items by category
+    const categoriesWithItems = allCategories.map(category => {
+      const categoryName = category.category_data?.name || 'Uncategorized';
+      const categoryItems = processedItems.filter(item => 
+        item.item_data?.category_id === category.id
+      );
+      
+      console.log(`Category ${categoryName} (${category.id}) has ${categoryItems.length} items`);
+      
+      return {
+        ...category,
+        name: categoryName,
+        items: categoryItems
+      };
+    });
+    
+    console.log('Processed categories with items:', categoriesWithItems);
+    
+    return {
+      categories: categoriesWithItems,
+      items: processedItems
+    };
+  }, [catalogData, inventoryData]);
+  
+  // Get current category items
+  const currentCategoryItems = useMemo(() => {
     if (selectedCategory === 'all') {
-      // Flatten all items from all categories
-      return catalogData.categories.flatMap(category => category.items || []);
+      console.log('Showing all items:', items);
+      return items;
     }
     
     // Find the selected category and return its items
-    const category = catalogData.categories.find(cat => cat.name === selectedCategory);
+    const category = categories.find(cat => cat.name === selectedCategory);
+    console.log('Selected category items:', {
+      selectedCategory,
+      foundCategory: category,
+      allCategories: categories.map(c => c.name)
+    });
     return category?.items || [];
-  }, [catalogData, selectedCategory]);
+  }, [categories, items, selectedCategory]);
 
   // Format currency
   const formatCurrency = (amount, currency = 'GBP') => {
-    if (amount === undefined || amount === null) return '';
+    if (amount === undefined || amount === null || amount === '') return '';
     
     // If amount is a string, try to convert it to a number
     const amountNum = typeof amount === 'string' ? parseFloat(amount) : amount;
     
     if (isNaN(amountNum)) return '';
     
+    // Convert amount from cents to currency units if needed (Square API uses cents)
+    const displayAmount = amountNum >= 1000 && amountNum % 100 === 0 ? amountNum / 100 : amountNum;
+    
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: currency
-    }).format(amountNum);
+    }).format(displayAmount);
   };
 
   // Check if item is in stock
@@ -104,6 +232,9 @@ const SmartMenu = () => {
     if (!inventory) return true;
     return inventory.quantity > 0 && inventory.state !== 'SOLD_OUT';
   };
+
+  // Get the active template from restaurant data or default to 'Modern Minimalist'
+  const activeTemplate = catalogData?.restaurant_data?.active_template || 'Modern Minimalist';
 
   // Get style configuration with defaults
   const styleConfig = React.useMemo(() => {
@@ -167,33 +298,54 @@ const SmartMenu = () => {
     );
   }
 
+  const backgroundColor = styleConfig.colors?.background || '#ffffff';
+  
   return (
-    <div className="smart-menu">
+    <div className="smart-menu" style={{ backgroundColor }}>
       {/* Header */}
-      <div className="menu-header">
-        <div className="header-content">
-          <button className="menu-toggle">☰</button>
-          <h1 className="restaurant-name">
-            {catalogData?.restaurant_name || 'Restaurant Menu'}
-          </h1>
-          <div className="header-actions">
-            <button className="search-button">🔍</button>
+      <div className="menu-header-container">
+        <div 
+          className="menu-header" 
+          style={{ 
+            backgroundColor: styleConfig.colors?.background || '#ffffff',
+          }}
+        >
+          <div className="header-content">
+            <div className="header-text">
+              <h1 style={{ color: styleConfig.colors?.heading || '#000000' }}>
+                {catalogData?.restaurant_name || 'Restaurant Menu'}
+              </h1>
+              <p style={{ color: styleConfig.colors?.description || '#555555' }}>
+                Choose from our delicious selection
+              </p>
+            </div>
           </div>
         </div>
-        <div className="delivery-info">
-          {catalogData?.delivery_info || 'Open Now • Delivery • Pickup'}
-        </div>
-      </div>
-
-      {/* Category Filter - Horizontal Scrollable */}
-      <div className="category-scroll-container">
-        <div className="category-scroll">
-          {catalogData?.categories?.map((category) => (
+        
+        {/* Category Navigation */}
+        <div 
+          ref={categoryFilterRef}
+          className="category-navigation"
+          style={{ 
+            backgroundColor: styleConfig.colors?.background || '#ffffff',
+          }}
+        >
+          <button 
+            className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+            style={{ 
+              color: styleConfig.colors?.heading || '#000000',
+            }}
+            onClick={() => setSelectedCategory('all')}
+          >
+            All Items
+          </button>
+          {categories?.map((category) => (
             <button
-              key={category.name}
-              className={`category-tab ${
-                selectedCategory === category.name ? 'active' : ''
-              }`}
+              key={category.id}
+              className={`category-btn ${selectedCategory === category.name ? 'active' : ''}`}
+              style={{ 
+                color: styleConfig.colors?.heading || '#000000',
+              }}
               onClick={() => setSelectedCategory(category.name)}
             >
               {category.name}
@@ -218,57 +370,41 @@ const SmartMenu = () => {
           </h2>
         )}
         
-        {/* Items Grid */}
-        <div className="menu-grid">
-          {currentCategoryItems.map((item, index) => (
-            <div 
-              key={index}
-              className="menu-item"
-              onClick={() => handleItemClick(item)}
-            >
-              <div className="item-content">
-                {item.image && (
-                  <div className="item-image-container">
-                    <img 
-                      src={item.image} 
-                      alt={item.name}
-                      className="item-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.parentElement.classList.add('hidden');
-                      }}
-                    />
-                  </div>
-                )}
-                <div className="item-details">
-                  <div className="item-header">
-                    <h3 
-                      className="item-name"
-                      style={{ color: styleConfig.colors?.heading || '#000000' }}
-                    >
-                      {item.name}
-                    </h3>
-                    {item.price && (
-                      <span 
-                        className="item-price"
-                        style={{ color: styleConfig.colors?.price || '#000000' }}
-                      >
-                        {formatCurrency(item.price, catalogData.currency || 'GBP')}
-                      </span>
-                    )}
-                  </div>
-                  {item.description && (
-                    <p 
-                      className="item-description"
-                      style={{ color: styleConfig.colors?.description || '#666666' }}
-                    >
-                      {item.description}
-                    </p>
-                  )}
-                </div>
+        {/* Items List */}
+        <div className="menu-items-list">
+          {currentCategoryItems.map((item, index) => {
+            // Determine which template to use based on active_template
+            const activeTemplateName = restaurantContext?.active_template || 'Modern Minimalist';
+            const TemplateComponent = activeTemplateName === 'Classic Elegant' ? ClassicElegantItem : ModernMinimalistItem;
+            
+            console.log('Rendering item:', {
+              itemId: item.id,
+              name: item.name || item.item_data?.name,
+              price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount,
+              image: item.image || (item.item_data?.image_ids?.[0] ? imageMap[item.item_data.image_ids[0]]?.url : null)
+            });
+            
+            return (
+              <div 
+                key={item.id || index}
+                className="menu-item"
+                onClick={() => handleItemClick(item)}
+              >
+                <TemplateComponent 
+                  item={{
+                    ...item,
+                    name: item.name || item.item_data?.name || 'Unnamed Item',
+                    price: item.price || item.item_data?.variations?.[0]?.item_variation_data?.price_money?.amount || 0,
+                    description: item.description || item.item_data?.description,
+                    image: item.image || (item.item_data?.image_ids?.[0] ? imageMap[item.item_data.image_ids[0]]?.url : null)
+                  }}
+                  formatCurrency={(amount, currency) => formatCurrency(amount, currency || restaurantContext?.currency || 'GBP')}
+                  onItemClick={handleItemClick}
+                  isAvailable={item.isAvailable}
+                />
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       
@@ -292,19 +428,13 @@ const SmartMenu = () => {
 
       <style jsx>{`
         .smart-menu {
-          max-width: 100%;
+          width: 100%;
           margin: 0;
           padding: 0;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background: #ffffff;
+          background: transparent;
           min-height: 100vh;
           color: #333;
-        }
-
-        .item-content {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
         }
 
         .loading-container {
@@ -359,27 +489,47 @@ const SmartMenu = () => {
           background: #1a202c;
         }
 
+        .menu-header-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 1000;
+          background: #fff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+          width: 100%;
+        }
+
         .menu-header {
           background: #ffffff;
           padding: 16px;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-          border-bottom: 1px solid #f0f0f0;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           width: 100%;
-          margin-bottom: 8px;
+        }
+
+        .header-text h1 {
+          font-size: 28px;
+          font-weight: 700;
+          margin: 0 0 4px 0;
+          line-height: 1.2;
+        }
+
+        .header-text p {
+          color: #555555;
+          font-size: 14px;
+          margin: 0;
+          font-weight: 400;
         }
 
         .restaurant-name {
           font-size: 18px;
-          font-weight: 600;
           margin: 0;
           flex-grow: 1;
           text-align: center;
@@ -405,6 +555,51 @@ const SmartMenu = () => {
           background-color: #f5f5f5;
         }
 
+        /* Category Navigation */
+        .category-navigation {
+          display: flex;
+          gap: 0;
+          padding: 0;
+          overflow-x: auto;
+          background: styleConfig.colors?.background || '#ffffff';
+          -webkit-overflow-scrolling: touch;
+          min-height: 56px;
+          width: 100%;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .category-navigation::-webkit-scrollbar {
+          display: none;
+        }
+
+        .category-btn {
+          background: transparent;
+          border: none;
+          padding: 16px 20px;
+          cursor: pointer;
+          font-size: 15px;
+          font-weight: 500;
+          white-space: nowrap;
+          transition: all 0.2s ease;
+          color: #666;
+          position: relative;
+          border-bottom: 2px solid transparent;
+          display: flex;
+          align-items: center;
+          flex-shrink: 0;
+        }
+
+        .category-btn:hover {
+          color: #000;
+          background: rgba(0, 0, 0, 0.03);
+        }
+
+        .category-btn.active {
+          color: #000;
+          font-weight: 600;
+          border-bottom-color: #000;
+        }
+
         .delivery-info {
           color: #666;
           font-size: 13px;
@@ -412,93 +607,71 @@ const SmartMenu = () => {
           padding: 4px 0;
         }
 
-        /* Category Scroll */
-        .category-scroll-container {
-          width: 100%;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          background: white;
-          border-bottom: 1px solid #f0f0f0;
-          padding: 12px 0;
-        }
-
-        .category-scroll {
-          display: flex;
-          gap: 12px;
-          padding: 0 16px;
-          width: max-content;
-        }
-
-        .category-tab {
-          padding: 8px 16px;
-          border: 1px solid #e0e0e0;
-          border-radius: 20px;
-          background: #f8f8f8;
-          color: #555;
-          font-size: 14px;
-          white-space: nowrap;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .category-tab.active {
-          background: #333;
-          color: white;
-          border-color: #333;
-        }
-
-        .category-filter::-webkit-scrollbar {
-          display: none;
-        }
-
-        .category-btn {
-          background: transparent;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 20px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-          color: #718096;
-        }
-
-        .category-btn:hover {
-          background: #f7fafc;
-        }
-
-        .category-btn.active {
-          background: #2d3748;
-          color: white;
-        }
-
-        .item-details {
+        .menu-content {
           padding: 16px;
-          flex-grow: 1;
+          width: 100%;
+          margin: 180px auto 0;
+          text-align: left;
+        }
+
+        .category-title {
+          font-size: 24px;
+          font-weight: 600;
+          margin: 0 0 20px 0;
+          padding: 0;
+          text-align: left;
+        }
+
+        /* Menu Items List */
+        .menu-items-list {
           display: flex;
           flex-direction: column;
+          gap: 0;
         }
 
-        .item-header {
+        .menu-item {
+          border-bottom: 1px solid #f0f0f0;
+          padding: 20px 0;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .menu-item:hover {
+          background-color: #fafafa;
+        }
+
+        .menu-item:last-child {
+          border-bottom: none;
+        }
+
+        .item-content {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 8px;
+          gap: 16px;
+          width: 100%;
+          text-align: left;
+        }
+
+        .item-details {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: flex-start;
+          width: 100%;
+          text-align: left;
         }
 
         .item-name {
           font-size: 16px;
           font-weight: 600;
           margin: 0;
-          flex: 1;
-        }
-
-        .item-price {
-          font-size: 16px;
-          font-weight: 600;
-          margin-left: 12px;
-          white-space: nowrap;
+          padding: 0;
+          line-height: 1.3;
+          text-align: left;
+          width: 100%;
+          display: block;
         }
 
         .item-description {
@@ -506,28 +679,63 @@ const SmartMenu = () => {
           color: #666;
           margin: 0;
           line-height: 1.4;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          text-align: left;
+          width: 100%;
+        }
+
+        .item-price {
+          color: #000;
+          font-weight: 600;
+          margin: 8px 0 0 0;
+          padding: 0;
+          text-align: left;
+          width: 100%;
+          display: block;
         }
 
         .item-image-container {
           position: relative;
-          width: 100%;
-          padding-top: 56.25%; /* 16:9 Aspect Ratio */
+          width: 80px;
+          height: 80px;
+          border-radius: 8px;
           overflow: hidden;
           background: #f8f8f8;
+          flex-shrink: 0;
         }
 
         .item-image {
-          position: absolute;
-          top: 0;
-          left: 0;
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+
+        .no-image {
+          width: 100%;
+          height: 100%;
+          background: #f0f0f0;
+        }
+
+        .add-button {
+          position: absolute;
+          bottom: 4px;
+          right: 4px;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #333;
+          color: white;
+          border: none;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.2s ease;
+        }
+
+        .add-button:hover {
+          background: #555;
         }
 
         .no-items {
@@ -539,27 +747,23 @@ const SmartMenu = () => {
 
         /* Larger screens */
         @media (min-width: 768px) {
-          .smart-menu {
-            max-width: 480px;
-            margin: 0 auto;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-          }
-          
           .menu-header {
             padding: 20px;
           }
           
-          .category-filter {
+          .menu-content {
             padding: 20px;
-          }
-          
-          .menu-items-container {
-            padding: 0 20px 20px;
           }
           
           .item-image-container {
             width: 100px;
             height: 100px;
+          }
+
+          .add-button {
+            width: 28px;
+            height: 28px;
+            font-size: 18px;
           }
         }
       `}</style>

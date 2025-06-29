@@ -117,7 +117,7 @@ const CartPage = ({
       }
 
       // Build URL with restaurant context parameters
-      const url = new URL(`https://tablemint.onrender.com/api/orders/${orderId}/`);
+      const url = new URL(`http://localhost:8000/api/orders/${orderId}/`);
       if (restaurantId) {
         url.searchParams.append('restaurant_id', restaurantId);
       }

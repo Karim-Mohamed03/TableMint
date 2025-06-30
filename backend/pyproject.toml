@@ -13,8 +13,10 @@ dependencies = [
     "python-dotenv==1.0.0",
     "qrcode==7.4.2",
     "requests>=2.32.3",
-    "squareup>=42.1.0.20250416",
+    "squareup==42.1.0.20250521",
     "stripe>=12.1.0",
-    "gunicorn>=21.2.0"
+    "gunicorn>=21.2.0",
+    "cryptography>=43.0.1",
+    "reportlab>=4.1.0"
 ]
 

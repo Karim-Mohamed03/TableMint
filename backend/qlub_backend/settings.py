@@ -150,8 +150,8 @@ if DEBUG:
 else:
     # Production - only allow specific origins
     CORS_ALLOWED_ORIGINS = [
-        'http://localhost:3000',
-        'http://localhost:3000/',  # With trailing slash
+        'https://test-app-fawn-phi.vercel.app',
+        'https://test-app-fawn-phi.vercel.app/',  # With trailing slash
     ]
     
     # Also check environment variable for additional origins

@@ -21,7 +21,7 @@
 
 //   // Create return URL with query parameters
 //   useEffect(() => {
-//     let url = "http://localhost:3000/complete";
+//     let url = "https://test-app-fawn-phi.vercel.app/complete";
     
 //     // Add query parameters if we have them
 //     const params = new URLSearchParams();
@@ -124,7 +124,7 @@ const CheckoutForm = ({ baseAmount, tipAmount, orderId }) => {
 
   // Generate return URL
   useEffect(() => {
-    let url = "http://localhost:3000/complete";
+    let url = "https://test-app-fawn-phi.vercel.app/complete";
     const params = new URLSearchParams();
 
     if (baseAmount) params.append("base_amount", baseAmount);

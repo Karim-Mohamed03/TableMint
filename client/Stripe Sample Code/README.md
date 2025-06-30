@@ -30,4 +30,4 @@ npm install
 npm start
 ~~~
 
-5. Go to [http://localhost:3000/checkout](http://localhost:3000/checkout)
+5. Go to [https://test-app-fawn-phi.vercel.app/checkout](https://test-app-fawn-phi.vercel.app/checkout)

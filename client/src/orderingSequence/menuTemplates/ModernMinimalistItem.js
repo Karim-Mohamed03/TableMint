@@ -67,12 +67,13 @@ const ModernMinimalistItem = ({
         transition: 'background-color 0.2s ease',
         display: 'flex',
         alignItems: 'flex-start',
-        padding: '10px 0px',
+        paddingLeft: '8px',
+        paddingRight: '28px',
         position: 'relative',
         gap: '16px',
         fontFamily: 'Satoshi, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
-        cursor: 'pointer',
-        borderBottom: isLastInCategory ? 'none' : '1px solid #eee'
+        cursor: 'pointer'
+        // borderBottom: isLastInCategory ? 'none' : '1px solid #eee'
       }}
     >
       <div style={{

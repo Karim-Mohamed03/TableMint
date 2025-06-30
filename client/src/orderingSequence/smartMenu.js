@@ -626,7 +626,6 @@ const SmartMenu = () => {
         }
 
         .menu-item {
-          border-bottom: 1px solid #f0f0f0;
           padding: 20px 0;
           cursor: pointer;
           transition: background-color 0.2s ease;

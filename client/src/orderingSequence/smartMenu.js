@@ -42,6 +42,10 @@ const SmartMenuContent = () => {
   const { translatedText: chooseFromSelectionText } = useTranslatedText('Choose from our delicious selection');
   const { translatedText: noItemsFoundText } = useTranslatedText('No items found in this category');
 
+  // Refs for scroll handling
+  const categoryNavigationRef = React.useRef(null);
+  const activeCategoryButtonRef = React.useRef(null);
+
   // We'll use restaurant context instead of the URL param for consistency
   useParams(); // Keep this for potential future use
   
@@ -276,6 +280,8 @@ const SmartMenuContent = () => {
         top: 0,
         behavior: 'smooth'
       });
+      // Scroll category navigation to the beginning
+      scrollCategoryNavigation('all');
       return;
     }
 
@@ -290,8 +296,101 @@ const SmartMenuContent = () => {
         top: offsetPosition,
         behavior: 'smooth'
       });
+      
+      // Scroll the category navigation to show the active button
+      scrollCategoryNavigation(categoryName);
     }
   };
+
+  // Function to scroll the category navigation horizontally
+  const scrollCategoryNavigation = (categoryName) => {
+    if (!categoryFilterRef.current) return;
+
+    const navigation = categoryFilterRef.current;
+    const activeButton = navigation.querySelector(`button[data-category="${categoryName}"]`) || 
+                        navigation.querySelector('.category-btn.active');
+    
+    if (activeButton) {
+      const navRect = navigation.getBoundingClientRect();
+      const buttonRect = activeButton.getBoundingClientRect();
+      
+      // Calculate the position to center the button
+      const scrollLeft = activeButton.offsetLeft - (navRect.width / 2) + (buttonRect.width / 2);
+      
+      navigation.scrollTo({
+        left: scrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Function to detect which category is currently in view
+  const detectActiveCategory = () => {
+    if (!categoriesWithItems.length) return;
+
+    const headerOffset = 200; // Offset for fixed header
+    const scrollPosition = window.scrollY + headerOffset;
+
+    // Check if we're at the top of the page
+    if (window.scrollY < 100) {
+      if (activeCategory !== 'all') {
+        setActiveCategory('all');
+        scrollCategoryNavigation('all');
+      }
+      return;
+    }
+
+    // Find which category section is currently in view
+    for (let i = 0; i < categoriesWithItems.length; i++) {
+      const category = categoriesWithItems[i];
+      const categoryElement = document.getElementById(
+        `category-${category.name.replace(/\s+/g, '-').toLowerCase()}`
+      );
+      
+      if (categoryElement) {
+        const categoryTop = categoryElement.offsetTop;
+        const categoryHeight = categoryElement.offsetHeight;
+        const categoryBottom = categoryTop + categoryHeight;
+        
+        // Check if this category is in view
+        if (scrollPosition >= categoryTop && scrollPosition < categoryBottom) {
+          if (activeCategory !== category.name) {
+            setActiveCategory(category.name);
+            scrollCategoryNavigation(category.name);
+          }
+          return;
+        }
+      }
+    }
+  };
+
+  // Add scroll event listener
+  useEffect(() => {
+    const handleScroll = () => {
+      // Throttle scroll events for better performance
+      if (window.scrollThrottleTimer) {
+        clearTimeout(window.scrollThrottleTimer);
+      }
+      
+      window.scrollThrottleTimer = setTimeout(() => {
+        detectActiveCategory();
+      }, 100);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Initial check
+    setTimeout(detectActiveCategory, 500);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (window.scrollThrottleTimer) {
+        clearTimeout(window.scrollThrottleTimer);
+      }
+    };
+  }, [categoriesWithItems, activeCategory]);
+
+  
 
   // Handle item selection
   const handleItemClick = (item) => {
@@ -338,9 +437,7 @@ const SmartMenuContent = () => {
           <div className="header-content">
             <div className="header-text">
               <h1>
-                <TranslatedText>
-                  {restaurantContext?.name || 'Restaurant Menu'}
-                </TranslatedText>
+                {restaurantContext?.name || 'Restaurant Menu'}
               </h1>
               <p>
                 <TranslatedText>
@@ -359,6 +456,7 @@ const SmartMenuContent = () => {
         <div ref={categoryFilterRef} className="category-navigation">
           <button 
             className={`category-btn ${activeCategory === 'all' ? 'active' : ''}`}
+            data-category="all"
             onClick={() => scrollToCategory('all')}
           >
             <TranslatedText>{allItemsText}</TranslatedText>
@@ -367,6 +465,7 @@ const SmartMenuContent = () => {
             <button
               key={category.id}
               className={`category-btn ${activeCategory === category.name ? 'active' : ''}`}
+              data-category={category.name}
               onClick={() => scrollToCategory(category.name)}
             >
               <TranslatedText>{category.name}</TranslatedText>

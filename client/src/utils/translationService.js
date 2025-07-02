@@ -40,6 +40,11 @@ class TranslationService {
       return text;
     }
 
+    // Check if text is marked as untranslatable (wrapped in [[ ]])
+    if (text.startsWith('[[') && text.endsWith(']]')) {
+      return text.slice(2, -2); // Remove the markers and return original text
+    }
+
     // Check cache first
     const cacheKey = this.getCacheKey(text, targetLang, sourceLang);
     if (this.cache.has(cacheKey)) {

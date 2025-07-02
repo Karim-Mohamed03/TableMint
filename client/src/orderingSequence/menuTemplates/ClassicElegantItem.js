@@ -1,10 +1,22 @@
 import React from 'react';
+import { TranslatedText } from '../../hooks/useTranslation';
 
-const ClassicElegantItem = ({ item }) => {
+const ClassicElegantItem = ({ 
+  item, 
+  useTranslation = false // Flag to enable/disable translation
+}) => {
   const formatPrice = (price) => {
     if (!price) return '$0.00';
     const amount = typeof price === 'number' ? price / 100 : 0;
     return `$${amount.toFixed(2)}`;
+  };
+
+  // Text content with conditional translation
+  const renderText = (text, fallback = '') => {
+    if (!text) return fallback;
+    return useTranslation ? (
+      <TranslatedText>{text}</TranslatedText>
+    ) : text;
   };
   
   return (
@@ -25,7 +37,7 @@ const ClassicElegantItem = ({ item }) => {
             fontWeight: 600
           }}
         >
-          {item.name || 'Unnamed Item'}
+          {renderText(item.name, 'Unnamed Item')}
         </h3>
         {item.description && (
           <p 
@@ -38,7 +50,7 @@ const ClassicElegantItem = ({ item }) => {
               marginTop: '4px'
             }}
           >
-            {item.description}
+            {renderText(item.description)}
           </p>
         )}
       </div>

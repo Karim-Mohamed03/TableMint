@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
+// Import translation components and hooks
+import { TranslationProvider, useTranslation } from '../contexts/TranslationContext';
+import LanguageSelector from '../components/LanguageSelector';
+import { useTranslatedText, TranslatedText } from '../hooks/useTranslation';
+
 // Import the ItemDetailModal component from the new menu folder location
 import ItemDetailModal from '../components/menu/ItemDetailModal';
 
@@ -11,8 +16,8 @@ import ClassicElegantItem from './menuTemplates/ClassicElegantItem';
 // Import utility functions from menuCategories
 import { getCatalogData, processCatalogWithImages, getInventoryData } from './menuCategories';
 
-// Smart Menu component - Menu display only, no cart functionality
-const SmartMenu = () => {
+// Smart Menu component wrapped with translation functionality
+const SmartMenuContent = () => {
   const [catalogData, setCatalogData] = useState(null);
   const [imageMap, setImageMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -25,6 +30,17 @@ const SmartMenu = () => {
   const [effectiveLocationId, setEffectiveLocationId] = useState(null);
   const [activeTemplate, setActiveTemplate] = useState('Modern Minimalist');
   const categoryFilterRef = React.useRef(null);
+
+  // Translation hooks
+  const { currentLanguage, isRTL } = useTranslation();
+
+  // Translated static text
+  const { translatedText: loadingText } = useTranslatedText('Loading menu...');
+  const { translatedText: tryAgainText } = useTranslatedText('Try Again');
+  const { translatedText: failedToLoadText } = useTranslatedText('Failed to load menu. Please try again.');
+  const { translatedText: allItemsText } = useTranslatedText('All Items');
+  const { translatedText: chooseFromSelectionText } = useTranslatedText('Choose from our delicious selection');
+  const { translatedText: noItemsFoundText } = useTranslatedText('No items found in this category');
 
   // We'll use restaurant context instead of the URL param for consistency
   useParams(); // Keep this for potential future use
@@ -132,7 +148,7 @@ const SmartMenu = () => {
     fetchData();
   }, [effectiveLocationId, restaurantContext]);
 
-  // Get categories and items from catalog data
+  // Get categories and items from catalog data with translation consideration
   const { categories, items, categoriesWithItems } = useMemo(() => {
     if (!catalogData) return { categories: [], items: [], categoriesWithItems: [] };
     
@@ -277,8 +293,6 @@ const SmartMenu = () => {
     }
   };
 
-  console.log('Active template:', activeTemplate);
-
   // Handle item selection
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -296,7 +310,7 @@ const SmartMenu = () => {
       <div className="smart-menu">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading menu...</p>
+          <p>{loadingText}</p>
         </div>
       </div>
     );
@@ -309,7 +323,7 @@ const SmartMenu = () => {
         <div className="error-container">
           <p className="error-message">{error}</p>
           <button onClick={() => window.location.reload()} className="retry-button">
-            Try Again
+            {tryAgainText}
           </button>
         </div>
       </div>
@@ -317,16 +331,26 @@ const SmartMenu = () => {
   }
 
   return (
-    <div className="smart-menu">
-      {/* Header */}
+    <div className={`smart-menu ${isRTL() ? 'rtl' : 'ltr'}`} dir={isRTL() ? 'rtl' : 'ltr'}>
+      {/* Language Selector - moved inside header for better visibility */}
       <div className="menu-header-container">
         <div className="menu-header">
           <div className="header-content">
             <div className="header-text">
               <h1>
-                {restaurantContext?.name || 'Restaurant Menu'}
+                <TranslatedText>
+                  {restaurantContext?.name || 'Restaurant Menu'}
+                </TranslatedText>
               </h1>
-              <p>Choose from our delicious selection</p>
+              <p>
+                <TranslatedText>
+                  {chooseFromSelectionText}
+                </TranslatedText>
+              </p>
+            </div>
+            {/* Language Selector in header */}
+            <div className="header-actions">
+              <LanguageSelector position="header" showLabel={false} />
             </div>
           </div>
         </div>
@@ -337,7 +361,7 @@ const SmartMenu = () => {
             className={`category-btn ${activeCategory === 'all' ? 'active' : ''}`}
             onClick={() => scrollToCategory('all')}
           >
-            All Items
+            <TranslatedText>{allItemsText}</TranslatedText>
           </button>
           {categoriesWithItems?.map((category) => (
             <button
@@ -345,7 +369,7 @@ const SmartMenu = () => {
               className={`category-btn ${activeCategory === category.name ? 'active' : ''}`}
               onClick={() => scrollToCategory(category.name)}
             >
-              {category.name}
+              <TranslatedText>{category.name}</TranslatedText>
             </button>
           ))}
         </div>
@@ -360,7 +384,7 @@ const SmartMenu = () => {
             className="category-section"
           >
             <h2 className="category-title">
-              {category.name}
+              <TranslatedText>{category.name}</TranslatedText>
             </h2>
             
             <div className="menu-items-list">
@@ -386,6 +410,7 @@ const SmartMenu = () => {
                       formatCurrency={(amount, currency) => formatCurrency(amount, currency || restaurantContext?.currency || 'GBP')}
                       onItemClick={handleItemClick}
                       isAvailable={item.isAvailable}
+                      useTranslation={true} // Pass flag to template components to use translation
                     />
                   </div>
                 );
@@ -395,7 +420,7 @@ const SmartMenu = () => {
             {/* No items message for empty categories */}
             {category.items.length === 0 && (
               <div className="no-items">
-                <p>No items found in this category</p>
+                <p><TranslatedText>{noItemsFoundText}</TranslatedText></p>
               </div>
             )}
           </div>
@@ -422,6 +447,31 @@ const SmartMenu = () => {
           background: transparent;
           min-height: 100vh;
           color: #333;
+        }
+
+        /* RTL Support */
+        .smart-menu.rtl {
+          direction: rtl;
+        }
+
+        .smart-menu.rtl .menu-header-container {
+          text-align: right;
+        }
+
+        .smart-menu.rtl .category-navigation {
+          flex-direction: row-reverse;
+        }
+
+        .smart-menu.rtl .category-btn {
+          text-align: right;
+        }
+
+        .smart-menu.rtl .menu-content {
+          text-align: right;
+        }
+
+        .smart-menu.rtl .category-title {
+          text-align: right;
         }
 
         .loading-container {
@@ -501,6 +551,10 @@ const SmartMenu = () => {
           width: 100%;
         }
 
+        .header-text {
+          flex: 1;
+        }
+
         .header-text h1 {
           font-size: 28px;
           font-weight: 700;
@@ -513,6 +567,12 @@ const SmartMenu = () => {
           font-size: 14px;
           margin: 0;
           font-weight: 400;
+        }
+
+        .header-actions {
+          display: flex;
+          align-items: flex-start;
+          padding-top: 4px;
         }
 
         .restaurant-name {
@@ -764,6 +824,11 @@ const SmartMenu = () => {
       `}</style>
     </div>
   );
+};
+
+// Main SmartMenu component - translation context is now provided at app level
+const SmartMenu = () => {
+  return <SmartMenuContent />;
 };
 
 export default SmartMenu;

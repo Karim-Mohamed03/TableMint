@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import ItemDetailModal from '../../components/menu/ItemDetailModal';
+import { TranslatedText } from '../../hooks/useTranslation';
 
 const ModernMinimalistItem = ({
   item,
@@ -11,7 +11,8 @@ const ModernMinimalistItem = ({
   onIncrement,
   onDecrement,
   onItemClick,
-  isLastInCategory
+  isLastInCategory,
+  useTranslation = false // Flag to enable/disable translation
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageStatus, setImageStatus] = useState('loading'); // 'loading', 'loaded', 'error'
@@ -49,12 +50,21 @@ const ModernMinimalistItem = ({
     return `$${value.toFixed(2)}`;
   };
 
+  // Text content with conditional translation
+  const renderText = (text, fallback = '') => {
+    if (!text) return fallback;
+    return useTranslation ? (
+      <TranslatedText>{text}</TranslatedText>
+    ) : text;
+  };
+
   // Debug logging
   console.log('ModernMinimalistItem render:', {
     itemName: item.name,
     imageUrl: item.image,
     imageStatus,
-    hasImage: !!item.image
+    hasImage: !!item.image,
+    useTranslation
   });
 
   return (
@@ -97,7 +107,7 @@ const ModernMinimalistItem = ({
             lineHeight: 1.2,
             fontFamily: 'Satoshi, sans-serif'
           }}>
-            {item.name || 'Unnamed Item'}
+            {renderText(item.name, 'Unnamed Item')}
           </h3>
 
           {item.description && (
@@ -113,7 +123,7 @@ const ModernMinimalistItem = ({
               fontFamily: 'Satoshi, sans-serif',
               fontWeight: 400
             }}>
-              {item.description}
+              {renderText(item.description)}
             </p>
           )}
 
@@ -174,7 +184,7 @@ const ModernMinimalistItem = ({
                 fontSize: '12px',
                 fontFamily: 'Satoshi, sans-serif'
               }}>
-                Loading...
+                {useTranslation ? <TranslatedText>Loading...</TranslatedText> : 'Loading...'}
               </div>
             )}
             
@@ -194,7 +204,7 @@ const ModernMinimalistItem = ({
                 fontFamily: 'Satoshi, sans-serif',
                 textAlign: 'center'
               }}>
-                Image not available
+                {useTranslation ? <TranslatedText>Image not available</TranslatedText> : 'Image not available'}
               </div>
             )}
           </>
@@ -210,7 +220,7 @@ const ModernMinimalistItem = ({
             fontSize: '12px',
             fontFamily: 'Satoshi, sans-serif'
           }}>
-            No image
+            {useTranslation ? <TranslatedText>No image</TranslatedText> : 'No image'}
           </div>
         )}
       </div>

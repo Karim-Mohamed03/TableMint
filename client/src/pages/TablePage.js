@@ -24,7 +24,7 @@ const TablePage = () => {
       }
 
       try {
-        const apiUrl = `https://tablemint.onrender.com/api/tables/context/${token}/`;
+        const apiUrl = `http://localhost:8000/api/tables/context/${token}/`;
         console.log('🚀 Making API call to:', apiUrl);
         
         // Fetch table and restaurant context from backend

@@ -15,6 +15,7 @@ export const TranslationProvider = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationCache, setTranslationCache] = useState(new Map());
+  const [translationProgress, setTranslationProgress] = useState({ current: 0, total: 0 });
 
   // Load saved language preference on mount
   useEffect(() => {
@@ -29,7 +30,7 @@ export const TranslationProvider = ({ children }) => {
     localStorage.setItem('preferred_language', currentLanguage);
   }, [currentLanguage]);
 
-  // Function to translate text with caching
+  // Function to translate text with caching and progress tracking
   const translateText = async (text, targetLang = currentLanguage) => {
     if (!text || typeof text !== 'string' || text.trim() === '') {
       return text;
@@ -63,7 +64,7 @@ export const TranslationProvider = ({ children }) => {
     }
   };
 
-  // Function to translate multiple texts
+  // Function to translate multiple texts with progress tracking
   const translateBatch = async (texts, targetLang = currentLanguage) => {
     if (targetLang === 'en') {
       return texts;
@@ -71,22 +72,43 @@ export const TranslationProvider = ({ children }) => {
 
     try {
       setIsTranslating(true);
-      const translatedTexts = await Promise.all(
-        texts.map(text => translateText(text, targetLang))
-      );
+      setTranslationProgress({ current: 0, total: texts.length });
+
+      const translatedTexts = [];
+      
+      for (let i = 0; i < texts.length; i++) {
+        const text = texts[i];
+        setTranslationProgress({ current: i + 1, total: texts.length });
+        
+        const translatedText = await translateText(text, targetLang);
+        translatedTexts.push(translatedText);
+        
+        // Small delay to prevent API rate limiting
+        if (i < texts.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
       return translatedTexts;
     } catch (error) {
       console.error('Batch translation failed:', error);
       return texts; // Return original texts on error
     } finally {
       setIsTranslating(false);
+      setTranslationProgress({ current: 0, total: 0 });
     }
   };
 
-  // Function to change language
-  const changeLanguage = (languageCode) => {
+  // Function to change language with loading state
+  const changeLanguage = async (languageCode) => {
     if (translationService.getSupportedLanguages()[languageCode]) {
+      setIsTranslating(true);
       setCurrentLanguage(languageCode);
+      
+      // Small delay to allow UI to update
+      setTimeout(() => {
+        setIsTranslating(false);
+      }, 500);
     }
   };
 
@@ -114,6 +136,7 @@ export const TranslationProvider = ({ children }) => {
   const value = {
     currentLanguage,
     isTranslating,
+    translationProgress,
     translateText,
     translateBatch,
     changeLanguage,

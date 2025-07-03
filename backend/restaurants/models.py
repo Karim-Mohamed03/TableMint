@@ -73,7 +73,7 @@ class RestaurantLocation(models.Model):
 
 class RestaurantMenuTemplate(models.Model):
     """
-    Model for restaurant_menu_templates table
+    Model for restaurant_smart_menus table
     Stores menu templates for restaurants
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -87,7 +87,7 @@ class RestaurantMenuTemplate(models.Model):
     
     class Meta:
         managed = False  # Don't let Django manage this table's schema
-        db_table = 'restaurant_menu_templates'
+        db_table = 'restaurant_smart_menus'
     
     def __str__(self):
         return f"{self.name} - {self.restaurant.name if self.restaurant else 'No Restaurant'}"

@@ -20,24 +20,42 @@ def get_published_menu(request, restaurant_id):
     Get the published menu template for a restaurant
     """
     try:
-        menu_template = RestaurantMenuTemplate.get_published_menu(restaurant_id)
-        if not menu_template:
+        # Get the restaurant first to check if it exists
+        restaurant = get_object_or_404(Restaurant, id=restaurant_id)
+        
+        # Get the active menu ID from the restaurant
+        active_menu_id = restaurant.active_menu
+        
+        if not active_menu_id:
+            return Response({
+                'success': False,
+                'error': 'No active menu set for this restaurant'
+            }, status=404)
+        
+        # Get the smart menu data
+        smart_menu = get_object_or_404(
+            RestaurantMenuTemplate, 
+            id=active_menu_id,
+            restaurant_id=restaurant_id,
+            is_published=True
+        )
+        
+        if not smart_menu:
             return Response({
                 'success': False,
                 'error': 'No published menu found for this restaurant'
             }, status=404)
             
+        # Log the menu data for debugging
+        print("Menu Data Structure:", smart_menu.menu_data)
+            
         return Response({
             'success': True,
-            'menu': {
-                'id': str(menu_template.id),
-                'name': menu_template.name,
-                'menu_data': menu_template.menu_data,
-                'restaurant_id': str(menu_template.restaurant_id)
-            }
+            'menu_data': smart_menu.menu_data
         })
         
     except Exception as e:
+        print("Error in get_published_menu:", str(e))  # Log any errors
         return Response({
             'success': False,
             'error': str(e)

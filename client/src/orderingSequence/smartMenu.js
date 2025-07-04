@@ -385,7 +385,7 @@ const SmartMenuContent = () => {
                     price: item.price,
                     description: item.description,
                     image: item.image || null
-                  };
+                  }; 
                   
                   return (
                     <div 
@@ -652,9 +652,7 @@ const SmartMenuContent = () => {
           transition: background-color 0.2s ease;
         }
 
-        .menu-item:hover {
-          background-color: #fafafa;
-        }
+        
 
         .menu-item:last-child {
           border-bottom: none;

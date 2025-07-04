@@ -1,69 +1,186 @@
-import React, { useState, useEffect } from 'react';
-
+import React, { useState, useEffect, useRef } from 'react';
 
 const ItemDetailModal = ({ 
   isOpen, 
   onClose, 
   item, 
-  isItemInStock 
+  isItemInStock,
+  formatCurrency 
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const modalRef = useRef(null);
 
+  // Mouse handlers for desktop drag
+  const handleMouseMove = React.useCallback((e) => {
+    if (!isDragging) return;
+    
+    const currentY = e.clientY;
+    const diff = currentY - dragStartY;
+    
+    // Only allow dragging down
+    if (diff > 0) {
+      setDragOffset(diff);
+    }
+  }, [isDragging, dragStartY]);
+
+  const handleMouseUp = React.useCallback(() => {
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    
+    // If dragged down more than 100px, close the modal
+    if (dragOffset > 100) {
+      onClose();
+    } else {
+      // Snap back to original position
+      setDragOffset(0);
+    }
+  }, [isDragging, dragOffset, onClose]);
 
   // Reset quantity when modal opens
   useEffect(() => {
     if (isOpen) {
       setQuantity(1);
+      setDragOffset(0);
     }
   }, [isOpen]);
 
+  // Add mouse event listeners
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   if (!isOpen || !item) return null;
 
-  const itemData = item.item_data;
-  const variation = itemData?.variations?.[0];
-  const price = variation?.item_variation_data?.price_money;
-
-  const formatPrice = (amount, currency = 'USD') => {
-    if (!amount) return '$0.00';
-    const value = typeof amount === 'number' ? amount / 100 : 0;
-    return `$${value.toFixed(2)}`;
+  const itemData = item.item_data || item;
+  
+  // Handle price formatting - use the formatCurrency prop if available
+  const displayPrice = () => {
+    if (formatCurrency && itemData.price_money) {
+      return formatCurrency(itemData.price_money.amount, itemData.price_money.currency);
+    } else if (formatCurrency && item.price) {
+      return formatCurrency(item.price);
+    } else if (itemData.price_money) {
+      const amount = itemData.price_money.amount;
+      const currency = itemData.price_money.currency || 'GBP';
+      return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: currency
+      }).format(amount);
+    } else if (item.price) {
+      return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP'
+      }).format(item.price);
+    }
+    return 'Price not available';
   };
 
-  
 
-  return (
-    <div className={`modal-backdrop ${isOpen ? 'open' : ''}`} onClick={onClose}>
-      <div className={`item-detail-modal ${isOpen ? 'open' : ''}`} onClick={e => e.stopPropagation()}>
+
+  // Touch/drag handlers
+  const handleTouchStart = (e) => {
+    setIsDragging(true);
+    setDragStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - dragStartY;
+    
+    // Only allow dragging down
+    if (diff > 0) {
+      setDragOffset(diff);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    
+    // If dragged down more than 100px, close the modal
+    if (dragOffset > 100) {
+      onClose();
+    } else {
+      // Snap back to original position
+      setDragOffset(0);
+    }
+  };
+
+  // Mouse handlers for desktop drag
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStartY(e.clientY);
+  };
+
+     return (
+    <div 
+      className={`modal-backdrop ${isOpen ? 'open' : ''}`} 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        ref={modalRef}
+        className={`item-detail-modal ${isOpen ? 'open' : ''}`} 
+        onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `translateY(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+      >
         {/* Drag handle */}
-        <div className="modal-header">
+        <div className="modal-header" onMouseDown={handleMouseDown}>
           <div className="drag-handle"></div>
         </div>
 
         {/* Item Image */}
         <div className="detail-image-container">
-          {itemData?.primaryImage ? (
+          {itemData?.primaryImage?.url || item.image ? (
             <img 
-              src={itemData.primaryImage.url} 
-              alt={itemData.primaryImage.caption || itemData?.name || 'Menu item'}
+              src={itemData?.primaryImage?.url || item.image} 
+              alt={itemData?.name || item.name || 'Menu item'}
               className="detail-image"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
             />
-          ) : (
-            <div className="detail-no-image">
-              <span>No Image</span>
-            </div>
-          )}
+          ) : null}
+          <div className="detail-no-image" style={{ display: (itemData?.primaryImage?.url || item.image) ? 'none' : 'flex' }}>
+            <span>No Image</span>
+          </div>
         </div>
 
         {/* Item Info */}
         <div className="detail-content">
-          <h1 className="detail-title">{itemData?.name || 'Unknown Item'}</h1>
+          <h1 className="detail-title">{itemData?.name || item.name || 'Unknown Item'}</h1>
           
-          {itemData?.description && (
-            <p className="detail-description">{itemData.description}</p>
+          {(itemData?.description || item.description) && (
+            <p className="detail-description">{itemData?.description || item.description}</p>
           )}
 
           <div className="detail-price">
-            {formatPrice(price?.amount)}
+            {displayPrice()}
           </div>
 
           {/* Nutrition Info */}
@@ -105,7 +222,7 @@ const ItemDetailModal = ({
           .item-detail-modal {
             background: white;
             width: 100%;
-            max-width: 500px;
+            max-width: 100%;
             min-height: 85vh;
             max-height: 95vh;
             border-radius: 20px 20px 0 0;
@@ -120,6 +237,7 @@ const ItemDetailModal = ({
             box-shadow: none;
             font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             border: none;
+            user-select: none;
           }
 
           .item-detail-modal.open {
@@ -140,6 +258,11 @@ const ItemDetailModal = ({
             border: none;
             border-bottom: none;
             box-shadow: none;
+            cursor: grab;
+          }
+
+          .modal-header:active {
+            cursor: grabbing;
           }
 
           .drag-handle {
@@ -147,6 +270,7 @@ const ItemDetailModal = ({
             height: 4px;
             background-color: white;
             border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           }
 
           .detail-image-container {
@@ -156,6 +280,7 @@ const ItemDetailModal = ({
             background: #f7fafc;
             flex-shrink: 0;
             margin-top: 0;
+            position: relative;
           }
 
           .detail-image {
@@ -174,6 +299,9 @@ const ItemDetailModal = ({
             font-size: 16px;
             font-family: 'Satoshi', sans-serif;
             font-weight: 400;
+            position: absolute;
+            top: 0;
+            left: 0;
           }
 
           .detail-content {
@@ -208,8 +336,8 @@ const ItemDetailModal = ({
 
           .detail-price {
             font-size: 20px;
-            font-weight: 500;
-            color: rgb(112, 112, 112);
+            font-weight: 600;
+            color: #000;
             font-family: 'Satoshi', sans-serif;
             text-align: left;
           }
@@ -241,90 +369,6 @@ const ItemDetailModal = ({
             font-weight: 400;
           }
 
-          .add-to-cart-section {
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            margin-top: auto;
-            padding-top: 24px;
-          }
-
-          .quantity-controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 8px 16px;
-            flex-shrink: 0;
-            border: none;
-          }
-
-          .quantity-btn {
-            background: none;
-            border: none;
-            font-size: 20px;
-            font-weight: 600;
-            color: #000;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background-color 0.2s ease;
-            font-family: 'Satoshi', sans-serif;
-            outline: none;
-          }
-
-          .quantity-btn:hover:not(:disabled) {
-            background: #e2e8f0;
-          }
-
-          .quantity-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-
-          .quantity-display {
-            font-size: 16px;
-            font-weight: 600;
-            color: #000;
-            min-width: 20px;
-            text-align: center;
-            font-family: 'Satoshi', sans-serif;
-          }
-
-          .add-to-cart-btn {
-            flex: 1;
-            background: #000;
-            color: white;
-            border: none;
-            padding: 16px 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            font-family: 'Satoshi', sans-serif;
-            min-width: 0;
-            text-align: center;
-            outline: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .add-to-cart-btn:hover:not(.disabled) {
-            background: #333;
-          }
-
-          .add-to-cart-btn.disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-          }
-
           /* Mobile responsiveness */
           @media (max-width: 480px) {
             .detail-content {
@@ -333,20 +377,6 @@ const ItemDetailModal = ({
 
             .detail-title {
               font-size: 22px;
-            }
-
-            .add-to-cart-section {
-              gap: 12px;
-            }
-
-            .quantity-controls {
-              gap: 12px;
-              padding: 6px 12px;
-            }
-
-            .add-to-cart-btn {
-              font-size: 14px;
-              padding: 14px 16px;
             }
           }
         `}</style>

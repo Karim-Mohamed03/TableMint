@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TranslatedText } from '../../hooks/useTranslatedText';
 
 const ModernMinimalistItem = ({
   item,
@@ -80,7 +81,7 @@ const ModernMinimalistItem = ({
             lineHeight: 1.2,
             fontFamily: 'Satoshi, sans-serif'
           }}>
-            {item.name || 'Unnamed Item'}
+            {item.name || <TranslatedText>Unnamed Item</TranslatedText>}
           </h3>
 
           {item.description && (
@@ -150,7 +151,11 @@ const ModernMinimalistItem = ({
             fontFamily: 'Satoshi, sans-serif',
             textAlign: 'center'
           }}>
-            {imageError ? 'Image not available' : 'No image'}
+            {imageError ? (
+              <TranslatedText>Image not available</TranslatedText>
+            ) : (
+              <TranslatedText>No image</TranslatedText>
+            )}
           </div>
         )}
       </div>

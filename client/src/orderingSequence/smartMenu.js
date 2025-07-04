@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
+// Import translation components and hooks
+import { TranslationProvider, useTranslation } from '../contexts/TranslationContext';
+import LanguageSelector from '../components/LanguageSelector';
+import { useTranslatedText, TranslatedText } from '../hooks/useTranslatedText';
+
 // Import menu template components
 import ModernMinimalistItem from './menu-templates/ModernMinimalistItem';
 import ClassicElegantItem from './menu-templates/ClassicElegantItem';
@@ -8,7 +13,7 @@ import ClassicElegantItem from './menu-templates/ClassicElegantItem';
 // Import the ItemDetailModal component from the new menu folder location
 import ItemDetailModal from './menu-templates/modals/ItemDetailModal';
 
-// Smart Menu component
+// Smart Menu component with translation functionality
 const SmartMenuContent = () => {
   const [catalogData, setCatalogData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +23,19 @@ const SmartMenuContent = () => {
   const [restaurantContext, setRestaurantContext] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeTemplate, setActiveTemplate] = useState('Modern Minimalist');
+  const [translatedMenuData, setTranslatedMenuData] = useState(null);
   const categoryFilterRef = React.useRef(null);
+
+  // Translation hooks
+  const { currentLanguage, isRTL, translateTextDynamic } = useTranslation();
+
+  // Translated static text
+  const { translatedText: loadingText } = useTranslatedText('Loading menu...');
+  const { translatedText: tryAgainText } = useTranslatedText('Try Again');
+  const { translatedText: failedToLoadText } = useTranslatedText('Failed to load menu. Please try again.');
+  const { translatedText: allItemsText } = useTranslatedText('All Items');
+  const { translatedText: chooseFromSelectionText } = useTranslatedText('Choose from our delicious selection');
+  const { translatedText: noItemsFoundText } = useTranslatedText('No items found in this category');
 
   // Load context from sessionStorage and URL parameters
   useEffect(() => {
@@ -68,6 +85,49 @@ const SmartMenuContent = () => {
     }
   };
 
+  // Function to translate menu data
+  const translateMenuData = async (menuData, targetLanguage) => {
+    if (targetLanguage === 'en' || !menuData) {
+      return menuData;
+    }
+
+    try {
+      const translatedData = {
+        ...menuData,
+        menu_name: await translateTextDynamic(menuData.menu_name || ''),
+        categories: await Promise.all(
+          menuData.categories.map(async (category) => ({
+            ...category,
+            name: await translateTextDynamic(category.name || ''),
+            items: await Promise.all(
+              category.items.map(async (item) => ({
+                ...item,
+                name: await translateTextDynamic(item.name || ''),
+                description: await translateTextDynamic(item.description || '')
+              }))
+            )
+          }))
+        )
+      };
+      return translatedData;
+    } catch (error) {
+      console.error('Error translating menu data:', error);
+      return menuData; // Fallback to original data
+    }
+  };
+
+  // Translate menu data when language changes
+  useEffect(() => {
+    const translateMenu = async () => {
+      if (catalogData) {
+        const translated = await translateMenuData(catalogData, currentLanguage);
+        setTranslatedMenuData(translated);
+      }
+    };
+
+    translateMenu();
+  }, [catalogData, currentLanguage]);
+
   // Modify the fetchData function in the useEffect
   useEffect(() => {
     const fetchData = async () => {
@@ -109,10 +169,11 @@ const SmartMenuContent = () => {
 
   // Update the useMemo hook for organizing data
   const { categories, items, categoriesWithItems } = useMemo(() => {
-    if (!catalogData) return { categories: [], items: [], categoriesWithItems: [] };
+    const dataToUse = translatedMenuData || catalogData;
+    if (!dataToUse) return { categories: [], items: [], categoriesWithItems: [] };
     
     // Categories are already in the correct format
-    const allCategories = catalogData.categories;
+    const allCategories = dataToUse.categories;
     
     // Flatten all items from categories
     const allItems = allCategories.reduce((acc, category) => {
@@ -129,7 +190,7 @@ const SmartMenuContent = () => {
           amount: item.price,
           currency: restaurantContext?.currency || 'GBP'
         },
-        images: item.image ? [item.image] : []
+        images: item.image ? [item.image] : [] // Use 'image' field, not 'media'
       }
     }));
     
@@ -138,7 +199,7 @@ const SmartMenuContent = () => {
       items: processedItems,
       categoriesWithItems: allCategories
     };
-  }, [catalogData, restaurantContext?.currency]);
+  }, [translatedMenuData, catalogData, restaurantContext?.currency]);
 
   // Format currency
   const formatCurrency = (amount, currency = 'GBP') => {
@@ -299,7 +360,7 @@ const SmartMenuContent = () => {
       <div className="smart-menu">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading menu...</p>
+          <p>{loadingText}</p>
         </div>
       </div>
     );
@@ -312,24 +373,34 @@ const SmartMenuContent = () => {
         <div className="error-container">
           <p className="error-message">{error}</p>
           <button onClick={() => window.location.reload()} className="retry-button">
-            Try Again
+            {tryAgainText}
           </button>
         </div>
       </div>
     );
   }
 
+  const dataToDisplay = translatedMenuData || catalogData;
+
   return (
-    <div className="smart-menu">
+    <div className={`smart-menu ${isRTL() ? 'rtl' : 'ltr'}`} dir={isRTL() ? 'rtl' : 'ltr'}>
       {/* Menu Header */}
       <div className="menu-header-container">
         <div className="menu-header">
           <div className="header-content">
             <div className="header-text">
               <h1>
-                {catalogData?.menu_name || restaurantContext?.name || 'Restaurant Menu'}
+                {dataToDisplay?.menu_name || restaurantContext?.name || 'Restaurant Menu'}
               </h1>
-              <p>Choose from our delicious selection</p>
+              <p>
+                <TranslatedText>
+                  {chooseFromSelectionText}
+                </TranslatedText>
+              </p>
+            </div>
+            {/* Language Selector in header */}
+            <div className="header-actions">
+              <LanguageSelector />
             </div>
           </div>
         </div>
@@ -341,7 +412,7 @@ const SmartMenuContent = () => {
             data-category="all"
             onClick={() => scrollToCategory('all')}
           >
-            All Items
+            <TranslatedText>{allItemsText}</TranslatedText>
           </button>
           {categoriesWithItems?.map((category) => {
             const categoryName = category.name;
@@ -385,7 +456,7 @@ const SmartMenuContent = () => {
                     price: item.price,
                     description: item.description,
                     image: item.image || null
-                  }; 
+                  };
                   
                   return (
                     <div 
@@ -407,7 +478,7 @@ const SmartMenuContent = () => {
               {/* No items message for empty categories */}
               {(!category?.items || category.items.length === 0) && (
                 <div className="no-items">
-                  <p>No items found in this category</p>
+                  <p><TranslatedText>{noItemsFoundText}</TranslatedText></p>
                 </div>
               )}
             </div>
@@ -447,6 +518,31 @@ const SmartMenuContent = () => {
           background: transparent;
           min-height: 100vh;
           color: #333;
+        }
+
+        /* RTL Support */
+        .smart-menu.rtl {
+          direction: rtl;
+        }
+
+        .smart-menu.rtl .menu-header-container {
+          text-align: right;
+        }
+
+        .smart-menu.rtl .category-navigation {
+          flex-direction: row-reverse;
+        }
+
+        .smart-menu.rtl .category-btn {
+          text-align: right;
+        }
+
+        .smart-menu.rtl .menu-content {
+          text-align: right;
+        }
+
+        .smart-menu.rtl .category-title {
+          text-align: right;
         }
 
         .loading-container {
@@ -542,6 +638,12 @@ const SmartMenuContent = () => {
           font-size: 14px;
           margin: 0;
           font-weight: 400;
+        }
+
+        .header-actions {
+          display: flex;
+          align-items: flex-start;
+          padding-top: 4px;
         }
 
         .menu-toggle, .search-button {
@@ -652,7 +754,9 @@ const SmartMenuContent = () => {
           transition: background-color 0.2s ease;
         }
 
-        
+        .menu-item:hover {
+          background-color: #fafafa;
+        }
 
         .menu-item:last-child {
           border-bottom: none;
@@ -785,9 +889,13 @@ const SmartMenuContent = () => {
   );
 };
 
-// Main SmartMenu component
+// Main SmartMenu component with translation provider
 const SmartMenu = () => {
-  return <SmartMenuContent />;
+  return (
+    <TranslationProvider>
+      <SmartMenuContent />
+    </TranslationProvider>
+  );
 };
 
 export default SmartMenu;

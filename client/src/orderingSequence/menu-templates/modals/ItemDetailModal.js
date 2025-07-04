@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { TranslatedText } from '../../../hooks/useTranslatedText';
 
 const ItemDetailModal = ({ 
   isOpen, 
@@ -84,7 +85,7 @@ const ItemDetailModal = ({
         currency: 'GBP'
       }).format(item.price);
     }
-    return 'Price not available';
+    return <TranslatedText>Price not available</TranslatedText>;
   };
 
 
@@ -167,13 +168,13 @@ const ItemDetailModal = ({
             />
           ) : null}
           <div className="detail-no-image" style={{ display: (itemData?.primaryImage?.url || item.image) ? 'none' : 'flex' }}>
-            <span>No Image</span>
+            <span><TranslatedText>No Image</TranslatedText></span>
           </div>
         </div>
 
         {/* Item Info */}
         <div className="detail-content">
-          <h1 className="detail-title">{itemData?.name || item.name || 'Unknown Item'}</h1>
+          <h1 className="detail-title">{itemData?.name || item.name || <TranslatedText>Unknown Item</TranslatedText>}</h1>
           
           {(itemData?.description || item.description) && (
             <p className="detail-description">{itemData?.description || item.description}</p>

@@ -59,7 +59,7 @@ const SmartMenuContent = () => {
         return null;
       }
 
-      const url = new URL(`http://localhost:8000/api/restaurants/${restaurantId}/published-menu/`);
+      const url = new URL(`https://tablemint.onrender.com/api/restaurants/${restaurantId}/published-menu/`);
       
       const response = await fetch(url.toString(), { method: 'GET' });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);

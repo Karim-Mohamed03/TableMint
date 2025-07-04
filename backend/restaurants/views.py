@@ -27,7 +27,7 @@ def get_published_menu(request, restaurant_id):
                 'success': False,
                 'error': 'No active menu found for this restaurant'
             }, status=404)
-        
+            
         # Get the restaurant for additional context
         restaurant = Restaurant.objects.get(id=restaurant_id)
         

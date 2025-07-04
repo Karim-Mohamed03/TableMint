@@ -129,7 +129,7 @@ const SmartMenuContent = () => {
           amount: item.price,
           currency: restaurantContext?.currency || 'GBP'
         },
-        images: item.media || []
+        images: item.image ? [item.image] : []
       }
     }));
     
@@ -384,7 +384,7 @@ const SmartMenuContent = () => {
                     name: item.name,
                     price: item.price,
                     description: item.description,
-                    image: item.media?.[0] || null
+                    image: item.image || null
                   };
                   
                   return (
@@ -427,7 +427,8 @@ const SmartMenuContent = () => {
                 amount: selectedItem.price,
                 currency: restaurantContext?.currency || 'GBP'
               },
-              images: selectedItem.media || []
+              images: selectedItem.image ? [selectedItem.image] : [],
+              primaryImage: selectedItem.image ? { url: selectedItem.image } : null
             }
           }}
           isOpen={showItemModal}

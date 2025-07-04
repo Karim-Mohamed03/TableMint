@@ -1,60 +1,72 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+// import { useTranslation } from '../../contexts/TranslationContext';
 
-const CategoryFilter = ({ selectedCategory, setSelectedCategory, categories }) => {
+const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
+  // const { currentLanguage } = useTranslation();
+  const filterRef = useRef(null);
+
+  // Scroll to active category button
+  useEffect(() => {
+    if (filterRef.current) {
+      const activeButton = filterRef.current.querySelector('.category-btn.active');
+      if (activeButton) {
+        const containerWidth = filterRef.current.offsetWidth;
+        const buttonLeft = activeButton.offsetLeft;
+        const buttonWidth = activeButton.offsetWidth;
+        const scrollLeft = buttonLeft - (containerWidth / 2) + (buttonWidth / 2);
+        
+        filterRef.current.scrollTo({
+          left: Math.max(0, scrollLeft),
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [selectedCategory]);
+
   const scrollToCategory = (categoryId) => {
     if (categoryId === 'all') {
-      // Scroll to top for "All Items"
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setSelectedCategory('all');
+      onSelectCategory('all');
       return;
     }
 
     const element = document.getElementById(`category-${categoryId}`);
     if (element) {
-      // Calculate offset to account for the fixed category filter
-      const categoryFilterHeight = 80; // Account for the fixed filter height
+      const headerHeight = 140;
       const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - categoryFilterHeight;
+      const offsetPosition = elementPosition + window.pageYOffset - headerHeight;
 
       window.scrollTo({
         top: offsetPosition,
         behavior: 'smooth'
       });
       
-      setSelectedCategory(categoryId);
+      onSelectCategory(categoryId);
     }
   };
 
   return (
-    <div className="category-filter-container">
-      <div className="category-filter">
-        <button 
-          className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-          onClick={() => scrollToCategory('all')}
-        >
-          All Items
-        </button>
-        {categories.map(category => (
+    <div ref={filterRef} className="category-filter">
+      <button 
+        className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+        onClick={() => scrollToCategory('all')}
+      >
+        All Items
+      </button>
+      {categories.map(category => {
+        const categoryId = category.name;
+        return (
           <button
-            key={category.id}
-            className={`category-btn ${selectedCategory === category.id ? 'active' : ''}`}
-            onClick={() => scrollToCategory(category.id)}
+            key={categoryId}
+            className={`category-btn ${selectedCategory === categoryId ? 'active' : ''}`}
+            onClick={() => scrollToCategory(categoryId)}
           >
-            {category.category_data?.name || 'Unknown Category'}
+            {category.name}
           </button>
-        ))}
-      </div>
-      
-      <style jsx>{`
-        .category-filter-container {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 1000;
-          background: #fff;
-        }
+        );
+      })}
 
+      <style jsx>{`
         .category-filter {
           display: flex;
           gap: 0;
@@ -65,6 +77,9 @@ const CategoryFilter = ({ selectedCategory, setSelectedCategory, categories }) =
           font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           min-height: 64px;
           max-width: 100vw;
+          transition: all 0.3s ease;
+          transform: translateY(0);
+          opacity: 1;
         }
 
         .category-filter::-webkit-scrollbar {
@@ -82,7 +97,7 @@ const CategoryFilter = ({ selectedCategory, setSelectedCategory, categories }) =
           transition: all 0.3s ease;
           color: #718096;
           position: relative;
-          border-bottom: 3px solid rgb(193, 193, 193);
+          border-bottom: 3px solid transparent;
           font-family: 'Satoshi', sans-serif;
           display: flex;
           align-items: center;
@@ -98,10 +113,8 @@ const CategoryFilter = ({ selectedCategory, setSelectedCategory, categories }) =
           color: #2d3748;
           font-weight: 600;
           border-bottom-color: #2d3748;
-          background: rgba(45, 55, 72, 0.08);
         }
 
-        /* Ensure proper spacing on mobile */
         @media (max-width: 768px) {
           .category-btn {
             padding: 16px 20px;

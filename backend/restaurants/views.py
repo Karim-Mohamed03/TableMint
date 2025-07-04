@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .models import Restaurant, RestaurantMenuTemplate
+from .models import Restaurant, RestaurantSmartMenu
 import os
 from django.conf import settings
 from django.urls import reverse
@@ -17,23 +17,30 @@ from django.urls import reverse
 @permission_classes([AllowAny])
 def get_published_menu(request, restaurant_id):
     """
-    Get the published menu template for a restaurant
+    Get the active smart menu for a restaurant
     """
     try:
-        menu_template = RestaurantMenuTemplate.get_published_menu(restaurant_id)
-        if not menu_template:
+        # Get the active menu using the new model
+        menu = RestaurantSmartMenu.get_active_menu(restaurant_id)
+        if not menu:
             return Response({
                 'success': False,
-                'error': 'No published menu found for this restaurant'
+                'error': 'No active menu found for this restaurant'
             }, status=404)
-            
+        
+        # Get the restaurant for additional context
+        restaurant = Restaurant.objects.get(id=restaurant_id)
+        
+        # Return the menu data in the expected format
         return Response({
             'success': True,
-            'menu': {
-                'id': str(menu_template.id),
-                'name': menu_template.name,
-                'menu_data': menu_template.menu_data,
-                'restaurant_id': str(menu_template.restaurant_id)
+            'menu_data': menu.menu_data,
+            'restaurant_context': {
+                'id': str(restaurant.id),
+                'name': restaurant.name,
+                'currency': restaurant.currency,
+                'active_template': restaurant.active_template,
+                'location_id': restaurant.location_id
             }
         })
         

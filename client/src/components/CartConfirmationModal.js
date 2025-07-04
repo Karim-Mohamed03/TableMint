@@ -196,7 +196,7 @@ const CartConfirmationModal = ({
       };
       
       // Step 8: Create the order via API call
-      const response = await fetch('https://tablemint.onrender.com/api/orders/create/', {
+      const response = await fetch('http://localhost:8000/api/orders/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

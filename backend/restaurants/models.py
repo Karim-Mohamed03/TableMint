@@ -20,6 +20,7 @@ class Restaurant(models.Model):
     stripe_is_connected = models.BooleanField(default=False)
     stripe_onboarding_completed = models.BooleanField(default=False)
     active_subscription = models.TextField(null=True, blank=True)
+    active_template = models.TextField(null=True, blank=True)
     
     class Meta:
         managed = False  # Don't let Django manage this table's schema
@@ -41,6 +42,7 @@ class Restaurant(models.Model):
             'secondary_color': '#f5f5f7',
             'show_logo_on_receipt': True,
             'show_background_image': True,
+            'active_template': self.active_template,
         }
 
 class RestaurantLocation(models.Model):
@@ -101,4 +103,59 @@ class RestaurantMenuTemplate(models.Model):
             ).order_by('-updated_at').first()
         except Exception as e:
             print(f"Error getting published menu: {str(e)}")
+            return None
+
+class SmartMenuTemplate(models.Model):
+    """
+    Model for smart_menu_templates table
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'smart_menu_templates'
+
+class RestaurantSmartMenu(models.Model):
+    """
+    Model for restaurant_smart_menus table
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    menu_data = models.JSONField()
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, db_column='restaurant_id')
+    template = models.ForeignKey(SmartMenuTemplate, on_delete=models.CASCADE, db_column='template_id')
+    style_config = models.JSONField(default=dict, null=True, blank=True)
+    
+    class Meta:
+        managed = False
+        db_table = 'restaurant_smart_menus'
+        indexes = [
+            models.Index(fields=['restaurant']),
+            models.Index(fields=['template']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.restaurant.name if self.restaurant else 'No Restaurant'}"
+    
+    @classmethod
+    def get_active_menu(cls, restaurant_id):
+        """Get the active menu for a restaurant"""
+        try:
+            restaurant = Restaurant.objects.get(id=restaurant_id)
+            if not restaurant.active_menu:
+                return None
+                
+            return cls.objects.get(
+                id=restaurant.active_menu,
+                restaurant_id=restaurant_id,
+                is_published=True
+            )
+        except (Restaurant.DoesNotExist, cls.DoesNotExist, Exception) as e:
+            print(f"Error getting active menu: {str(e)}")
             return None

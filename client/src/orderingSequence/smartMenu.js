@@ -37,9 +37,96 @@ const SmartMenuContent = () => {
   const { translatedText: chooseFromSelectionText } = useTranslatedText('Choose from our delicious selection');
   const { translatedText: noItemsFoundText } = useTranslatedText('No items found in this category');
 
+  // Memoize template styles to ensure they update when activeTemplate changes
+  const templateStyles = useMemo(() => {
+    const isModernMinimalist = activeTemplate === 'Modern Minimalist';
+    console.log('templateStyles useMemo - activeTemplate:', activeTemplate, 'isModernMinimalist:', isModernMinimalist);
+    
+    return {
+      container: {
+        fontFamily: isModernMinimalist 
+          ? 'Satoshi, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+          : 'Satoshi, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        background: isModernMinimalist ? 'transparent' : '#fafafa',
+        color: isModernMinimalist ? '#333' : '#1a1a1a',
+      },
+      header: {
+        background: isModernMinimalist ? '#ffffff' : '#ffffff',
+        boxShadow: isModernMinimalist 
+          ? '0 2px 4px rgba(0, 0, 0, 0.1)' 
+          : '0 1px 3px rgba(0, 0, 0, 0.1)',
+        borderBottom: isModernMinimalist ? 'none' : '1px solid #e5e7eb',
+      },
+      headerTitle: {
+        fontSize: isModernMinimalist ? '28px' : '32px',
+        fontWeight: isModernMinimalist ? '700' : '600',
+        color: isModernMinimalist ? '#000' : '#111827',
+        letterSpacing: isModernMinimalist ? 'normal' : '-0.025em',
+      },
+      headerSubtitle: {
+        color: isModernMinimalist ? '#555555' : '#6b7280',
+        fontSize: isModernMinimalist ? '14px' : '16px',
+        fontWeight: isModernMinimalist ? '400' : '400',
+      },
+      categoryNavigation: {
+        background: isModernMinimalist ? '#ffffff' : '#ffffff',
+        borderBottom: isModernMinimalist ? '1px solid #f0f0f0' : '1px solid #e5e7eb',
+        padding: isModernMinimalist ? '0' : '0 4px',
+      },
+      categoryButton: {
+        padding: isModernMinimalist ? '16px 20px' : '18px 24px',
+        fontSize: isModernMinimalist ? '15px' : '16px',
+        fontWeight: isModernMinimalist ? '500' : '500',
+        color: isModernMinimalist ? '#666' : '#6b7280',
+        borderRadius: isModernMinimalist ? '0' : '12px',
+        margin: isModernMinimalist ? '0' : '8px 4px',
+        background: isModernMinimalist ? 'transparent' : 'transparent',
+        border: isModernMinimalist ? 'none' : '1px solid transparent',
+        borderBottom: isModernMinimalist ? '2px solid transparent' : '1px solid transparent',
+      },
+      categoryButtonActive: {
+        color: isModernMinimalist ? '#000' : '#111827',
+        fontWeight: isModernMinimalist ? '600' : '600',
+        borderBottomColor: isModernMinimalist ? '#000' : 'transparent',
+        background: isModernMinimalist ? 'transparent' : '#f3f4f6',
+        borderColor: isModernMinimalist ? 'transparent' : '#e5e7eb',
+      },
+      categoryButtonHover: {
+        color: isModernMinimalist ? '#000' : '#111827',
+        background: isModernMinimalist ? 'rgba(0, 0, 0, 0.03)' : '#f9fafb',
+        borderColor: isModernMinimalist ? 'transparent' : '#d1d5db',
+      },
+      menuContent: {
+        padding: isModernMinimalist ? '16px' : '24px',
+        marginTop: isModernMinimalist ? '180px' : '180px',
+        background: isModernMinimalist ? 'transparent' : '#ffffff',
+        borderRadius: isModernMinimalist ? '0' : '0',
+      },
+      categoryTitle: {
+        fontSize: isModernMinimalist ? '24px' : '28px',
+        fontWeight: isModernMinimalist ? '600' : '700',
+        color: isModernMinimalist ? '#000' : '#111827',
+        marginBottom: isModernMinimalist ? '20px' : '24px',
+        letterSpacing: isModernMinimalist ? 'normal' : '-0.025em',
+      },
+      menuItem: {
+        padding: isModernMinimalist ? '20px 0' : '24px 0',
+        borderBottom: isModernMinimalist ? 'none' : '1px solid #f3f4f6',
+        background: isModernMinimalist ? 'transparent' : 'transparent',
+        borderRadius: isModernMinimalist ? '0' : '12px',
+        margin: isModernMinimalist ? '0' : '0 0 8px 0',
+      },
+      menuItemHover: {
+        background: isModernMinimalist ? '#fafafa' : '#f9fafb',
+        borderRadius: isModernMinimalist ? '8px' : '12px',
+      },
+    };
+  }, [activeTemplate]);
+
   // Load context from sessionStorage and URL parameters
   useEffect(() => {
     // Get restaurant context from sessionStorage
+    
     const storedRestaurantContext = sessionStorage.getItem('restaurant_context');
     if (storedRestaurantContext) {
       try {
@@ -128,6 +215,19 @@ const SmartMenuContent = () => {
     translateMenu();
   }, [catalogData, currentLanguage]);
 
+  // Log active template whenever it changes
+  useEffect(() => {
+    console.log('Current active template:', activeTemplate);
+  }, [activeTemplate]);
+
+  // Set active template from restaurant context immediately when it's available
+  useEffect(() => {
+    if (restaurantContext?.active_template) {
+      console.log('Setting active template from restaurant context:', restaurantContext.active_template);
+      setActiveTemplate(restaurantContext.active_template);
+    }
+  }, [restaurantContext?.active_template]);
+
   // Modify the fetchData function in the useEffect
   useEffect(() => {
     const fetchData = async () => {
@@ -148,11 +248,6 @@ const SmartMenuContent = () => {
           
           // The menu data is already in the correct format, just set it directly
           setCatalogData(menuData);
-          
-          // Set active template from restaurant context
-          if (restaurantContext.active_template) {
-            setActiveTemplate(restaurantContext.active_template);
-          }
         } else {
           throw new Error('Failed to load menu data');
         }
@@ -215,6 +310,7 @@ const SmartMenuContent = () => {
       currency: currency
     }).format(amountNum);
   };
+
 
   // Smooth scroll to category
   const scrollToCategory = (categoryName) => {
@@ -383,16 +479,20 @@ const SmartMenuContent = () => {
   const dataToDisplay = translatedMenuData || catalogData;
 
   return (
-    <div className={`smart-menu ${isRTL() ? 'rtl' : 'ltr'}`} dir={isRTL() ? 'rtl' : 'ltr'}>
+    <div 
+      className={`smart-menu ${isRTL() ? 'rtl' : 'ltr'}`} 
+      dir={isRTL() ? 'rtl' : 'ltr'}
+      style={templateStyles.container}
+    >
       {/* Menu Header */}
-      <div className="menu-header-container">
+      <div className="menu-header-container" style={templateStyles.header}>
         <div className="menu-header">
           <div className="header-content">
             <div className="header-text">
-              <h1>
+              <h1 style={templateStyles.headerTitle}>
                 {dataToDisplay?.menu_name || restaurantContext?.name || 'Restaurant Menu'}
               </h1>
-              <p>
+              <p style={templateStyles.headerSubtitle}>
                 <TranslatedText>
                   {chooseFromSelectionText}
                 </TranslatedText>
@@ -406,11 +506,15 @@ const SmartMenuContent = () => {
         </div>
         
         {/* Category Navigation */}
-        <div ref={categoryFilterRef} className="category-navigation">
+        <div ref={categoryFilterRef} className="category-navigation" style={templateStyles.categoryNavigation}>
           <button 
             className={`category-btn ${activeCategory === 'all' ? 'active' : ''}`}
             data-category="all"
             onClick={() => scrollToCategory('all')}
+            style={{
+              ...templateStyles.categoryButton,
+              ...(activeCategory === 'all' ? templateStyles.categoryButtonActive : {})
+            }}
           >
             <TranslatedText>{allItemsText}</TranslatedText>
           </button>
@@ -422,6 +526,10 @@ const SmartMenuContent = () => {
                 className={`category-btn ${activeCategory === categoryName ? 'active' : ''}`}
                 data-category={categoryName}
                 onClick={() => scrollToCategory(categoryName)}
+                style={{
+                  ...templateStyles.categoryButton,
+                  ...(activeCategory === categoryName ? templateStyles.categoryButtonActive : {})
+                }}
               >
                 {categoryName}
               </button>
@@ -431,7 +539,7 @@ const SmartMenuContent = () => {
       </div>
 
       {/* Menu Content - All Categories */}
-      <div className="menu-content">
+      <div className="menu-content" style={templateStyles.menuContent}>
         {categoriesWithItems?.map((category) => {
           const categoryName = category.name;
           const categoryId = `category-${(categoryName || '').toLowerCase().replace(/\s+/g, '-')}`;
@@ -442,7 +550,7 @@ const SmartMenuContent = () => {
               id={categoryId}
               className="category-section"
             >
-              <h2 className="category-title">
+              <h2 className="category-title" style={templateStyles.categoryTitle}>
                 {categoryName}
               </h2>
               
@@ -463,6 +571,7 @@ const SmartMenuContent = () => {
                       key={item.name}
                       className="menu-item"
                       onClick={() => handleItemClick(item)}
+                      style={templateStyles.menuItem}
                     >
                       <TemplateComponent 
                         item={itemData}
@@ -514,10 +623,8 @@ const SmartMenuContent = () => {
           width: 100%;
           margin: 0;
           padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background: transparent;
           min-height: 100vh;
-          color: #333;
+          transition: all 0.3s ease;
         }
 
         /* RTL Support */
@@ -603,16 +710,12 @@ const SmartMenuContent = () => {
           left: 0;
           right: 0;
           z-index: 1000;
-          background: #fff;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
           transition: all 0.3s ease;
           width: 100%;
         }
 
         .menu-header {
-          background: #ffffff;
           padding: 16px;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         .header-content {
@@ -627,17 +730,12 @@ const SmartMenuContent = () => {
         }
 
         .header-text h1 {
-          font-size: 28px;
-          font-weight: 700;
           margin: 0 0 4px 0;
           line-height: 1.2;
         }
 
         .header-text p {
-          color: #555555;
-          font-size: 14px;
           margin: 0;
-          font-weight: 400;
         }
 
         .header-actions {
@@ -669,13 +767,10 @@ const SmartMenuContent = () => {
         .category-navigation {
           display: flex;
           gap: 0;
-          padding: 0;
           overflow-x: auto;
-          background: #ffffff;
           -webkit-overflow-scrolling: touch;
           min-height: 56px;
           width: 100%;
-          border-bottom: 1px solid #f0f0f0;
         }
         
         .category-navigation::-webkit-scrollbar {
@@ -683,31 +778,20 @@ const SmartMenuContent = () => {
         }
 
         .category-btn {
-          background: transparent;
           border: none;
-          padding: 16px 20px;
           cursor: pointer;
-          font-size: 15px;
-          font-weight: 500;
           white-space: nowrap;
           transition: all 0.2s ease;
-          color: #666;
           position: relative;
-          border-bottom: 2px solid transparent;
           display: flex;
           align-items: center;
           flex-shrink: 0;
         }
 
         .category-btn:hover {
-          color: #000;
-          background: rgba(0, 0, 0, 0.03);
-        }
-
-        .category-btn.active {
-          color: #000;
-          font-weight: 600;
-          border-bottom-color: #000;
+          ${Object.entries(templateStyles.categoryButtonHover).map(([key, value]) => 
+            `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`
+          ).join(' ')}
         }
 
         .delivery-info {
@@ -718,9 +802,8 @@ const SmartMenuContent = () => {
         }
 
         .menu-content {
-          padding: 16px;
           width: 100%;
-          margin: 180px auto 0;
+          margin: 0 auto;
           text-align: left;
         }
 
@@ -733,9 +816,7 @@ const SmartMenuContent = () => {
         }
 
         .category-title {
-          font-size: 24px;
-          font-weight: 600;
-          margin: 0 0 20px 0;
+          margin: 0;
           padding: 0;
           text-align: left;
           scroll-margin-top: 200px; /* For smooth scroll positioning */
@@ -749,111 +830,18 @@ const SmartMenuContent = () => {
         }
 
         .menu-item {
-          padding: 20px 0;
           cursor: pointer;
-          transition: background-color 0.2s ease;
+          transition: all 0.2s ease;
         }
 
         .menu-item:hover {
-          background-color: #fafafa;
+          ${Object.entries(templateStyles.menuItemHover).map(([key, value]) => 
+            `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`
+          ).join(' ')}
         }
 
         .menu-item:last-child {
           border-bottom: none;
-        }
-
-        .item-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          width: 100%;
-          text-align: left;
-        }
-
-        .item-details {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          align-items: flex-start;
-          width: 100%;
-          text-align: left;
-        }
-
-        .item-name {
-          font-size: 16px;
-          font-weight: 600;
-          margin: 0;
-          padding: 0;
-          line-height: 1.3;
-          text-align: left;
-          width: 100%;
-          display: block;
-        }
-
-        .item-description {
-          font-size: 14px;
-          color: #666;
-          margin: 0;
-          line-height: 1.4;
-          text-align: left;
-          width: 100%;
-        }
-
-        .item-price {
-          color: #000;
-          font-weight: 600;
-          margin: 8px 0 0 0;
-          padding: 0;
-          text-align: left;
-          width: 100%;
-          display: block;
-        }
-
-        .item-image-container {
-          position: relative;
-          width: 80px;
-          height: 80px;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #f8f8f8;
-          flex-shrink: 0;
-        }
-
-        .item-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .no-image {
-          width: 100%;
-          height: 100%;
-          background: #f0f0f0;
-        }
-
-        .add-button {
-          position: absolute;
-          bottom: 4px;
-          right: 4px;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: #333;
-          color: white;
-          border: none;
-          font-size: 16px;
-          font-weight: bold;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background-color 0.2s ease;
-        }
-
-        .add-button:hover {
-          background: #555;
         }
 
         .no-items {
@@ -871,17 +859,6 @@ const SmartMenuContent = () => {
           
           .menu-content {
             padding: 20px;
-          }
-          
-          .item-image-container {
-            width: 100px;
-            height: 100px;
-          }
-
-          .add-button {
-            width: 28px;
-            height: 28px;
-            font-size: 18px;
           }
         }
       `}</style>

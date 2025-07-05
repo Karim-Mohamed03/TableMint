@@ -47,78 +47,94 @@ const SmartMenuContent = () => {
         fontFamily: isModernMinimalist 
           ? 'Satoshi, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
           : 'Satoshi, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        background: isModernMinimalist ? 'transparent' : '#fafafa',
+        background: isModernMinimalist ? 'transparent' : '#fefefe',
         color: isModernMinimalist ? '#333' : '#1a1a1a',
+        minHeight: isModernMinimalist ? 'auto' : '100vh',
       },
       header: {
-        background: isModernMinimalist ? '#ffffff' : '#ffffff',
-        boxShadow: isModernMinimalist 
-          ? '0 2px 4px rgba(0, 0, 0, 0.1)' 
-          : '0 1px 3px rgba(0, 0, 0, 0.1)',
-        borderBottom: isModernMinimalist ? 'none' : '1px solid #e5e7eb',
+        background: '#ffffff',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.02)',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
       },
       headerTitle: {
-        fontSize: isModernMinimalist ? '28px' : '32px',
-        fontWeight: isModernMinimalist ? '700' : '600',
-        color: isModernMinimalist ? '#000' : '#111827',
-        letterSpacing: isModernMinimalist ? 'normal' : '-0.025em',
+        fontSize: '32px',
+        fontWeight: '700',
+        color: '#1a1a1a',
+        letterSpacing: '-0.02em',
+        lineHeight: '1.1',
       },
       headerSubtitle: {
-        color: isModernMinimalist ? '#555555' : '#6b7280',
-        fontSize: isModernMinimalist ? '14px' : '16px',
-        fontWeight: isModernMinimalist ? '400' : '400',
+        color: '#6b7280',
+        fontSize: '15px',
+        fontWeight: '400',
+        lineHeight: '1.4',
+        marginTop: '4px',
       },
       categoryNavigation: {
-        background: isModernMinimalist ? '#ffffff' : '#ffffff',
-        borderBottom: isModernMinimalist ? '1px solid #f0f0f0' : '1px solid #e5e7eb',
-        padding: isModernMinimalist ? '0' : '0 4px',
+        background: '#ffffff',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+        padding: '0',
+        backdropFilter: 'blur(8px)',
       },
       categoryButton: {
-        padding: isModernMinimalist ? '16px 20px' : '18px 24px',
-        fontSize: isModernMinimalist ? '15px' : '16px',
-        fontWeight: isModernMinimalist ? '500' : '500',
-        color: isModernMinimalist ? '#666' : '#6b7280',
-        borderRadius: isModernMinimalist ? '0' : '12px',
-        margin: isModernMinimalist ? '0' : '8px 4px',
-        background: isModernMinimalist ? 'transparent' : 'transparent',
-        border: isModernMinimalist ? 'none' : '1px solid transparent',
-        borderBottom: isModernMinimalist ? '2px solid transparent' : '1px solid transparent',
+        padding: '18px 24px',
+        fontSize: '15px',
+        fontWeight: '500',
+        color: '#4b5563',
+        borderRadius: '0',
+        margin: '0',
+        background: 'transparent',
+        border: 'none',
+        borderBottom: '2px solid transparent',
+        transition: 'all 0.15s ease-in-out',
+        position: 'relative',
       },
       categoryButtonActive: {
-        color: isModernMinimalist ? '#000' : '#111827',
-        fontWeight: isModernMinimalist ? '600' : '600',
-        borderBottomColor: isModernMinimalist ? '#000' : 'transparent',
-        background: isModernMinimalist ? 'transparent' : '#f3f4f6',
-        borderColor: isModernMinimalist ? 'transparent' : '#e5e7eb',
+        color: '#111827',
+        fontWeight: '600',
+        borderBottom: '2px solid #111827',
+        background: 'transparent',
       },
       categoryButtonHover: {
-        color: isModernMinimalist ? '#000' : '#111827',
-        background: isModernMinimalist ? 'rgba(0, 0, 0, 0.03)' : '#f9fafb',
-        borderColor: isModernMinimalist ? 'transparent' : '#d1d5db',
+        color: '#111827',
+        background: 'rgba(0, 0, 0, 0.04)',
       },
       menuContent: {
-        padding: isModernMinimalist ? '16px' : '24px',
-        marginTop: isModernMinimalist ? '180px' : '180px',
-        background: isModernMinimalist ? 'transparent' : '#ffffff',
-        borderRadius: isModernMinimalist ? '0' : '0',
+        padding: isModernMinimalist ? '32px 20px' : '40px 24px',
+        marginTop: '228px',
+        background: 'transparent',
+        borderRadius: '0',
+        maxWidth: isModernMinimalist ? '1200px' : 'none',
+        margin: isModernMinimalist ? '228px auto 0' : '228px 0 0',
+        boxShadow: 'none',
+        minHeight: isModernMinimalist ? 'auto' : 'calc(100vh - 228px)',
+        width: '100%',
       },
       categoryTitle: {
-        fontSize: isModernMinimalist ? '24px' : '28px',
-        fontWeight: isModernMinimalist ? '600' : '700',
-        color: isModernMinimalist ? '#000' : '#111827',
-        marginBottom: isModernMinimalist ? '20px' : '24px',
-        letterSpacing: isModernMinimalist ? 'normal' : '-0.025em',
+        fontSize: isModernMinimalist ? '28px' : '36px',
+        fontWeight: isModernMinimalist ? '700' : '600',
+        color: '#1a1a1a',
+        marginBottom: isModernMinimalist ? '28px' : '36px',
+        letterSpacing: isModernMinimalist ? '-0.02em' : '-0.025em',
+        lineHeight: '1.1',
+        fontFamily: isModernMinimalist ? 'Satoshi, sans-serif' : 'Satoshi, Georgia, serif',
+        position: 'relative',
+        paddingBottom: isModernMinimalist ? '0' : '12px',
       },
       menuItem: {
-        padding: isModernMinimalist ? '20px 0' : '24px 0',
-        borderBottom: isModernMinimalist ? 'none' : '1px solid #f3f4f6',
-        background: isModernMinimalist ? 'transparent' : 'transparent',
-        borderRadius: isModernMinimalist ? '0' : '12px',
-        margin: isModernMinimalist ? '0' : '0 0 8px 0',
+        padding: isModernMinimalist ? '24px 0' : '0',
+        borderBottom: isModernMinimalist ? 'none' : 'none',
+        background: 'transparent',
+        borderRadius: '0',
+        margin: '0',
+        transition: 'all 0.15s ease-in-out',
+        position: 'relative',
       },
       menuItemHover: {
-        background: isModernMinimalist ? '#fafafa' : '#f9fafb',
-        borderRadius: isModernMinimalist ? '8px' : '12px',
+        background: isModernMinimalist ? 'rgba(0, 0, 0, 0.02)' : 'rgba(212, 175, 55, 0.02)',
+        borderRadius: '8px',
+        transform: 'translateY(-1px)',
+        boxShadow: isModernMinimalist ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.06)',
       },
     };
   }, [activeTemplate]);
@@ -146,7 +162,7 @@ const SmartMenuContent = () => {
         return null;
       }
 
-      const url = new URL(`https://tablemint.onrender.com/api/restaurants/${restaurantId}/published-menu/`);
+      const url = new URL(`http://localhost:8000/api/restaurants/${restaurantId}/published-menu/`);
       
       const response = await fetch(url.toString(), { method: 'GET' });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -335,7 +351,7 @@ const SmartMenuContent = () => {
     // Find the category element and scroll to it
     const categoryElement = document.getElementById(categoryId);
     if (categoryElement) {
-      const headerOffset = 180; // Account for fixed header
+      const headerOffset = 228; // Account for fixed header
       const elementPosition = categoryElement.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -375,7 +391,7 @@ const SmartMenuContent = () => {
   const detectActiveCategory = () => {
     if (!categoriesWithItems.length) return;
 
-    const headerOffset = 200; // Offset for fixed header
+    const headerOffset = 248; // Offset for fixed header
     const scrollPosition = window.scrollY + headerOffset;
 
     // Check if we're at the top of the page
@@ -508,7 +524,7 @@ const SmartMenuContent = () => {
         {/* Category Navigation */}
         <div ref={categoryFilterRef} className="category-navigation" style={templateStyles.categoryNavigation}>
           <button 
-            className={`category-btn ${activeCategory === 'all' ? 'active' : ''}`}
+            className="category-btn"
             data-category="all"
             onClick={() => scrollToCategory('all')}
             style={{
@@ -523,7 +539,7 @@ const SmartMenuContent = () => {
             return (
               <button
                 key={categoryName}
-                className={`category-btn ${activeCategory === categoryName ? 'active' : ''}`}
+                className="category-btn"
                 data-category={categoryName}
                 onClick={() => scrollToCategory(categoryName)}
                 style={{
@@ -627,6 +643,20 @@ const SmartMenuContent = () => {
           transition: all 0.3s ease;
         }
 
+        /* Ensure full-width for Classic Elegant */
+        ${activeTemplate === 'Classic Elegant' ? `
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          
+          .smart-menu {
+            width: 100vw !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        ` : ''}
+
         /* RTL Support */
         .smart-menu.rtl {
           direction: rtl;
@@ -715,7 +745,7 @@ const SmartMenuContent = () => {
         }
 
         .menu-header {
-          padding: 16px;
+          padding: 24px 20px 20px;
         }
 
         .header-content {
@@ -723,25 +753,31 @@ const SmartMenuContent = () => {
           justify-content: space-between;
           align-items: flex-start;
           width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
         }
 
         .header-text {
           flex: 1;
+          min-width: 0;
         }
 
         .header-text h1 {
-          margin: 0 0 4px 0;
-          line-height: 1.2;
+          margin: 0 0 6px 0;
+          line-height: 1.1;
         }
 
         .header-text p {
           margin: 0;
+          max-width: 600px;
         }
 
         .header-actions {
           display: flex;
           align-items: flex-start;
-          padding-top: 4px;
+          padding-top: 2px;
+          flex-shrink: 0;
+          margin-left: 16px;
         }
 
         .menu-toggle, .search-button {
@@ -769,8 +805,11 @@ const SmartMenuContent = () => {
           gap: 0;
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
-          min-height: 56px;
+          min-height: 60px;
           width: 100%;
+          padding: 0 20px;
+          max-width: 1200px;
+          margin: 0 auto;
         }
         
         .category-navigation::-webkit-scrollbar {
@@ -778,20 +817,21 @@ const SmartMenuContent = () => {
         }
 
         .category-btn {
-          border: none;
+          border: none !important;
+          border-bottom: 2px solid transparent !important;
           cursor: pointer;
           white-space: nowrap;
-          transition: all 0.2s ease;
+          transition: all 0.15s ease-in-out;
           position: relative;
           display: flex;
           align-items: center;
           flex-shrink: 0;
+          touch-action: manipulation;
         }
 
         .category-btn:hover {
-          ${Object.entries(templateStyles.categoryButtonHover).map(([key, value]) => 
-            `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`
-          ).join(' ')}
+          color: #111827 !important;
+          background: rgba(0, 0, 0, 0.04) !important;
         }
 
         .delivery-info {
@@ -819,7 +859,18 @@ const SmartMenuContent = () => {
           margin: 0;
           padding: 0;
           text-align: left;
-          scroll-margin-top: 200px; /* For smooth scroll positioning */
+          scroll-margin-top: 248px; /* For smooth scroll positioning */
+        }
+
+        /* Classic Elegant category title decorations */
+        .smart-menu .category-title::after {
+          content: ${activeTemplate === 'Classic Elegant' ? '""' : 'none'};
+          display: ${activeTemplate === 'Classic Elegant' ? 'block' : 'none'};
+          width: 60px;
+          height: 2px;
+          background: linear-gradient(90deg, #d4af37 0%, rgba(212, 175, 55, 0.3) 70%, transparent 100%);
+          margin-top: 8px;
+          border-radius: 1px;
         }
 
         /* Menu Items List */
@@ -831,13 +882,16 @@ const SmartMenuContent = () => {
 
         .menu-item {
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.15s ease-in-out;
+          touch-action: manipulation;
+          overflow: hidden;
         }
 
         .menu-item:hover {
-          ${Object.entries(templateStyles.menuItemHover).map(([key, value]) => 
-            `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`
-          ).join(' ')}
+          background: ${templateStyles.menuItemHover.background} !important;
+          border-radius: ${templateStyles.menuItemHover.borderRadius} !important;
+          transform: ${templateStyles.menuItemHover.transform} !important;
+          box-shadow: ${templateStyles.menuItemHover.boxShadow} !important;
         }
 
         .menu-item:last-child {
@@ -851,15 +905,102 @@ const SmartMenuContent = () => {
           font-size: 15px;
         }
 
-        /* Larger screens */
-        @media (min-width: 768px) {
+        /* Mobile optimizations */
+        @media (max-width: 767px) {
           .menu-header {
-            padding: 20px;
+            padding: 20px 16px 16px;
+          }
+          
+          .header-content {
+            align-items: flex-start;
+          }
+          
+          .header-actions {
+            margin-left: 12px;
+          }
+          
+          .category-navigation {
+            padding: 0 16px;
           }
           
           .menu-content {
-            padding: 20px;
+            padding: ${activeTemplate === 'Classic Elegant' ? '24px 20px !important' : '32px 20px !important'};
+            max-width: ${activeTemplate === 'Classic Elegant' ? 'none !important' : '1200px !important'};
+            margin: ${activeTemplate === 'Classic Elegant' ? '228px 0 0 !important' : '228px auto 0 !important'};
           }
+          
+          /* Classic Elegant mobile adjustments */
+          ${activeTemplate === 'Classic Elegant' ? `
+            .menu-item {
+              margin: 0 -8px !important;
+            }
+            
+            .category-title {
+              font-size: 24px !important;
+              margin-bottom: 20px !important;
+            }
+            
+            .category-title::after {
+              width: 40px !important;
+              height: 2px !important;
+              margin-top: 6px !important;
+            }
+          ` : ''}
+        }
+
+        /* Larger screens */
+        @media (min-width: 768px) {
+          .menu-header {
+            padding: 28px 24px 24px;
+          }
+          
+          .category-navigation {
+            padding: 0 24px;
+          }
+          
+          .menu-content {
+            padding: ${activeTemplate === 'Classic Elegant' ? '32px 24px !important' : '32px 20px !important'};
+            max-width: ${activeTemplate === 'Classic Elegant' ? 'none !important' : '1200px !important'};
+            margin: ${activeTemplate === 'Classic Elegant' ? '228px 0 0 !important' : '228px auto 0 !important'};
+          }
+          
+          /* Classic Elegant tablet adjustments */
+          ${activeTemplate === 'Classic Elegant' ? `
+            .category-title {
+              font-size: 30px !important;
+              margin-bottom: 24px !important;
+            }
+            
+            .category-title::after {
+              width: 50px !important;
+              height: 2px !important;
+            }
+          ` : ''}
+        }
+
+        /* Desktop optimizations */
+        @media (min-width: 1024px) {
+          .menu-header {
+            padding: 32px 32px 28px;
+          }
+          
+          .category-navigation {
+            padding: 0 32px;
+          }
+          
+          .menu-content {
+            padding: ${activeTemplate === 'Classic Elegant' ? '48px 32px !important' : '32px 20px !important'};
+            max-width: ${activeTemplate === 'Classic Elegant' ? 'none !important' : '1200px !important'};
+            margin: ${activeTemplate === 'Classic Elegant' ? '228px 0 0 !important' : '228px auto 0 !important'};
+          }
+          
+          /* Enhanced Classic Elegant styling on desktop */
+          ${activeTemplate === 'Classic Elegant' ? `
+            .category-title::after {
+              width: 80px !important;
+              height: 3px !important;
+            }
+          ` : ''}
         }
       `}</style>
     </div>
